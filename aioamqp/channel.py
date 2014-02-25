@@ -121,9 +121,7 @@ class Channel:
         request.write_short(0)  # reserved
         request.write_shortstr(queue_name)
         request.write_bits(passive, durable, exclusive, auto_delete, nowait)
-        request.write_bool(nowait)
-        request.write_table(arguments)
-
+        request.write_table({})
         frame.write_frame(request)
 
     @asyncio.coroutine
@@ -149,8 +147,24 @@ class Channel:
             auto_delete=False, internal=False, no_wait=False)
 
     @asyncio.coroutine
-    def queue_bind(self, queue_name, exchange_name, routing_key):
+    def queue_bind(self, queue_name, exchange_name, routing_key, no_wait=False, arguments=None):
         """Bind a queue and a channel"""
+        frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_BIND)
+
+        request = amqp_frame.AmqpEncoder()
+        request.write_short(0)
+        request.write_shortstr(queue_name)
+        request.write_shortstr(exchange_name)
+        request.write_shortstr(routing_key)
+        request.write_octet(int(no_wait))
+        request.write_table({})
+        frame.write_frame(request)
+
+    @asyncio.coroutine
+    def exchange_bind(self, *args, **kwargs):
+        """bind two exhanges together"""
         pass
 
     @asyncio.coroutine

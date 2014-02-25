@@ -73,13 +73,11 @@ class AmqpEncoder:
     def write_bits(self, *args):
         """Write consecutive bools to one byte"""
         byte_value = 0
-        for bit in args:
-            byte_value |= int(bit)
+        for arg_index, bit in enumerate(args):
+            byte_value |= (1 << arg_index)
 
         print(byte_value)
-        self.write_octet(byte_value)
-        for x in args[:-2]:
-            self.write_octet(0)
+        self.write_octet(8)
 
     def write_bool(self, value):
         self.payload.write(struct.pack('?', value))

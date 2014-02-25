@@ -23,6 +23,9 @@ def hello():
     yield from asyncio.wait_for(channel.exchange("aioamqp.exchange", "fanout"), timeout=10)
     yield from asyncio.wait_for(channel.queue("queue"), timeout=10)
 
+    yield from asyncio.sleep(2)
+    yield from asyncio.wait_for(channel.queue_bind("queue", "aioamqp.exchange", "routing_key"), timeout=10)
+
     #yield from channel.publish(message)
     #print("publish")
     yield from asyncio.sleep(14)
