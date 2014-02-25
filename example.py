@@ -18,11 +18,14 @@ def hello():
         print("closed connections")
         return
 
-    channel = protocol.channel()
-    # channel = yield from cnx.channel('name', 'fanout')
-    # yield from channel.publish(message)
-    # print("publish")
+    channel = yield from protocol.channel()
 
-    #yield from protocol.channel("/")
+    yield from asyncio.wait_for(channel.exchange("aioamqp.exchange", "fanout"), timeout=10)
+    yield from asyncio.wait_for(channel.queue("queue"), timeout=10)
+
+    #yield from channel.publish(message)
+    #print("publish")
+    yield from asyncio.sleep(14)
+    yield from asyncio.wait_for(protocol.client_close(), timeout=10)
 
 asyncio.get_event_loop().run_until_complete(hello())

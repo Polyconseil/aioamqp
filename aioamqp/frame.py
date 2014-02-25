@@ -44,6 +44,9 @@ class AmqpEncoder:
         self.payload = io.BytesIO()
 
     def write_table(self, data_dict):
+        if data_dict is None:
+            return None
+
         table_encoder = AmqpEncoder()
         for key, value in data_dict.items():
             table_encoder.write_shortstr(key)
@@ -51,7 +54,8 @@ class AmqpEncoder:
 
         table_len = table_encoder.payload.tell()
         self.write_long(table_len)
-        self.payload.write(table_encoder.payload.getvalue())
+        if table_len:
+            self.payload.write(table_encoder.payload.getvalue())
 
     def write_value(self, value):
         if isinstance(value, (bytes, str)):
@@ -65,6 +69,17 @@ class AmqpEncoder:
             self.write_table(value)
         else:
             raise Exception("type({}) unsupported".format(type(value)))
+
+    def write_bits(self, *args):
+        """Write consecutive bools to one byte"""
+        byte_value = 0
+        for bit in args:
+            byte_value |= int(bit)
+
+        print(byte_value)
+        self.write_octet(byte_value)
+        for x in args[:-2]:
+            self.write_octet(0)
 
     def write_bool(self, value):
         self.payload.write(struct.pack('?', value))
@@ -164,12 +179,13 @@ class AmqpRequest:
 
     def write_frame(self, encoder):
         if self.frame_type == amqp_constants.TYPE_METHOD:
-            transmission = io.BytesIO()
             payload = encoder.payload
-            print("size: ", payload.tell())
-            header = struct.pack('!BHI', self.frame_type, self.channel, payload.tell() + 4)
-            transmission.write(header)
+
             method_payload = struct.pack('!HH', self.class_id, self.method_id)
+            header = struct.pack('!BHI', self.frame_type, self.channel, payload.tell() + len(method_payload))
+
+            transmission = io.BytesIO()
+            transmission.write(header)
             transmission.write(method_payload)
             transmission.write(payload.getvalue())
             transmission.write(struct.pack('>B', amqp_constants.FRAME_END))
