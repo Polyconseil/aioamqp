@@ -10,6 +10,8 @@ AMQP Frame implementations
 +------+---------+---------+    +-------------+     +-----------+
  octets   short     long         'size' octets          octet
 
+The frame-end octet MUST always be the hexadecimal value %xCE
+
 type:
 
 Type = 1, "METHOD": method frame.
@@ -18,7 +20,7 @@ Type = 3, "BODY": content body frame.
 Type = 4, "HEARTBEAT": heartbeat frame.
 
 
-Method Payloads
+Method Payload
 
 0          2           4
 +----------+-----------+-------------- - -
@@ -26,8 +28,13 @@ Method Payloads
 +----------+-----------+-------------- - -
     short     short       ...
 
-The frame-end octet MUST always be the hexadecimal value %xCE
+Content Payload
 
+0          2        4           12               14
++----------+--------+-----------+----------------+------------- - -
+| class-id | weight | body size | property flags | property list...
++----------+--------+-----------+----------------+------------- - -
+   short     short    long long       short        remainder...
 
 """
 
@@ -168,28 +175,36 @@ class AmqpRequest:
         self.frame_type = frame_type
         self.channel = channel
         self.class_id = None
+        self.weight = None
         self.method_id = None
         self.payload = None
+
+    def declare_class(self, class_id, weight=0):
+        self.class_id = class_id
+        self.weight = 0
 
     def declare_method(self, class_id, method_id):
         self.class_id = class_id
         self.method_id = method_id
 
     def write_frame(self, encoder):
+        payload = encoder.payload
+        transmission = io.BytesIO()
         if self.frame_type == amqp_constants.TYPE_METHOD:
-            payload = encoder.payload
-
-            method_payload = struct.pack('!HH', self.class_id, self.method_id)
-            header = struct.pack('!BHI', self.frame_type, self.channel, payload.tell() + len(method_payload))
-
-            transmission = io.BytesIO()
-            transmission.write(header)
-            transmission.write(method_payload)
-            transmission.write(payload.getvalue())
-            transmission.write(struct.pack('>B', amqp_constants.FRAME_END))
-            self.writer.write(transmission.getvalue())
+            content_header = struct.pack('!HH', self.class_id, self.method_id)
+        elif self.frame_type == amqp_constants.TYPE_HEADER:
+            content_header = struct.pack('!HHQ', self.class_id, self.weight, payload.tell())
+        elif self.frame_type == amqp_constants.TYPE_BODY:
+            content_header = struct.pack('!HHQ', self.class_id, self.weight, payload.tell())
         else:
             raise Exception("frame_type {} not handlded".format(self.frame_type))
+
+        header = struct.pack('!BHI', self.frame_type, self.channel, payload.tell() + len(content_header))
+        transmission.write(header)
+        transmission.write(content_header)
+        transmission.write(payload.getvalue())
+        transmission.write(struct.pack('>B', amqp_constants.FRAME_END))
+        self.writer.write(transmission.getvalue())
 
 
 class AmqpResponse:

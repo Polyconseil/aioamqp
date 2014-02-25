@@ -163,14 +163,115 @@ class Channel:
         frame.write_frame(request)
 
     @asyncio.coroutine
-    def exchange_bind(self, *args, **kwargs):
+    def exchange_bind(self, exchange_source, exchange_destination, routing_key, no_wait=False, arguments=None):
         """bind two exhanges together"""
+        frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_BIND)
+        request = amqp_frame.AmqpEncoder()
+        request.write_short(0)
+        request.write_shortstr(exchange_destination)
+        request.write_shortstr(exchange_source)
+        request.write_shortstr(routing_key)
+        request.write_bit(no_wait)
+        request.write_table({})
+        frame.write_frame(request)
+
+    @asyncio.coroutine
+    def exchange_bind_ok(self, frame):
+        logger.debug("exchange Bound")
+
+    @asyncio.coroutine
+    def publish(self, payload, exhange_name, routing_key, mandatory=False, immediate=False):
+        method_frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        method_frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_PUBLISH)
+
+        method_request = amqp_frame.AmqpEncoder()
+        method_request.write_short(0)
+        method_request.write_shortstr(exhange_name)
+        method_request.write_shortstr(routing_key)
+        method_request.write_bits(mandatory, immediate)
+        method_frame.write_frame(method_request)
+
+        header_frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_HEADER, self.channel_id)
+        header_frame.declare_class(amqp_constants.CLASS_BASIC)
+        encoder = amqp_frame.AmqpEncoder()
+        encoder.write_short(0)
+        header_frame.write_frame(encoder)
+
+        content_frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_BODY, self.channel_id)
+        content_frame.declare_class(amqp_constants.CLASS_BASIC)
+        encoder = amqp_frame.AmqpEncoder()
+        encoder.payload.write(payload.encode())
+        content_frame.write_frame(encoder)
+
+#
+## Basic
+#
+
+    @asyncio.coroutine
+    def basic_qos(self, *args, **kwargs):
+        pass
+
+    @asyncio.coroutine
+    def basic_qos_ok(self, frame):
+        """"""
+        pass
+
+    @asyncio.coroutine
+    def basic_cancel(self, *args, **kwargs):
+        pass
+
+    @asyncio.coroutine
+    def basic_cancel_ok(self, frame):
+        pass
+
+    @asyncio.coroutine
+    def basic_get(self, *args, **kwargs):
+        pass
+
+    @asyncio.coroutine
+    def basic_get_ok(self, frame):
+        pass
+
+    @asyncio.coroutine
+    def basic_get_empty(self, frame):
+        pass
+
+    @asyncio.coroutine
+    def basic_client_ack(self, *args, **kwargs):
+        pass
+
+    @asyncio.coroutine
+    def basic_server_ack(self, frame):
+        pass
+
+    @asyncio.coroutine
+    def basic_reject(self, *args, **kwargs):
+        pass
+
+    @asyncio.coroutine
+    def basic_client_nack(self, *args, **kwargs):
+        pass
+
+    @asyncio.coroutine
+    def basic_server_nack(self, frame):
+        pass
+
+    @asyncio.coroutine
+    def basic_recover_async(self):
+        pass
+
+    @asyncio.coroutine
+    def basic_recover(self, *args, **kwargs):
+        pass
+
+    @asyncio.coroutine
+    def basic_recover_ok(self, frame):
         pass
 
     @asyncio.coroutine
     def basic_publish(self, message):
         """publish"""
         pass
-
-
-
