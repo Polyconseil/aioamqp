@@ -81,10 +81,9 @@ class AmqpEncoder:
         """Write consecutive bools to one byte"""
         byte_value = 0
         for arg_index, bit in enumerate(args):
-            byte_value |= (1 << arg_index)
+            byte_value |= (int(bit) << arg_index)
 
-        print(byte_value)
-        self.write_octet(8)
+        self.write_octet(byte_value)
 
     def write_bool(self, value):
         self.payload.write(struct.pack('?', value))
@@ -178,10 +177,14 @@ class AmqpRequest:
         self.weight = None
         self.method_id = None
         self.payload = None
+        self.next_body_size = None
 
     def declare_class(self, class_id, weight=0):
         self.class_id = class_id
         self.weight = 0
+
+    def set_body_size(self, size):
+        self.next_body_size = size
 
     def declare_method(self, class_id, method_id):
         self.class_id = class_id
@@ -189,22 +192,25 @@ class AmqpRequest:
 
     def write_frame(self, encoder):
         payload = encoder.payload
+        content_header = ''
         transmission = io.BytesIO()
         if self.frame_type == amqp_constants.TYPE_METHOD:
             content_header = struct.pack('!HH', self.class_id, self.method_id)
         elif self.frame_type == amqp_constants.TYPE_HEADER:
-            content_header = struct.pack('!HHQ', self.class_id, self.weight, payload.tell())
+            content_header = struct.pack('!HHQ', self.class_id, self.weight, self.next_body_size)
         elif self.frame_type == amqp_constants.TYPE_BODY:
-            content_header = struct.pack('!HHQ', self.class_id, self.weight, payload.tell())
+            # no specific headers
+            pass
         else:
             raise Exception("frame_type {} not handlded".format(self.frame_type))
 
         header = struct.pack('!BHI', self.frame_type, self.channel, payload.tell() + len(content_header))
         transmission.write(header)
-        transmission.write(content_header)
+        if content_header:
+            transmission.write(content_header)
         transmission.write(payload.getvalue())
         transmission.write(struct.pack('>B', amqp_constants.FRAME_END))
-        self.writer.write(transmission.getvalue())
+        return self.writer.write(transmission.getvalue())
 
 
 class AmqpResponse:
