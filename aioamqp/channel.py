@@ -63,8 +63,8 @@ class Channel:
         yield from methods[(frame.class_id, frame.method_id)](frame)
 
     @asyncio.coroutine
-    def exchange_declare(self, exchange_name, type_name, passive, durable,
-                         auto_delete, internal, no_wait, arguments=None):
+    def exchange_declare(self, exchange_name, type_name, passive=False, durable=False,
+                         auto_delete=False, internal=False, no_wait=False, arguments=None):
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DECLARE)
@@ -132,14 +132,7 @@ class Channel:
 #
 
     queue = queue_declare
-
-    @asyncio.coroutine
-    def exchange(self, exchange_name, type_name, passive=False, durable=False, arguments=None):
-        """Declare an exchange on the server"""
-        print("exchange_name", exchange_name)
-        yield from self.exchange_declare(
-            exchange_name, type_name, passive, durable,
-            auto_delete=False, internal=False, no_wait=False)
+    exchange = exchange_declare
 
     @asyncio.coroutine
     def queue_bind(self, queue_name, exchange_name, routing_key, no_wait=False, arguments=None):
@@ -177,7 +170,7 @@ class Channel:
         logger.debug("exchange Bound")
 
     @asyncio.coroutine
-    def publish(self, payload, exhange_name, routing_key, properties=None, mandatory=False, immediate=False):
+    def publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
         method_frame = amqp_frame.AmqpRequest(
             self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         method_frame.declare_method(
@@ -185,7 +178,7 @@ class Channel:
 
         method_request = amqp_frame.AmqpEncoder()
         method_request.write_short(0)
-        method_request.write_shortstr(exhange_name)
+        method_request.write_shortstr(exchange_name)
         method_request.write_shortstr(routing_key)
         method_request.write_bits(mandatory, immediate)
         method_frame.write_frame(method_request)
