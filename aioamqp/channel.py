@@ -101,9 +101,7 @@ class Channel:
         request.write_shortstr(exchange_name)
         request.write_bool(if_unused)
         request.write_bool(no_wait)
-
         frame.write_frame(request)
-        print("declare")
 
     @asyncio.coroutine
     def exchange_delete_ok(self, frame):
@@ -133,10 +131,7 @@ class Channel:
 ## Public api
 #
 
-    @asyncio.coroutine
-    def queue(self, queue_name):
-        """Declare a queue on the server"""
-        yield from self.queue_declare(queue_name)
+    queue = queue_declare
 
     @asyncio.coroutine
     def exchange(self, exchange_name, type_name, passive=False, durable=False, arguments=None):
@@ -182,8 +177,9 @@ class Channel:
         logger.debug("exchange Bound")
 
     @asyncio.coroutine
-    def publish(self, payload, exhange_name, routing_key, mandatory=False, immediate=False):
-        method_frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+    def publish(self, payload, exhange_name, routing_key, properties=None, mandatory=False, immediate=False):
+        method_frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         method_frame.declare_method(
             amqp_constants.CLASS_BASIC, amqp_constants.BASIC_PUBLISH)
 
@@ -194,21 +190,22 @@ class Channel:
         method_request.write_bits(mandatory, immediate)
         method_frame.write_frame(method_request)
 
-        header_frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_HEADER, self.channel_id)
+        header_frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_HEADER, self.channel_id)
         header_frame.declare_class(amqp_constants.CLASS_BASIC)
         header_frame.set_body_size(len(payload))
         encoder = amqp_frame.AmqpEncoder()
-        encoder.write_short(0)  # no properties ?
+        encoder.write_message_properties(properties)
+
         header_frame.write_frame(encoder)
 
-        content_frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_BODY, self.channel_id)
+        content_frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_BODY, self.channel_id)
         content_frame.declare_class(amqp_constants.CLASS_BASIC)
         encoder = amqp_frame.AmqpEncoder()
         encoder.payload.write(payload.encode())
 
-        bodysize = content_frame.write_frame(encoder)
-
-        print(bodysize)
+        content_frame.write_frame(encoder)
         yield from self.protocol.writer.drain()
 #
 ## Basic

@@ -111,6 +111,75 @@ class AmqpEncoder:
         self.write_octet(len(string))
         self._write_string(string)
 
+    def write_message_properties(self, properties):
+        properties_flag_value = 0
+        properties_encoder = AmqpEncoder()
+        if properties is None:
+            self.write_short(0)
+            return
+
+        assert len(set(properties.keys() - set(amqp_constants.MESSAGE_PROPERTIES))) == 0
+
+        content_type = properties.get('content_type')
+        if content_type:
+            properties_flag_value |= amqp_constants.FLAG_CONTENT_TYPE
+            properties_encoder.write_shortstr(content_type)
+        content_encoding = properties.get('content_encoding')
+        if content_encoding:
+            properties_flag_value |= amqp_constants.FLAG_CONTENT_ENCODING
+            properties_encoder.write_shortstr(content_encoding)
+        headers = properties.get('headers')
+        if headers:
+            properties_flag_value |= amqp_constants.FLAG_HEADERS
+            properties_encoder.write_table(headers)
+        delivery_mode = properties.get('delivery_mode')
+        if delivery_mode:
+            properties_flag_value |= amqp_constants.FLAG_DELIVERY_MODE
+            properties_encoder.write_octet(delivery_mode)
+        priority = properties.get('priority')
+        if priority:
+            properties_flag_value |= amqp_constants.FLAG_PRIORITY
+            properties_encoder.write_octet(priority)
+        correlation_id = properties.get('correlation_id')
+        if correlation_id:
+            properties_flag_value |= amqp_constants.FLAG_CORRELATION_ID
+            properties_encoder.write_octet(correlation_id)
+        reply_to = properties.get('reply_to')
+        if reply_to:
+            properties_flag_value |= amqp_constants.FLAG_REPLY_TO
+            properties_encoder.write_shortstr(reply_to)
+        expiration = properties.get('expiration')
+        if expiration:
+            properties_flag_value |= amqp_constants.FLAG_EXPIRATION
+            properties_encoder.write_shortstr(expiration)
+        message_id = properties.get('message_id')
+        if message_id:
+            properties_flag_value |= amqp_constants.FLAG_MESSAGE_ID
+            properties_encoder.write_shortstr(message_id)
+        timestamp = properties.get('timestamp')
+        if timestamp:
+            properties_flag_value |= amqp_constants.FLAG_TIMESTAMP
+            properties_encoder.write_timestamp(timestamp)
+        type_ = properties.get('type')
+        if type_:
+            properties_flag_value |= amqp_constants.FLAG_TYPE
+            properties_encoder.write_shortstr(type_)
+        user_id = properties.get('user_id')
+        if user_id:
+            properties_flag_value |= amqp_constants.FLAG_USER_ID
+            properties_encoder.write_shortstr(user_id)
+        app_id = properties.get('app_id')
+        if app_id:
+            properties_flag_value |= amqp_constants.FLAG_APP_ID
+            properties_encoder.write_shortstr(app_id)
+        cluster_id = properties.get('cluster_id')
+        if cluster_id:
+            properties_flag_value |= amqp_constants.FLAG_CLUSTER_ID
+            properties_encoder.write_shortstr(cluster_id)
+
+        self.write_short(properties_flag_value)
+        self.payload.write(properties_encoder.payload.getvalue())
+
 
 class AmqpDecoder:
     def __init__(self, reader):

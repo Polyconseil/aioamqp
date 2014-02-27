@@ -22,13 +22,13 @@ def simple_message_example():
     yield from asyncio.wait_for(channel.queue("py2.queue"), timeout=10)
     frame = yield from protocol.get_frame()
     frame.frame()
-    yield from asyncio.wait_for(channel.publish("py3.message", '', 'py2.queue'), timeout=10)
-    yield from asyncio.sleep(3)
+    while True:
+        yield from channel.publish("py3.message", '', 'py2.queue')
     yield from asyncio.wait_for(protocol.client_close(), timeout=10)
 
 
 @asyncio.coroutine
-def amqp_test():
+def exchange_routing():
     protocol = yield from aioamqp.connect('localhost', 5672)
 
     try:

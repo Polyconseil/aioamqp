@@ -82,3 +82,22 @@ TX_COMMIT = 20
 TX_COMMIT_OK = 21
 TX_ROLLBACK = 30
 TX_ROLLBACK_OK = 31
+
+
+MESSAGE_PROPERTIES = ('content_type', 'content_encoding', 'headers', 'delivery_mode', 'priority', 'correlation_id',
+                      'reply_to', 'expiration', 'message_id', 'timestamp', 'type', 'user_id', 'app_id', 'cluster_id')
+
+FLAG_CONTENT_TYPE = (1 << 15)
+FLAG_CONTENT_ENCODING = (1 << 14)
+FLAG_HEADERS = (1 << 13)
+FLAG_DELIVERY_MODE = (1 << 12)
+FLAG_PRIORITY = (1 << 11)
+FLAG_CORRELATION_ID = (1 << 10)
+FLAG_REPLY_TO = (1 << 9)
+FLAG_EXPIRATION = (1 << 8)
+FLAG_MESSAGE_ID = (1 << 7)
+FLAG_TIMESTAMP = (1 << 6)
+FLAG_TYPE = (1 << 5)
+FLAG_USER_ID = (1 << 4)
+FLAG_APP_ID = (1 << 3)
+FLAG_CLUSTER_ID = (1 << 2)
