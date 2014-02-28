@@ -13,3 +13,7 @@ class ClosedConnection(AioamqpException):
 
 class ConnectionError(AioamqpException):
     pass
+
+
+class ChannelClosed(AioamqpException):
+    pass

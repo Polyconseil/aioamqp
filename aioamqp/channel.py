@@ -7,6 +7,7 @@ import logging
 
 from . import constants as amqp_constants
 from . import frame as amqp_frame
+from . import exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ class Channel:
         methods = {
             (amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_OPEN_OK): self.open_ok,
             (amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE_OK): self.close_ok,
+            (amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE): self.server_channel_close,
             (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DECLARE_OK): self.exchange_delete_ok,
             (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DELETE_OK): self.exchange_delete_ok,
             (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_DECLARE_OK): self.queue_declare_ok,
@@ -126,6 +128,16 @@ class Channel:
     def queue_declare_ok(self, frame):
         frame.frame()
         logger.debug("queue declared")
+
+    @asyncio.coroutine
+    def server_channel_close(self, frame):
+        frame.frame()
+        response = amqp_frame.AmqpDecoder(frame.payload)
+        reply_code = response.read_short()
+        reply_text = response.read_shortstr()
+        #class_id = response.read_short()
+        #method_id = response.read_short()
+        raise exceptions.ClosedConnection("{} ({})".format(reply_text, reply_code))
 
 #
 ## Public api
@@ -205,8 +217,16 @@ class Channel:
 #
 
     @asyncio.coroutine
-    def basic_qos(self, *args, **kwargs):
-        pass
+    def basic_qos(self, prefetch_size, prefetch_count, connection_global):
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_QOS)
+        encoder = amqp_frame.AmqpEncoder()
+        encoder.write_long(prefetch_size)
+        encoder.write_short(prefetch_count)
+        encoder.write_bits(connection_global)
+        frame.write_frame(encoder)
 
     @asyncio.coroutine
     def basic_qos_ok(self, frame):
@@ -214,16 +234,31 @@ class Channel:
         pass
 
     @asyncio.coroutine
-    def basic_cancel(self, *args, **kwargs):
-        pass
+    def basic_cancel(self, consumer_tag, no_wait=False):
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CANCEL)
+        encoder = amqp_frame.AmqpEncoder()
+        encoder.write_shortstr(consumer_tag)
+        encoder.write_bits(no_wait)
+        frame.write_frame(encoder)
 
     @asyncio.coroutine
     def basic_cancel_ok(self, frame):
         pass
 
     @asyncio.coroutine
-    def basic_get(self, *args, **kwargs):
-        pass
+    def basic_get(self, queue_name='', no_ack=False):
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_GET)
+        encoder = amqp_frame.AmqpEncoder()
+        encoder.write_short(0)
+        encoder.write_shortstr(queue_name)
+        encoder.write_bits(no_ack)
+        frame.write_frame(encoder)
 
     @asyncio.coroutine
     def basic_get_ok(self, frame):
@@ -234,16 +269,30 @@ class Channel:
         pass
 
     @asyncio.coroutine
-    def basic_client_ack(self, *args, **kwargs):
-        pass
+    def basic_client_ack(self, delivery_tag, multiple):
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_ACK)
+        encoder = amqp_frame.AmqpEncoder()
+        encoder.write_long_long(delivery_tag)
+        encoder.write_bits(multiple)
+        frame.write_frame(encoder)
 
     @asyncio.coroutine
     def basic_server_ack(self, frame):
         pass
 
     @asyncio.coroutine
-    def basic_reject(self, *args, **kwargs):
-        pass
+    def basic_reject(self, delivery_tag, requeue):
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_REJECT)
+        encoder = amqp_frame.AmqpEncoder()
+        encoder.write_long_long(delivery_tag)
+        encoder.write_bits(requeue)
+        frame.write_frame(encoder)
 
     @asyncio.coroutine
     def basic_client_nack(self, *args, **kwargs):
@@ -269,3 +318,21 @@ class Channel:
     def basic_publish(self, message):
         """publish"""
         pass
+
+    @asyncio.coroutine
+    def basic_consume(self, queue_name='', consumer_tag='', no_local=False, no_ack=False, exclusive=False,
+                      no_wait=False, callback=None, arguments=None, on_cancel=None):
+        if not arguments:
+            arguments = {}
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CONSUME)
+        encoder = amqp_frame.AmqpEncoder()
+        encoder.write_short(0)
+        encoder.write_shortstr(queue_name)
+        encoder.write_shortstr(consumer_tag)
+        encoder.write_bits(no_local, no_ack, exclusive, no_wait)
+        encoder.write_table(arguments)
+
+        frame.write_frame(encoder)

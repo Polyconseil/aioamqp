@@ -97,6 +97,9 @@ class AmqpEncoder:
     def write_long(self, integer):
         self.payload.write(struct.pack('!I', integer))
 
+    def write_long_long(self, longlong):
+        self.payload.write(struct.pack('!Q', longlong))
+
     def _write_string(self, string):
         if isinstance(string, str):
             self.payload.write(string.encode())

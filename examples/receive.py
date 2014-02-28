@@ -1,15 +1,11 @@
 #!/usr/bin/env python
 
-"""
-    Amqp client exemple
-
-"""
 import asyncio
 import aioamqp
 
 
 @asyncio.coroutine
-def produce():
+def receive():
     protocol = yield from aioamqp.connect('localhost', 5672)
 
     try:
@@ -18,14 +14,17 @@ def produce():
         print("closed connections")
         return
 
-    queue_name = 'py2.queue'
     channel = yield from protocol.channel()
+    queue_name = 'py2.queue'
+
     yield from asyncio.wait_for(channel.queue(queue_name, durable=True), timeout=10)
-    frame = yield from protocol.get_frame()
-    frame.frame()
-    while True:
-        yield from channel.publish("py3.message", '', queue_name)
+    yield from asyncio.sleep(2)
+
+    yield from asyncio.wait_for(channel.basic_get(queue_name), timeout=10)
+#    yield from asyncio.wait_for(channel.basic_consume(queue_name), timeout=10)
+
+    yield from asyncio.sleep(1)
     yield from asyncio.wait_for(protocol.client_close(), timeout=10)
 
 
-asyncio.get_event_loop().run_until_complete(produce())
+asyncio.get_event_loop().run_until_complete(receive())
