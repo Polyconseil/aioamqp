@@ -79,9 +79,11 @@ class AmqpEncoder:
 
     def write_bits(self, *args):
         """Write consecutive bools to one byte"""
+        assert len(args) <= 8, "write_bits can only write 8 bits into one octet, sadly"
         byte_value = 0
         for arg_index, bit in enumerate(args):
-            byte_value |= (int(bit) << arg_index)
+            if bit:
+                byte_value |= (1 << arg_index)
 
         self.write_octet(byte_value)
 
@@ -89,7 +91,7 @@ class AmqpEncoder:
         self.payload.write(struct.pack('?', value))
 
     def write_octet(self, octet):
-        self.payload.write(struct.pack('B', octet))
+        self.payload.write(struct.pack('!B', octet))
 
     def write_short(self, short):
         self.payload.write(struct.pack('!H', short))
@@ -200,13 +202,17 @@ class AmqpDecoder:
         data = self.reader.read(4)
         return struct.unpack('!I', data)[0]
 
+    def read_long_long(self):
+        data = self.reader.read(8)
+        return struct.unpack('!Q', data)[0]
+
     def read_float(self):
         data = self.reader.read(4)
         return struct.unpack('!d', data)[0]
 
     def read_shortstr(self):
         data = self.reader.read(1)
-        string_len = struct.unpack('B', data)[0]
+        string_len = struct.unpack('!B', data)[0]
         data = self.reader.read(string_len)
         return data.decode()
 
@@ -224,6 +230,8 @@ class AmqpDecoder:
             var_name = table_data.read_shortstr()
             var_value = self.read_table_subitem(table_data)
             table[var_name] = var_value
+
+        return table
 
     def read_table_subitem(self, table_data):
         """
@@ -281,7 +289,7 @@ class AmqpRequest:
         if content_header:
             transmission.write(content_header)
         transmission.write(payload.getvalue())
-        transmission.write(struct.pack('>B', amqp_constants.FRAME_END))
+        transmission.write(amqp_constants.FRAME_END)
         return self.writer.write(transmission.getvalue())
 
 
@@ -339,6 +347,7 @@ class AmqpResponse:
         assert self.frame_end == amqp_constants.FRAME_END
 
     def frame(self):
+        return
         frame_data = {
             'type': self.frame_type or '',
             'channel': self.channel,
