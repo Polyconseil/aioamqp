@@ -20,11 +20,11 @@ def produce():
 
     queue_name = 'py2.queue'
     channel = yield from protocol.channel()
-    yield from asyncio.wait_for(channel.queue(queue_name, durable=True), timeout=10)
-    frame = yield from protocol.get_frame()
-    frame.frame()
+    yield from asyncio.wait_for(channel.queue(queue_name, durable=False, auto_delete=True), timeout=10)
+
     while True:
         yield from channel.publish("py3.message", '', queue_name)
+        yield from asyncio.sleep(10)
     yield from asyncio.wait_for(protocol.client_close(), timeout=10)
 
 

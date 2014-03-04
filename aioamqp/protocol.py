@@ -31,8 +31,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.channels = {}
         self.channels_max_id = 0
 
-        #self.worker = asyncio.async(self.run())
-
     def client_connected(self, reader, writer):
         self.reader = reader
         self.writer = writer
@@ -98,6 +96,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from asyncio.wait_for(
             self.open_ok(), amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
 
+        # for now, we read server's responses asynchronously
+        self.worker = asyncio.async(self.run())
+
     @asyncio.coroutine
     def stop(self):
         self.stop_now.set_result(None)
@@ -109,18 +110,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """
         frame = amqp_frame.AmqpResponse(self.reader)
         yield from frame.read_frame()
-
-        print("frame.channel {} class_id {}".format(frame.channel, frame.class_id))
-        if frame.channel is not 0:
-            yield from self.channels[frame.channel].dispatch_frame(frame)
-
-        else:
-            yield from self.dispatch_frame(frame)
-
         return frame
 
     @asyncio.coroutine
-    def dispatch_frame(self, frame):
+    def dispatch_frame(self, frame=None):
         """Dispatch the received frame to the corresponding handler"""
 
         method_dispatch = {
@@ -128,11 +121,25 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK): self.server_close,
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_START_OK): self.start_ok,
         }
+        if not frame:
+            frame = yield from self.get_frame()
+            print("frame.channel {} class_id {}".format(frame.channel, frame.class_id))
+        if frame.channel is not 0:
+            yield from self.channels[frame.channel].dispatch_frame(frame)
 
         try:
             yield from method_dispatch[(frame.class_id, frame.method_id)]
         except KeyError:
             logger.info("frame {} {} is not handled".format(frame.class_id, frame.method_id))
+
+    @asyncio.coroutine
+    def run(self):
+        print("runing")
+        while not self.stop_now.done():
+            try:
+                yield from self.dispatch_frame()
+            except Exception as exc:
+                print(exc)
 
     # Amqp specific methods
     @asyncio.coroutine

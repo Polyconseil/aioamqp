@@ -17,7 +17,6 @@ class Channel:
     def __init__(self, protocol, channel_id):
         self.protocol = protocol
         self.channel_id = channel_id
-
         self.is_open = False
 
     @asyncio.coroutine
@@ -30,11 +29,8 @@ class Channel:
         request.write_shortstr('')
         frame.write_frame(request)
 
-        yield from self.protocol.get_frame()
-
     @asyncio.coroutine
     def open_ok(self, frame):
-        print(frame.frame())
         self.is_open = True
 
     @asyncio.coroutine
@@ -60,8 +56,11 @@ class Channel:
             (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DECLARE_OK): self.exchange_delete_ok,
             (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DELETE_OK): self.exchange_delete_ok,
             (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_DECLARE_OK): self.queue_declare_ok,
+            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CONSUME_OK): self.basic_consume_ok,
+            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_DELIVER): self.basic_deliver,
         }
-
+        print("dispatch frame")
+        frame.frame()
         yield from methods[(frame.class_id, frame.method_id)](frame)
 
     @asyncio.coroutine
@@ -335,4 +334,23 @@ class Channel:
         encoder.write_bits(no_local, no_ack, exclusive, no_wait)
         encoder.write_table(arguments)
 
+        self.message_queue = asyncio.Queue()
         frame.write_frame(encoder)
+
+    @asyncio.coroutine
+    def basic_consume_ok(self, frame):
+        frame.frame()
+
+    @asyncio.coroutine
+    def consume(self, queue_name=''):
+        assert self.message_queue, "No message_queue defined"
+        message = yield from self.message_queue.get()
+        return message
+
+    @asyncio.coroutine
+    def basic_deliver(self, frame):
+        content_header_frame = yield from self.protocol.get_frame()
+        content_header_frame.frame()
+        content_body_frame = yield from self.protocol.get_frame()
+        content_body_frame.frame()
+        yield from self.message_queue.put(content_body_frame.payload)

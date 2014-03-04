@@ -17,13 +17,15 @@ def receive():
     channel = yield from protocol.channel()
     queue_name = 'py2.queue'
 
-    yield from asyncio.wait_for(channel.queue(queue_name, durable=True), timeout=10)
+    yield from asyncio.wait_for(channel.queue(queue_name, durable=False, auto_delete=True), timeout=10)
     yield from asyncio.sleep(2)
 
-    yield from asyncio.wait_for(channel.basic_get(queue_name), timeout=10)
-#    yield from asyncio.wait_for(channel.basic_consume(queue_name), timeout=10)
+    yield from asyncio.wait_for(channel.basic_consume(queue_name), timeout=10)
 
-    yield from asyncio.sleep(1)
+    while True:
+        message = yield from channel.consume()
+        print("recved:", message)
+    yield from asyncio.sleep(10)
     yield from asyncio.wait_for(protocol.client_close(), timeout=10)
 
 

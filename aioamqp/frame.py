@@ -301,25 +301,42 @@ class AmqpResponse:
         self.frame_method = None
         self.class_id = None
         self.method_id = None
+        self.weight = None
+        self.body_size = None
+        self.property_flags = None
 
     @asyncio.coroutine
     def read_frame(self):
         """Decode the frame"""
         data = yield from self.reader.readexactly(7)
+
         frame_header = io.BytesIO(data)
         decoder = AmqpDecoder(frame_header)
         self.frame_type = decoder.read_octet()
         self.channel = decoder.read_short()
-        self.payload_size = decoder.read_long()
+        self.frame_length = decoder.read_long()
+        payload_data = yield from self.reader.readexactly(self.frame_length)
 
         if self.frame_type == amqp_constants.TYPE_METHOD:
-            payload_data = yield from self.reader.readexactly(self.payload_size)
             self.payload = io.BytesIO(payload_data)
             decoder = AmqpDecoder(self.payload)
             self.class_id = decoder.read_short()
             self.method_id = decoder.read_short()
 
+        elif self.frame_type == amqp_constants.TYPE_HEADER:
+            self.payload = io.BytesIO(payload_data)
+            decoder = AmqpDecoder(self.payload)
+            self.class_id = decoder.read_short()
+            self.weight = decoder.read_short()
+            self.body_size = decoder.read_long_long()
+            self.property_flags = decoder.read_short()
+
+        elif self.frame_type == amqp_constants.TYPE_BODY:
+            self.payload = payload_data
+        else:
+            raise ValueError("Message type {:x} not known".format(self.frame_type))
         self.frame_end = yield from self.reader.readexactly(1)
+        assert self.frame_end == amqp_constants.FRAME_END
 
     def frame(self):
         frame_data = {
