@@ -3,12 +3,13 @@ import sys
 
 py_version = sys.version_info[:2]
 
-
-version = '0.0.1'
+aioamqp = __import__('aioamqp')
+version = aioamqp.__version__
+package_name = aioamqp.__packagename__
 description = 'AMQP implementation using asyncio'
 
 setuptools.setup(
-    name='aioamqp',
+    name=package_name,
     version=version,
     author='Benoît Calvez',
     author_email='benoit.calvez@polyconseil.fr',
@@ -19,7 +20,7 @@ setuptools.setup(
     packages=[
         'aioamqp',
     ],
-    install_requires=['asyncio'] if py_version == (3, 3) else [],
+    install_requires=['asyncio'] if py_version <= (3, 3) else [],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Web Environment",
