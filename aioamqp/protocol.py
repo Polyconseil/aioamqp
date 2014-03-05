@@ -123,13 +123,18 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         }
         if not frame:
             frame = yield from self.get_frame()
-            print("frame.channel {} class_id {}".format(frame.channel, frame.class_id))
+            #print("frame.channel {} class_id {}".format(frame.channel, frame.class_id))
 
         if frame.frame_type == amqp_constants.TYPE_HEARTBEAT:
             yield from self.reply_to_hearbeat(frame)
+            return
 
         if frame.channel is not 0:
-            yield from self.channels[frame.channel].dispatch_frame(frame)
+            try:
+                yield from self.channels[frame.channel].dispatch_frame(frame)
+            except KeyError:
+                logger.info("Unknown channel %s", frame.channel)
+            return
 
         try:
             yield from method_dispatch[(frame.class_id, frame.method_id)]

@@ -59,8 +59,6 @@ class Channel:
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CONSUME_OK): self.basic_consume_ok,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_DELIVER): self.basic_deliver,
         }
-        print("dispatch frame")
-        frame.frame()
         yield from methods[(frame.class_id, frame.method_id)](frame)
 
     @asyncio.coroutine
@@ -270,7 +268,7 @@ class Channel:
         pass
 
     @asyncio.coroutine
-    def basic_client_ack(self, delivery_tag, multiple):
+    def basic_client_ack(self, delivery_tag, multiple=False):
         frame = amqp_frame.AmqpRequest(
             self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
@@ -342,6 +340,7 @@ class Channel:
     @asyncio.coroutine
     def basic_consume_ok(self, frame):
         frame.frame()
+        pass
 
     @asyncio.coroutine
     def consume(self, queue_name=''):
@@ -351,8 +350,11 @@ class Channel:
 
     @asyncio.coroutine
     def basic_deliver(self, frame):
+        response = amqp_frame.AmqpDecoder(frame.payload)
+        consumer_tag = response.read_shortstr()
+        deliver_tag = response.read_long_long()
         content_header_frame = yield from self.protocol.get_frame()
         content_header_frame.frame()
         content_body_frame = yield from self.protocol.get_frame()
         content_body_frame.frame()
-        yield from self.message_queue.put(content_body_frame.payload)
+        yield from self.message_queue.put((consumer_tag, deliver_tag, content_body_frame.payload))

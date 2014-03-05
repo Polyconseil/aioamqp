@@ -23,8 +23,8 @@ def receive():
     yield from asyncio.wait_for(channel.basic_consume(queue_name), timeout=10)
 
     while True:
-        message = yield from channel.consume()
-        print("recved:", message)
+        consumer_tag, delivery_tag, message = yield from channel.consume()
+        print("consumer {} recved {} ({})".format(consumer_tag, message, delivery_tag))
     yield from asyncio.sleep(10)
     yield from asyncio.wait_for(protocol.client_close(), timeout=10)
 
