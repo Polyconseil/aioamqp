@@ -270,8 +270,10 @@ class AmqpRequest:
         self.class_id = class_id
         self.method_id = method_id
 
-    def write_frame(self, encoder):
-        payload = encoder.payload
+    def write_frame(self, encoder=None):
+        payload = None
+        if encoder is not None:
+            payload = encoder.payload
         content_header = ''
         transmission = io.BytesIO()
         if self.frame_type == amqp_constants.TYPE_METHOD:
@@ -281,6 +283,9 @@ class AmqpRequest:
         elif self.frame_type == amqp_constants.TYPE_BODY:
             # no specific headers
             pass
+        elif self.frame_type == amqp_constants.TYPE_HEARTBEAT:
+            # no specific headers
+            pass
         else:
             raise Exception("frame_type {} not handlded".format(self.frame_type))
 
@@ -288,7 +293,8 @@ class AmqpRequest:
         transmission.write(header)
         if content_header:
             transmission.write(content_header)
-        transmission.write(payload.getvalue())
+        if payload:
+            transmission.write(payload.getvalue())
         transmission.write(amqp_constants.FRAME_END)
         return self.writer.write(transmission.getvalue())
 
@@ -341,6 +347,10 @@ class AmqpResponse:
 
         elif self.frame_type == amqp_constants.TYPE_BODY:
             self.payload = payload_data
+
+        elif self.frame_type == amqp_constants.TYPE_HEARTBEAT:
+            pass
+
         else:
             raise ValueError("Message type {:x} not known".format(self.frame_type))
         self.frame_end = yield from self.reader.readexactly(1)

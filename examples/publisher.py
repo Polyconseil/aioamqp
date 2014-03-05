@@ -27,5 +27,4 @@ def produce():
         yield from asyncio.sleep(10)
     yield from asyncio.wait_for(protocol.client_close(), timeout=10)
 
-
 asyncio.get_event_loop().run_until_complete(produce())

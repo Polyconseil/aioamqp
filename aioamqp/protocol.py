@@ -124,6 +124,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         if not frame:
             frame = yield from self.get_frame()
             print("frame.channel {} class_id {}".format(frame.channel, frame.class_id))
+
+        if frame.frame_type == amqp_constants.TYPE_HEARTBEAT:
+            yield from self.reply_to_hearbeat(frame)
+
         if frame.channel is not 0:
             yield from self.channels[frame.channel].dispatch_frame(frame)
 
@@ -134,12 +138,18 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def run(self):
-        print("runing")
         while not self.stop_now.done():
             try:
                 yield from self.dispatch_frame()
             except Exception as exc:
                 print(exc)
+
+    @asyncio.coroutine
+    def reply_to_hearbeat(self, frame):
+        print("replyin' to heartbeat")
+        frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_HEARTBEAT, 0)
+        request = amqp_frame.AmqpEncoder()
+        frame.write_frame(request)
 
     # Amqp specific methods
     @asyncio.coroutine

@@ -207,8 +207,10 @@ class Channel:
             self.protocol.writer, amqp_constants.TYPE_BODY, self.channel_id)
         content_frame.declare_class(amqp_constants.CLASS_BASIC)
         encoder = amqp_frame.AmqpEncoder()
-        encoder.payload.write(payload.encode())
-
+        if isinstance(payload, str):
+            encoder.payload.write(payload.encode())
+        else:
+            encoder.payload.write(payload)
         content_frame.write_frame(encoder)
         yield from self.protocol.writer.drain()
 #
