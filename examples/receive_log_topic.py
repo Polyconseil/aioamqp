@@ -2,7 +2,7 @@
 """
     Rabbitmq.com pub/sub example
 
-    https://www.rabbitmq.com/tutorials/tutorial-four-python.html
+    https://www.rabbitmq.com/tutorials/tutorial-five-python.html
 
 """
 
@@ -24,23 +24,23 @@ def receive_log():
         return
 
     channel = yield from protocol.channel()
-    exchange_name = 'direct_logs'
+    exchange_name = 'topic_logs'
     # TODO let rabbitmq choose the queue name
     queue_name = 'queue-%s' % random.randint(0,10000)
 
-    yield from channel.exchange(exchange_name, 'direct')
+    yield from channel.exchange(exchange_name, 'topic')
 
     yield from asyncio.wait_for(channel.queue(queue_name, durable=False, auto_delete=True), timeout=10)
 
-    severities = sys.argv[1:]
-    if not severities:
-        print("Usage: %s [info] [warning] [error]" %  (sys.argv[0],))
+    binding_keys = sys.argv[1:]
+    if not binding_keys:
+        print("Usage: %s [binding_key]..." % (sys.argv[0],))
         sys.exit(1)
 
-    for severity in severities:
-        yield from asyncio.wait_for(channel.queue_bind(exchange_name='direct_logs',
-                                    queue_name=queue_name,
-                                    routing_key=severity), timeout=10)
+    for binding_key in binding_keys:
+        yield from asyncio.wait_for(channel.queue_bind(exchange_name='topic_logs',
+                                                       queue_name=queue_name,
+                                                       routing_key=binding_key), timeout=10)
 
     print(' [*] Waiting for logs. To exit press CTRL+C')
 
