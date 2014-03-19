@@ -17,6 +17,7 @@ class Channel:
     def __init__(self, protocol, channel_id):
         self.protocol = protocol
         self.channel_id = channel_id
+        self.message_queue = None
         self.is_open = False
 
     @asyncio.coroutine
