@@ -52,7 +52,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 return
 
     @asyncio.coroutine
-    def start_connection(self, virtual_host="/", insist=False):
+    def start_connection(self, login="guest", password="guest", virtual_host="/", insist=False):
         """Initiate a connection at the protocol level
             We send `PROTOCOL_HEADER'
         """
@@ -64,15 +64,15 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         client_properties = {
             'capabilities': {
                 'consumer_cancel_notify': True,
-                'connection.blocked': True,
+                'connection.blocked': False,
             },
             'product_version': aioamqp.__version__,
             'product': aioamqp.__packagename__,
             'copyright': 'BSD',
         }
         auth = {
-            'LOGIN': 'guest',
-            'PASSWORD': 'guest',
+            'LOGIN': login,
+            'PASSWORD': password,
         }
 
         yield from asyncio.wait_for(
