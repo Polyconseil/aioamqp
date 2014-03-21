@@ -15,7 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class AmqpProtocol(asyncio.StreamReaderProtocol):
+    """The AMQP protocol for asyncio.
 
+    See http://docs.python.org/3.4/library/asyncio-protocol.html#protocols for more information
+    on asyncio's protocol API.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(asyncio.StreamReader(), self.client_connected)
         self.connecting = asyncio.Future()
@@ -272,10 +276,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     def open_ok(self):
         frame = yield from self.get_frame()
         frame.frame()
-
-    @asyncio.coroutine
-    def close(self):
-        pass
 
     #
     ## aioamqp public methods
