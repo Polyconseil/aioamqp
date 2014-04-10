@@ -52,7 +52,7 @@ class AmqpEncoder:
 
     def write_table(self, data_dict):
         if data_dict is None:
-            return None
+            data_dict = {}
 
         table_encoder = AmqpEncoder()
         for key, value in data_dict.items():
@@ -81,6 +81,7 @@ class AmqpEncoder:
         """Write consecutive bools to one byte"""
         assert len(args) <= 8, "write_bits can only write 8 bits into one octet, sadly"
         byte_value = 0
+
         for arg_index, bit in enumerate(args):
             if bit:
                 byte_value |= (1 << arg_index)

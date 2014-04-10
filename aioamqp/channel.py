@@ -75,12 +75,7 @@ class Channel:
         request.write_shortstr(type_name)
 
         internal = False  # internal: deprecated
-
-        request.write_bool(passive)
-        request.write_bool(durable)
-        request.write_bool(auto_delete)
-        request.write_bool(internal)
-        request.write_bool(no_wait)
+        request.write_bits(passive, durable, auto_delete, internal, no_wait)
         request.write_table(arguments)
 
         frame.write_frame(request)
