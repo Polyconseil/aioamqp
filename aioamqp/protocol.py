@@ -141,7 +141,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             return
 
         try:
-            yield from method_dispatch[(frame.class_id, frame.method_id)]
+            yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
         except KeyError:
             logger.info("frame {} {} is not handled".format(frame.class_id, frame.method_id))
 
