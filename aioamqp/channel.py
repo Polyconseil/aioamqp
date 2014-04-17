@@ -58,6 +58,7 @@ class Channel:
             (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DECLARE_OK): self.exchange_declare_ok,
             (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DELETE_OK): self.exchange_delete_ok,
             (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_DECLARE_OK): self.queue_declare_ok,
+            (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_DELETE_OK): self.queue_delete_ok,
             (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_BIND_OK): self.queue_bind_ok,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CONSUME_OK): self.basic_consume_ok,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_DELIVER): self.basic_deliver,
@@ -72,8 +73,9 @@ class Channel:
             assert self.response_future is None, "Already waiting for some event"
             self.response_future = asyncio.Future()
             frame.write_frame(request)
-            yield from asyncio.wait_for(self.response_future, timeout=timeout)
+            response_frame = yield from asyncio.wait_for(self.response_future, timeout=timeout)
             self.response_future = None
+            return response_frame
 
     @asyncio.coroutine
     def exchange_declare(self, exchange_name, type_name, passive=False, durable=False,
@@ -91,7 +93,7 @@ class Channel:
         request.write_bits(passive, durable, auto_delete, internal, no_wait)
         request.write_table(arguments)
 
-        yield from self._write_frame(frame, request, no_wait, timeout=timeout)
+        return (yield from self._write_frame(frame, request, no_wait, timeout=timeout))
 
     @asyncio.coroutine
     def exchange_declare_ok(self, frame):
@@ -130,7 +132,7 @@ class Channel:
         request.write_shortstr(queue_name)
         request.write_bits(passive, durable, exclusive, auto_delete, no_wait)
         request.write_table({})
-        yield from self._write_frame(frame, request, no_wait, timeout=timeout)
+        return (yield from self._write_frame(frame, request, no_wait, timeout=timeout))
 
     @asyncio.coroutine
     def queue_declare_ok(self, frame):
@@ -138,6 +140,25 @@ class Channel:
             self.response_future.set_result(frame)
         frame.frame()
         logger.debug("queue declared")
+
+    @asyncio.coroutine
+    def queue_delete(self, queue_name, if_unused=False, if_empty=False, no_wait=False, timeout=None):
+        frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_DELETE)
+
+        request = amqp_frame.AmqpEncoder()
+        request.write_short(0)  # reserved
+        request.write_shortstr(queue_name)
+        request.write_bits(if_unused, if_empty, no_wait)
+        return (yield from self._write_frame(frame, request, no_wait, timeout=timeout))
+
+    @asyncio.coroutine
+    def queue_delete_ok(self, frame):
+        if self.response_future is not None:
+            self.response_future.set_result(frame)
+        frame.frame()
+        logger.debug('queue deleted')
 
     @asyncio.coroutine
     def server_channel_close(self, frame):
@@ -170,7 +191,7 @@ class Channel:
         request.write_shortstr(routing_key)
         request.write_octet(int(no_wait))
         request.write_table({})
-        yield from self._write_frame(frame, request, no_wait, timeout=timeout)
+        return (yield from self._write_frame(frame, request, no_wait, timeout=timeout))
 
     @asyncio.coroutine
     def queue_bind_ok(self, frame):
@@ -357,7 +378,7 @@ class Channel:
         encoder.write_table(arguments)
 
         self.message_queue = asyncio.Queue()
-        yield from self._write_frame(frame, encoder, no_wait, timeout=timeout)
+        return (yield from self._write_frame(frame, encoder, no_wait, timeout=timeout))
 
     @asyncio.coroutine
     def basic_consume_ok(self, frame):

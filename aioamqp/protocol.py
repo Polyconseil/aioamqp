@@ -5,11 +5,12 @@
 import asyncio
 import logging
 
-import aioamqp
 from . import channel as amqp_channel
 from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
+from . import version
+
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +71,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 'consumer_cancel_notify': True,
                 'connection.blocked': False,
             },
-            'product_version': aioamqp.__version__,
-            'product': aioamqp.__packagename__,
+            'product_version': version.__version__,
+            'product': version.__packagename__,
             'copyright': 'BSD',
         }
         auth = {
