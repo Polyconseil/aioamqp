@@ -1,4 +1,5 @@
 import logging
+import os
 
 import asyncio
 from asyncio import subprocess
@@ -15,7 +16,8 @@ class RabbitTestCase:
     RABBIT_TIMEOUT = 1.0
 
     def setUp(self):
-        self.loop = asyncio.get_event_loop()
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
         self.vhost = '/'
         self.host = 'localhost'
         self.port = 5672
@@ -44,6 +46,7 @@ class RabbitTestCase:
         for amqp in self.amqps:
             logger.debug('Delete amqp %s', amqp)
             del amqp
+        self.loop.close()
 
     @property
     def amqp(self):
@@ -53,10 +56,22 @@ class RabbitTestCase:
     def channel(self):
         return self.channels[0]
 
+    def get_rabbitmqctl_exe(self):
+        paths = [
+            os.path.join(os.path.expanduser('~'), 'sbin/rabbitmqctl'),
+            '/usr/local/sbin/rabbitmqctl',
+            '/usr/sbin/rabbitmqctl',
+        ]
+        for path in paths:
+            if os.path.exists(path):
+                return path
+        return 'rabbitmqctl'
+
     @asyncio.coroutine
     def rabbitctl(self, *args):
+        exe_name = self.get_rabbitmqctl_exe()
         proc = yield from asyncio.create_subprocess_exec(
-            'rabbitmqctl', *args,
+            exe_name, *args,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         try:
@@ -65,10 +80,18 @@ class RabbitTestCase:
             proc.kill()
             yield from proc.wait()
             raise
+        if stdout is None:
+            stdout = ''
+        else:
+            stdout = stdout.decode('utf8')
+        if stderr is None:
+            stderr = ''
+        else:
+            stderr = stderr.decode('utf8')
         exitcode = yield from proc.wait()
         if exitcode != 0 or stderr:
-            raise ValueError(exitcode, stderr.decode('utf8'))
-        return stdout.decode('utf8')
+            raise ValueError(exitcode, stdout, stderr)
+        return stdout
 
     @asyncio.coroutine
     def rabbitctl_list(self, *args):
@@ -83,7 +106,7 @@ class RabbitTestCase:
         info = ['name', 'durable', 'auto_delete',
             'arguments', 'policy', 'pid', 'owner_pid', 'exclusive_consumer_pid',
             'exclusive_consumer_tag', 'messages_ready', 'messages_unacknowledged', 'messages',
-            'consumers', 'memory', 'slave_pids', 'synchronised_slave_pids', 'status']
+            'consumers', 'memory', 'slave_pids', 'synchronised_slave_pids']
         args = ['list_queues'] + info
         if vhost is not None:
             args += ['-p', vhost]
@@ -150,7 +173,6 @@ class RabbitTestCase:
     @asyncio.coroutine
     def create_amqp(self, vhost=None):
         vhost = vhost or self.vhost
-        amqp = yield from aioamqp_connect(host=self.host, port=self.port)
-        yield from amqp.start_connection(virtual_host=vhost)
+        amqp = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost)
         self.amqps.append(amqp)
         return amqp
