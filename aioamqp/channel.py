@@ -22,18 +22,22 @@ class Channel:
         self.response_future = None
 
     @asyncio.coroutine
-    def open(self):
+    def open(self, timeout=None):
         """Open the channel on the server"""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_OPEN)
         request = amqp_frame.AmqpEncoder()
         request.write_shortstr('')
-        frame.write_frame(request)
+        return (yield from self._write_frame(frame, request, no_wait=False, timeout=timeout, no_check_open=True))
 
     @asyncio.coroutine
     def open_ok(self, frame):
         self.is_open = True
+        if self.response_future is not None:
+            self.response_future.set_result(frame)
+        frame.frame()
+        logger.info('channel opened')
 
     @asyncio.coroutine
     def close(self):
@@ -66,15 +70,18 @@ class Channel:
         yield from methods[(frame.class_id, frame.method_id)](frame)
 
     @asyncio.coroutine
-    def _write_frame(self, frame, request, no_wait, timeout=None):
+    def _write_frame(self, frame, request, no_wait, timeout=None, no_check_open=False):
+        assert self.is_open or no_check_open, "channel is closed"
         if no_wait:
             frame.write_frame(request)
         else:
             assert self.response_future is None, "Already waiting for some event"
             self.response_future = asyncio.Future()
             frame.write_frame(request)
-            response_frame = yield from asyncio.wait_for(self.response_future, timeout=timeout)
-            self.response_future = None
+            try:
+                response_frame = yield from asyncio.wait_for(self.response_future, timeout=timeout)
+            finally:
+                self.response_future = None
             return response_frame
 
     @asyncio.coroutine
@@ -162,13 +169,11 @@ class Channel:
 
     @asyncio.coroutine
     def server_channel_close(self, frame):
+        if self.response_future is not None:
+            self.response_future.set_exception(
+                exceptions.ChannelClosed("{} ({})".format(frame.arguments['reply_text'], frame.arguments['reply_code']), frame=frame))
         frame.frame()
-        response = amqp_frame.AmqpDecoder(frame.payload)
-        reply_code = response.read_short()
-        reply_text = response.read_shortstr()
-        #class_id = response.read_short()
-        #method_id = response.read_short()
-        raise exceptions.ClosedConnection("{} ({})".format(reply_text, reply_code))
+        self.is_open = False
 
 #
 ## Public api

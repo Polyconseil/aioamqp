@@ -2,8 +2,9 @@ import unittest
 
 import asyncio
 
-from .. import connect as aioamqp_connect
 from . import testcase
+from .. import connect as aioamqp_connect
+from .. import exceptions
 
 
 class QueueDeclareTestCase(testcase.RabbitWithChannelTestCase, unittest.TestCase):
@@ -65,7 +66,7 @@ class QueueDeclareTestCase(testcase.RabbitWithChannelTestCase, unittest.TestCase
             yield from amqp2.start_connection(virtual_host=self.vhost)
             channel = yield from amqp2.channel()
             # assert that this connection cannot connect to the queue
-            with self.assertRaises(asyncio.TimeoutError):
+            with self.assertRaises(exceptions.ChannelClosed):
                 yield from channel.basic_consume(queue_name, no_wait=False, timeout=self.RABBIT_TIMEOUT)
             channel.close()
             del channel
@@ -97,12 +98,15 @@ class QueueDeclareTestCase(testcase.RabbitWithChannelTestCase, unittest.TestCase
         def go():
             queue_name = self.queue_name('test_passive')
             yield from self.safe_queue_delete(queue_name)
-            # TODO ask for non-existing queue
-            #yield from self.channel.queue_declare(queue_name, passive=True)
+            # ask for non-existing queue
+            channel = yield from self.amqp.channel()
+            with self.assertRaises(exceptions.ChannelClosed):
+                yield from channel.queue_declare(queue_name, passive=True)
             # create queue
             yield from self.channel.queue_declare(queue_name, exclusive=True)
             # get info
-            frame = yield from self.channel.queue_declare(queue_name, passive=True)
+            channel = yield from self.amqp.channel()
+            frame = yield from channel.queue_declare(queue_name, passive=True)
             self.assertEqual(queue_name, frame.arguments['queue'])
             # queue has been declared in exclusive mode, no need to delete it
         self.loop.run_until_complete(go())

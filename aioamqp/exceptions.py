@@ -16,4 +16,7 @@ class ConnectionError(AioamqpException):
 
 
 class ChannelClosed(AioamqpException):
-    pass
+    def __init__(self,  message, frame):
+        super().__init__(message, frame)
+        self.message = message
+        self.frame = frame

@@ -151,8 +151,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         while not self.stop_now.done():
             try:
                 yield from self.dispatch_frame()
-            except Exception as exc:
-                print(exc)
+            except:
+                logger.exception('error on dispatch')
 
     @asyncio.coroutine
     def reply_to_hearbeat(self, frame):

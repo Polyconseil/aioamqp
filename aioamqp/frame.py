@@ -345,6 +345,14 @@ class AmqpResponse:
                         'message_count': decoder.read_long(),
                         'consumer_count': decoder.read_long(),
                     }
+            elif self.class_id == amqp_constants.CLASS_CHANNEL:
+                if self.method_id == amqp_constants.CHANNEL_CLOSE:
+                    self.arguments = {
+                        'reply_code': decoder.read_short(),
+                        'reply_text': decoder.read_shortstr(),
+                        'class_id': decoder.read_short(),
+                        'method_id': decoder.read_short(),
+                    }
 
         elif self.frame_type == amqp_constants.TYPE_HEADER:
             self.payload = io.BytesIO(payload_data)
