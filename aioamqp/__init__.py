@@ -25,6 +25,9 @@ def connect(host='localhost', port=5672, login='guest', password='guest',
     transport, protocol = yield from asyncio.get_event_loop().create_connection(
         AmqpProtocol, host, port)
 
-    yield from protocol.start_connection(host, port, login, password, virtualhost, login_method, insist)
+    try:
+        yield from protocol.start_connection(host, port, login, password, virtualhost, login_method, insist)
+    except OSError as ex:
+        raise ClosedConnection('Connection failed') from ex
 
     return protocol
