@@ -4,11 +4,14 @@
 
 import unittest
 
-from aioamqp.frame import AmqpEncoder
+from ..frame import AmqpEncoder
 
 
 class EncoderTestCase(unittest.TestCase):
     """Test encoding of python builtin objects to AMQP frames."""
+
+    _multiprocess_can_split_ = True
+
     def setUp(self):
         self.encoder = AmqpEncoder()
 

@@ -319,6 +319,7 @@ class AmqpResponse:
         self.weight = None
         self.body_size = None
         self.property_flags = None
+        self.arguments = {}
 
     @asyncio.coroutine
     def read_frame(self):
@@ -337,6 +338,21 @@ class AmqpResponse:
             decoder = AmqpDecoder(self.payload)
             self.class_id = decoder.read_short()
             self.method_id = decoder.read_short()
+            if self.class_id == amqp_constants.CLASS_QUEUE:
+                if self.method_id == amqp_constants.QUEUE_DECLARE_OK:
+                    self.arguments = {
+                        'queue': decoder.read_shortstr(),
+                        'message_count': decoder.read_long(),
+                        'consumer_count': decoder.read_long(),
+                    }
+            elif self.class_id == amqp_constants.CLASS_CHANNEL:
+                if self.method_id == amqp_constants.CHANNEL_CLOSE:
+                    self.arguments = {
+                        'reply_code': decoder.read_short(),
+                        'reply_text': decoder.read_shortstr(),
+                        'class_id': decoder.read_short(),
+                        'method_id': decoder.read_short(),
+                    }
 
         elif self.frame_type == amqp_constants.TYPE_HEADER:
             self.payload = io.BytesIO(payload_data)
