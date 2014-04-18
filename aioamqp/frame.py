@@ -42,6 +42,7 @@ import asyncio
 import io
 import struct
 
+from . import exceptions
 from . import constants as amqp_constants
 
 
@@ -324,7 +325,10 @@ class AmqpResponse:
     @asyncio.coroutine
     def read_frame(self):
         """Decode the frame"""
-        data = yield from self.reader.readexactly(7)
+        try:
+            data = yield from self.reader.readexactly(7)
+        except asyncio.IncompleteReadError:
+            raise exceptions.ClosedConnection()
 
         frame_header = io.BytesIO(data)
         decoder = AmqpDecoder(frame_header)

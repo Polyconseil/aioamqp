@@ -25,6 +25,6 @@ def connect(host='localhost', port=5672, login='guest', password='guest',
     transport, protocol = yield from asyncio.get_event_loop().create_connection(
         AmqpProtocol, host, port)
 
-    protocol.start_connection(host, port, login, password, virtualhost, login_method, insist)
+    yield from protocol.start_connection(host, port, login, password, virtualhost, login_method, insist)
 
     return protocol

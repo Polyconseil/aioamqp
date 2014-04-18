@@ -63,8 +63,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """
         self.writer.write(amqp_constants.PROTOCOL_HEADER)
 
-        # ensure we effectively have a response from the server
-        yield from asyncio.wait_for(self.start(), timeout=amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
+        # Wait 'start' method from the server
+        yield from self.dispatch_frame()
 
         client_properties = {
             'capabilities': {
@@ -80,27 +80,27 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             'PASSWORD': password,
         }
 
-        yield from asyncio.wait_for(
-            self.start_ok(client_properties, login_method, auth, self.server_locales[0]),
-            amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
+        # waiting reply start with credentions and co
+        yield from self.start_ok(client_properties, 'AMQPLAIN', auth, self.server_locales[0])
 
-        yield from asyncio.wait_for(
-            self.tune(), amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
+        # wait for a "tune" reponse
+        yield from self.dispatch_frame()
 
         tune_ok = {
             'channel_max': self.server_channel_max,
             'frame_max': self.server_frame_max,
             'heartbeat': self.hearbeat,
         }
-        yield from asyncio.wait_for(
-            self.tune_ok(**tune_ok), amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
+        # "tune" the connexion with max channel, max frame, heartbeat
+        yield from self.tune_ok(**tune_ok)
 
-        yield from asyncio.wait_for(
-            self.open(virtualhost, capabilities='', insist=insist), amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
+        # open a virtualhost
+        yield from self.open(virtualhost, capabilities='', insist=insist)
 
-        yield from asyncio.wait_for(
-            self.open_ok(), amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
+        # wait for open-ok
+        yield from self.dispatch_frame()
 
+        self.is_connected = True
         # for now, we read server's responses asynchronously
         self.worker = asyncio.async(self.run())
 
@@ -124,7 +124,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         method_dispatch = {
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE): self.server_close,
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK): self.server_close,
-            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_START_OK): self.start_ok,
+            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_TUNE): self.tune,
+            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_START): self.start,
+            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_OPEN_OK): self.open_ok,
         }
         if not frame:
             frame = yield from self.get_frame()
@@ -163,10 +165,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     # Amqp specific methods
     @asyncio.coroutine
-    def start(self):
+    def start(self, frame):
         """Method sent from the server to begin a new connection"""
-        frame = yield from self.get_frame()
-        frame.frame()
         response = amqp_frame.AmqpDecoder(frame.payload)
 
         self.version_major = response.read_octet()
@@ -235,9 +235,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from self.stop()
 
     @asyncio.coroutine
-    def tune(self):
-        frame = yield from self.get_frame()
-        frame.frame()
+    def tune(self, frame):
         decoder = amqp_frame.AmqpDecoder(frame.payload)
         self.server_channel_max = decoder.read_short()
         self.server_frame_max = decoder.read_long()
@@ -274,9 +272,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         frame.write_frame(encoder)
 
     @asyncio.coroutine
-    def open_ok(self):
-        frame = yield from self.get_frame()
-        frame.frame()
+    def open_ok(self, frame):
+        pass
 
     #
     ## aioamqp public methods
