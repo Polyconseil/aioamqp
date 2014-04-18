@@ -7,6 +7,8 @@ from .. import connect as aioamqp_connect
 class RabbitTestCase:
     """TestCase with a rabbit running in background"""
 
+    RABBIT_TIMEOUT = 1.0
+
     def setUp(self):
         self.loop = asyncio.get_event_loop()
         self.vhost = '/'
@@ -78,6 +80,22 @@ class RabbitTestCase:
                 queue[info_name] = info_value
             queues[queue['name']] = queue
         return queues
+
+    @asyncio.coroutine
+    def safe_queue_delete(self, queue_name, channel=None):
+        """Delete the queue but does not raise any exception if it fails
+
+        The operation has a timeout as well.
+        """
+        if channel is None:
+            if hasattr(self, 'channel'):
+                channel = self.channel
+        if channel is None:
+            raise ValueError('You must provide a channel argument or have a channel attribute')
+        try:
+            yield from channel.queue_delete(queue_name, no_wait=False, timeout=1.0)
+        except asyncio.TimeoutError as ex:
+            logger.warning('Timeout on queue deletion\n%s', traceback.format_exc(ex))
 
 
 class RabbitWithChannelTestCase(RabbitTestCase):
