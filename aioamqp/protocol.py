@@ -57,7 +57,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 return
 
     @asyncio.coroutine
-    def start_connection(self, login="guest", password="guest", virtual_host="/", insist=False):
+    def start_connection(self, host, port, login, password, virtualhost, login_method, insist):
         """Initiate a connection at the protocol level
             We send `PROTOCOL_HEADER'
         """
@@ -81,7 +81,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         }
 
         yield from asyncio.wait_for(
-            self.start_ok(client_properties, 'AMQPLAIN', auth, self.server_locales[0]),
+            self.start_ok(client_properties, login_method, auth, self.server_locales[0]),
             amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
 
         yield from asyncio.wait_for(
@@ -96,7 +96,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             self.tune_ok(**tune_ok), amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
 
         yield from asyncio.wait_for(
-            self.open(virtual_host, capabilities='', insist=insist), amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
+            self.open(virtualhost, capabilities='', insist=insist), amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)
 
         yield from asyncio.wait_for(
             self.open_ok(), amqp_constants.PROTOCOL_DEFAULT_TIMEOUT)

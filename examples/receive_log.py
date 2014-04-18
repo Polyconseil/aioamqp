@@ -13,18 +13,17 @@ import random
 
 @asyncio.coroutine
 def receive_log():
-    protocol = yield from aioamqp.connect('localhost', 5672)
-
     try:
-        yield from protocol.start_connection()
+        protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.ClosedConnection:
-        print("closed connection")
+        print("closed connections")
         return
+
 
     channel = yield from protocol.channel()
     exchange_name = 'logs'
     # TODO let rabbitmq choose the queue name
-    queue_name = 'queue-%s' % random.randint(0,10000)
+    queue_name = 'queue-%s' % random.randint(0, 10000)
 
     yield from channel.exchange(exchange_name, 'fanout')
 

@@ -14,10 +14,8 @@ import sys
 
 @asyncio.coroutine
 def exchange_routing():
-    protocol = yield from aioamqp.connect('localhost', 5672)
-
     try:
-        yield from protocol.start_connection()
+        protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.ClosedConnection:
         print("closed connections")
         return

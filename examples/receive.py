@@ -6,13 +6,12 @@ import aioamqp
 
 @asyncio.coroutine
 def receive():
-    protocol = yield from aioamqp.connect('localhost', 5672)
-
     try:
-        yield from protocol.start_connection()
+        protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.ClosedConnection:
         print("closed connections")
         return
+
 
     channel = yield from protocol.channel()
     queue_name = 'py2.queue'
