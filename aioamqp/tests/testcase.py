@@ -1,7 +1,12 @@
+import logging
+
 import asyncio
 from asyncio import subprocess
 
 from .. import connect as aioamqp_connect
+
+
+logger = logging.getLogger(__name__)
 
 
 class RabbitTestCase:
@@ -14,17 +19,39 @@ class RabbitTestCase:
         self.vhost = '/'
         self.host = 'localhost'
         self.port = 5672
+        self.queues = {}
+        self.channels = []
+        self.amqps = []
         @asyncio.coroutine
         def go():
-            self.amqp = yield from aioamqp_connect(host=self.host, port=self.port)
-            yield from self.amqp.start_connection(virtual_host=self.vhost)
+            amqp = yield from self.create_amqp()
+            self.amqps.append(amqp)
+            channel = yield from self.create_channel()
+            self.channels.append(channel)
         self.loop.run_until_complete(go())
 
     def tearDown(self):
-        del self.amqp
+        @asyncio.coroutine
+        def go():
+            for queue_name, channel in self.queues.values():
+                logger.debug('Delete queue %s', self.full_queue_name(queue_name))
+                yield from self.safe_queue_delete(queue_name, channel)
+        self.loop.run_until_complete(go())
+        for channel in self.channels:
+            logger.debug('Delete channel %s', channel)
+            channel.close()
+            del channel
+        for amqp in self.amqps:
+            logger.debug('Delete amqp %s', amqp)
+            del amqp
 
-    def queue_name(self, identifier):
-        return self.__module__ + '.' + self.__class__.__qualname__ + '.' + identifier
+    @property
+    def amqp(self):
+        return self.amqps[0]
+
+    @property
+    def channel(self):
+        return self.channels[0]
 
     @asyncio.coroutine
     def rabbitctl(self, *args):
@@ -87,28 +114,43 @@ class RabbitTestCase:
 
         The operation has a timeout as well.
         """
-        if channel is None:
-            if hasattr(self, 'channel'):
-                channel = self.channel
-        if channel is None:
-            raise ValueError('You must provide a channel argument or have a channel attribute')
+        channel = channel or self.channel
+        full_queue_name = self.full_queue_name(queue_name)
         try:
-            yield from channel.queue_delete(queue_name, no_wait=False, timeout=1.0)
+            yield from channel.queue_delete(full_queue_name, no_wait=False, timeout=1.0)
         except asyncio.TimeoutError as ex:
-            logger.warning('Timeout on queue deletion\n%s', traceback.format_exc(ex))
+            logger.warning('Timeout on queue %s deletion\n%s', full_queue_name, traceback.format_exc(ex))
+        except Exception as ex:
+            logger.error('Unexpected error on queue %s deletion\n%s', fulle_queue_name, traceback.format_exc(ex))
 
+    def full_queue_name(self, queue_name):
+        return self.id() + '.' + queue_name
 
-class RabbitWithChannelTestCase(RabbitTestCase):
-    """TestCase with a rabbit and a pre opened channe"""
+    @asyncio.coroutine
+    def queue_declare(self, queue_name, *args, channel=None, exclusive=True, safe_delete_before=True, **kw):
+        channel = channel or self.channel
+        if safe_delete_before:
+            yield from self.safe_queue_delete(queue_name, channel=channel)
+        # prefix queue_name with the test name
+        full_queue_name = self.full_queue_name(queue_name)
+        try:
+            rep = yield from channel.queue_declare(full_queue_name, *args, exclusive=exclusive, **kw)
+        finally:
+            self.queues[queue_name] = (queue_name, channel)
+        rep = rep or queue_name
+        return rep
 
-    def setUp(self):
-        super().setUp()
-        @asyncio.coroutine
-        def go():
-            self.channel = yield from self.amqp.channel()
-        self.loop.run_until_complete(go())
+    @asyncio.coroutine
+    def create_channel(self, amqp=None):
+        amqp = amqp or self.amqp
+        channel = yield from amqp.channel()
+        self.channels.append(channel)
+        return channel
 
-    def tearDown(self):
-        self.channel.close()
-        del self.channel
-        super().tearDown()
+    @asyncio.coroutine
+    def create_amqp(self, vhost=None):
+        vhost = vhost or self.vhost
+        amqp = yield from aioamqp_connect(host=self.host, port=self.port)
+        yield from amqp.start_connection(virtual_host=vhost)
+        self.amqps.append(amqp)
+        return amqp
