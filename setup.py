@@ -1,16 +1,19 @@
+import os
+import re
 import setuptools
 import sys
 
 py_version = sys.version_info[:2]
 
-aioamqp = __import__('aioamqp')
-version = aioamqp.__version__
-package_name = aioamqp.__packagename__
+_file_content = open(os.path.join(os.path.dirname(__file__), 'aioamqp', 'version.py')).read()
+
+rex = re.compile(r"""version__ = '(.*)'.*__packagename__ = '(.*)'""", re.MULTILINE | re.DOTALL)
+VERSION, PACKAGE_NAME = rex.search(_file_content).groups()
 description = 'AMQP implementation using asyncio'
 
 setuptools.setup(
-    name=package_name,
-    version=version,
+    name=PACKAGE_NAME,
+    version=VERSION,
     author='Benoît Calvez',
     author_email='benoit.calvez@polyconseil.fr',
     url='https://github.com/polyconseil/aioamqp',
