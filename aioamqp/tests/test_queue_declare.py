@@ -11,7 +11,7 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
     _multiprocess_can_split_ = True
 
     @asyncio.coroutine
-    def _test_queue_declare(self, queue_name, exclusive=False, durable=False, auto_delete=False, clean_after=False):
+    def _test_queue_declare(self, queue_name, exclusive=False, durable=False, auto_delete=False):
         full_queue_name = self.full_queue_name(queue_name)
 
         # declare queue
@@ -38,22 +38,19 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     def test_durable_and_auto_deleted(self):
         self.loop.run_until_complete(
-            self._test_queue_declare('test_durable_and_auto_deleted', exclusive=False, durable=True, auto_delete=True))
+            self._test_queue_declare('q', exclusive=False, durable=True, auto_delete=True))
 
     def test_durable_and_not_auto_deleted(self):
         self.loop.run_until_complete(
-            self._test_queue_declare(
-                'test_durable_and_not_auto_deleted', exclusive=False, durable=True, auto_delete=False))
+            self._test_queue_declare('q', exclusive=False, durable=True, auto_delete=False))
 
     def test_not_durable_and_auto_deleted(self):
         self.loop.run_until_complete(
-            self._test_queue_declare(
-                'test_not_durable_and_auto_deleted', exclusive=False, durable=False, auto_delete=True))
+            self._test_queue_declare('q', exclusive=False, durable=False, auto_delete=True))
 
     def test_not_durable_and_not_auto_deleted(self):
         self.loop.run_until_complete(
-            self._test_queue_declare(
-                'test_not_durable_and_not_auto_deleted', exclusive=False, durable=False, auto_delete=False))
+            self._test_queue_declare('q', exclusive=False, durable=False, auto_delete=False))
 
     def test_exclusive(self):
         @asyncio.coroutine
