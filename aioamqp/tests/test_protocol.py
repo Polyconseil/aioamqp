@@ -26,9 +26,9 @@ class ProtocolTestCase(unittest.TestCase):
         self.assertTrue(proto.is_connected)
 
     def test_connection_unexistant_vhost(self):
-        with self.assertRaises(exceptions.ClosedConnection):
+        with self.assertRaises(exceptions.AmqpClosedConnection):
             self.loop.run_until_complete(amqp_connect(virtualhost='/unexistant'))
 
     def test_connection_wrong_login_password(self):
-        with self.assertRaises(exceptions.ClosedConnection):
+        with self.assertRaises(exceptions.AmqpClosedConnection):
             self.loop.run_until_complete(amqp_connect(login='wrong', password='wrong'))

@@ -8,10 +8,9 @@ import aioamqp
 def receive():
     try:
         protocol = yield from aioamqp.connect('localhost', 5672)
-    except aioamqp.ClosedConnection:
+    except aioamqp.AmqpClosedConnection:
         print("closed connections")
         return
-
 
     channel = yield from protocol.channel()
     queue_name = 'py2.queue'

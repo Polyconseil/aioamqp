@@ -7,7 +7,7 @@ class AioamqpException(Exception):
     pass
 
 
-class ClosedConnection(AioamqpException):
+class AmqpClosedConnection(AioamqpException):
     pass
 
 

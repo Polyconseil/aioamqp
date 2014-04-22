@@ -204,7 +204,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         reply_text = response.read_shortstr()
         #class_id = response.read_short()
         #method_id = response.read_short()
-        raise exceptions.ClosedConnection("{} ({})".format(reply_text, reply_code))
+        raise exceptions.AmqpClosedConnection("{} ({})".format(reply_text, reply_code))
 
     @asyncio.coroutine
     def server_close_ok(self, frame):

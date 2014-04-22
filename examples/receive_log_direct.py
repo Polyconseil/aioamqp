@@ -17,7 +17,7 @@ import sys
 def receive_log():
     try:
         protocol = yield from aioamqp.connect('localhost', 5672)
-    except aioamqp.ClosedConnection:
+    except aioamqp.AmqpClosedConnection:
         print("closed connections")
         return
 

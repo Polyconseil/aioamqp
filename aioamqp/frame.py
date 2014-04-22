@@ -331,7 +331,7 @@ class AmqpResponse:
         try:
             data = yield from self.reader.readexactly(7)
         except (asyncio.IncompleteReadError, socket.error):
-            raise exceptions.ClosedConnection()
+            raise exceptions.AmqpClosedConnection()
 
         frame_header = io.BytesIO(data)
         decoder = AmqpDecoder(frame_header)

@@ -10,7 +10,7 @@ import sys
 def exchange_routing():
     try:
         protocol = yield from aioamqp.connect('localhost', 5672)
-    except aioamqp.ClosedConnection:
+    except aioamqp.AmqpClosedConnection:
         print("closed connections")
         return
 
