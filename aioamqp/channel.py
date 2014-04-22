@@ -86,7 +86,7 @@ class Channel:
 
     @asyncio.coroutine
     def exchange_declare(self, exchange_name, type_name, passive=False, durable=False,
-                         auto_delete=False, internal=False, no_wait=False, arguments=None, timeout=None):
+                         auto_delete=False, no_wait=False, arguments=None, timeout=None):
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DECLARE)
@@ -110,20 +110,21 @@ class Channel:
         logger.debug("exchange declared")
 
     @asyncio.coroutine
-    def exchange_delete(self, exchange_name, if_unused, no_wait):
+    def exchange_delete(self, exchange_name, if_unused=False, no_wait=False, timeout=None):
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
-            amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DECLARE)
+            amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DELETE)
         request = amqp_frame.AmqpEncoder()
         # short reserved-1
         request.write_short(0)
         request.write_shortstr(exchange_name)
-        request.write_bool(if_unused)
-        request.write_bool(no_wait)
-        frame.write_frame(request)
+        request.write_bits(if_unused, no_wait)
+        return (yield from self._write_frame(frame, request, no_wait, timeout=timeout))
 
     @asyncio.coroutine
     def exchange_delete_ok(self, frame):
+        if self.response_future is not None:
+            self.response_future.set_result(frame)
         frame.frame()
         logger.debug("exchange deleted")
 
