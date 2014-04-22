@@ -142,9 +142,9 @@ class RabbitTestCase:
         try:
             yield from channel.queue_delete(full_queue_name, no_wait=False, timeout=1.0)
         except asyncio.TimeoutError:
-            logger.warning('Timeout on queue %s deletion\n%s', full_queue_name, exc_info=True)
+            logger.warning('Timeout on queue %s deletion', full_queue_name, exc_info=True)
         except Exception:
-            logger.error('Unexpected error on queue %s deletion\n%s', fulle_queue_name, exc_info=True)
+            logger.error('Unexpected error on queue %s deletion', fulle_queue_name, exc_info=True)
 
     def full_queue_name(self, queue_name):
         return self.id() + '.' + queue_name
