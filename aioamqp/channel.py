@@ -170,8 +170,8 @@ class Channel:
     @asyncio.coroutine
     def server_channel_close(self, frame):
         if self.response_future is not None:
-            self.response_future.set_exception(
-                exceptions.ChannelClosed("{} ({})".format(frame.arguments['reply_text'], frame.arguments['reply_code']), frame=frame))
+            exc_msg = "{} ({})".format(frame.arguments['reply_text'], frame.arguments['reply_code'])
+            self.response_future.set_exception(exceptions.ChannelClosed(exc_msg, frame=frame))
         frame.frame()
         self.is_open = False
 
@@ -277,8 +277,7 @@ class Channel:
 
     @asyncio.coroutine
     def basic_qos_ok(self, frame):
-        """"""
-        pass
+        raise NotImplementedError()
 
     @asyncio.coroutine
     def basic_cancel(self, consumer_tag, no_wait=False):

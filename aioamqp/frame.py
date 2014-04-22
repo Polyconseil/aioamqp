@@ -236,8 +236,9 @@ class AmqpDecoder:
         return table
 
     def read_table_subitem(self, table_data):
-        """
+        """Read `table_data` bytes, guess the type of the value, and cast it.
 
+            table_data:     a pair of b'<type><value>'
         """
         value_type = chr(table_data.read_octet())
         if value_type == 'F':
@@ -321,6 +322,7 @@ class AmqpResponse:
         self.body_size = None
         self.property_flags = None
         self.arguments = {}
+        self.frame_length = 0
 
     @asyncio.coroutine
     def read_frame(self):
