@@ -3,8 +3,6 @@ import unittest
 import asyncio
 
 from . import testcase
-from .. import connect as aioamqp_connect
-from .. import exceptions
 
 
 class QueueDeleteTestCase(testcase.RabbitTestCase, unittest.TestCase):

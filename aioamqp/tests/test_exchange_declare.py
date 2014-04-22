@@ -2,10 +2,8 @@ import logging
 import unittest
 
 import asyncio
-import itertools
 
 from . import testcase
-from .. import connect as aioamqp_connect
 from .. import exceptions
 
 
@@ -21,7 +19,8 @@ class ExchangeDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         full_exchange_name = self.full_exchange_name(exchange_name)
 
         # declare exchange
-        yield from self.exchange_declare(exchange_name, type_name, no_wait=False, durable=durable, auto_delete=auto_delete, timeout=self.RABBIT_TIMEOUT)
+        yield from self.exchange_declare(exchange_name, type_name, no_wait=False,
+            durable=durable, auto_delete=auto_delete, timeout=self.RABBIT_TIMEOUT)
 
         # retrieve exchange info from rabbitmqctl
         exchanges = yield from self.list_exchanges()
