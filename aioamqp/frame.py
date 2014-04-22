@@ -41,6 +41,7 @@ Content Payload
 import asyncio
 import io
 import struct
+import socket
 
 from . import exceptions
 from . import constants as amqp_constants
@@ -329,7 +330,7 @@ class AmqpResponse:
         """Decode the frame"""
         try:
             data = yield from self.reader.readexactly(7)
-        except asyncio.IncompleteReadError:
+        except (asyncio.IncompleteReadError, socket.error):
             raise exceptions.ClosedConnection()
 
         frame_header = io.BytesIO(data)
