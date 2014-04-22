@@ -15,7 +15,9 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         full_queue_name = self.full_queue_name(queue_name)
 
         # declare queue
-        frame = yield from self.queue_declare(queue_name, no_wait=False, exclusive=exclusive, durable=durable, auto_delete=auto_delete, timeout=self.RABBIT_TIMEOUT)
+        frame = yield from self.queue_declare(
+            queue_name, no_wait=False, exclusive=exclusive, durable=durable,
+            auto_delete=auto_delete, timeout=self.RABBIT_TIMEOUT)
 
         # assert returned frame has the good arguments
         self.assertEqual(full_queue_name, frame.arguments['queue'])
@@ -35,20 +37,23 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.safe_queue_delete(queue_name)
 
     def test_durable_and_auto_deleted(self):
-        self.loop.run_until_complete(self._test_queue_declare('test_durable_and_auto_deleted',
-            exclusive=False, durable=True, auto_delete=True))
+        self.loop.run_until_complete(
+            self._test_queue_declare('test_durable_and_auto_deleted', exclusive=False, durable=True, auto_delete=True))
 
     def test_durable_and_not_auto_deleted(self):
-        self.loop.run_until_complete(self._test_queue_declare('test_durable_and_not_auto_deleted',
-            exclusive=False, durable=True, auto_delete=False))
+        self.loop.run_until_complete(
+            self._test_queue_declare(
+                'test_durable_and_not_auto_deleted', exclusive=False, durable=True, auto_delete=False))
 
     def test_not_durable_and_auto_deleted(self):
-        self.loop.run_until_complete(self._test_queue_declare('test_not_durable_and_auto_deleted',
-            exclusive=False, durable=False, auto_delete=True))
+        self.loop.run_until_complete(
+            self._test_queue_declare(
+                'test_not_durable_and_auto_deleted', exclusive=False, durable=False, auto_delete=True))
 
     def test_not_durable_and_not_auto_deleted(self):
-        self.loop.run_until_complete(self._test_queue_declare('test_not_durable_and_not_auto_deleted',
-            exclusive=False, durable=False, auto_delete=False))
+        self.loop.run_until_complete(
+            self._test_queue_declare(
+                'test_not_durable_and_not_auto_deleted', exclusive=False, durable=False, auto_delete=False))
 
     def test_exclusive(self):
         @asyncio.coroutine

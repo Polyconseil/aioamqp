@@ -22,7 +22,7 @@ def connect(host='localhost', port=5672, login='guest', password='guest',
 
         Returns: an AmqpProtocol instance
     """
-    transport, protocol = yield from asyncio.get_event_loop().create_connection(
+    _transport, protocol = yield from asyncio.get_event_loop().create_connection(
         AmqpProtocol, host, port)
 
     yield from protocol.start_connection(host, port, login, password, virtualhost, login_method, insist)
