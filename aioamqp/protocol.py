@@ -27,13 +27,18 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.connection_closed = asyncio.Future()
         self.stop_now = asyncio.Future()
         self.is_connected = False
-        self.server_version_major = None
-        self.server_version_minor = None
+        self.version_major = None
+        self.version_minor = None
         self.server_properties = None
         self.server_mechanisms = None
         self.server_locales = None
-
+        self.reader = None
+        self.writer = None
+        self.worker = None
+        self.hearbeat = None
         self.channels = {}
+        self.server_frame_max = None
+        self.server_channel_max = None
         self.channels_max_id = 0
 
     def client_connected(self, reader, writer):
