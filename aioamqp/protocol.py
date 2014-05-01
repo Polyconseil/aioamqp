@@ -181,7 +181,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def reply_to_hearbeat(self, frame):
-        print("replyin' to heartbeat")
+        logger.debug("replyin' to heartbeat")
         frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_HEARTBEAT, 0)
         request = amqp_frame.AmqpEncoder()
         frame.write_frame(request)
