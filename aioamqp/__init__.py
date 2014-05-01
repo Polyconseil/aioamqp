@@ -1,4 +1,6 @@
+import logging
 import asyncio
+from urllib.parse import urlparse
 
 from .protocol import AmqpProtocol
 from .exceptions import *
@@ -27,4 +29,19 @@ def connect(host='localhost', port=5672, login='guest', password='guest',
 
     yield from protocol.start_connection(host, port, login, password, virtualhost, login_method, insist)
 
+    return protocol
+
+
+@asyncio.coroutine
+def from_url(url):
+    """ Connect to the AMQP using a single url parameter and return the client.
+    """
+    url = urlparse(url)
+    host = url.hostname or 'localhost'
+    port = url.port or 5672
+    vhost = url.path[1:] if len(url.path) > 1 else '/'
+    protocol = yield from connect(host, port,
+                                  url.username or 'guest',
+                                  url.password or 'guest',
+                                  vhost, ssl=(url.scheme.endswith('amqps')))
     return protocol
