@@ -296,7 +296,7 @@ class AmqpRequest:
             # no specific headers
             pass
         else:
-            raise Exception("frame_type {} not handlded".format(self.frame_type))
+            raise Exception("frame_type {} not handled".format(self.frame_type))
 
         header = struct.pack('!BHI', self.frame_type, self.channel, payload.tell() + len(content_header))
         transmission.write(header)
