@@ -161,7 +161,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         while not self.stop_now.done():
             try:
                 yield from self.dispatch_frame()
-            except exceptions.AmqpClosedConnection as ex:
+            except exceptions.AmqpClosedConnection:
                 logger.info("Close connection")
                 self.stop_now.set_result(None)
             except:
@@ -266,7 +266,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def secure_ok(self, login_response):
-        # TODO
         pass
 
     @asyncio.coroutine

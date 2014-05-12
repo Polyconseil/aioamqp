@@ -291,7 +291,7 @@ class Channel:
 
     @asyncio.coroutine
     def basic_qos_ok(self, frame):
-        raise NotImplementedError()
+        pass
 
     @asyncio.coroutine
     def basic_cancel(self, consumer_tag, no_wait=False):

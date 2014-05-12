@@ -18,12 +18,14 @@ def use_full_name(f, arg_names):
     for arg_name in arg_names:
         if arg_name not in sig.parameters:
             raise ValueError('%s is not a valid argument name for function %s' % (arg_name, f.__qualname__))
+
     def wrapper(self, *args, **kw):
         ba = sig.bind_partial(self, *args, **kw)
         for param in sig.parameters.values():
             if param.name in arg_names and param.name in ba.arguments:
                 ba.arguments[param.name] = self.full_name(ba.arguments[param.name])
         return f(*(ba.args), **(ba.kwargs))
+
     return wrapper
 
 
@@ -72,6 +74,7 @@ class RabbitTestCase:
         self.exchanges = {}
         self.channels = []
         self.amqps = []
+
         @asyncio.coroutine
         def go():
             amqp = yield from self.create_amqp()
@@ -181,12 +184,14 @@ class RabbitTestCase:
             'arguments', 'policy', 'pid', 'owner_pid', 'exclusive_consumer_pid',
             'exclusive_consumer_tag', 'messages_ready', 'messages_unacknowledged', 'messages',
             'consumers', 'memory', 'slave_pids', 'synchronised_slave_pids']
-        return (yield from self.rabbitctl_list('list_queues', info, vhost=vhost, fully_qualified_name=fully_qualified_name))
+        return (yield from self.rabbitctl_list('list_queues', info, vhost=vhost,
+            fully_qualified_name=fully_qualified_name))
 
     @asyncio.coroutine
     def list_exchanges(self, vhost=None, fully_qualified_name=False):
         info = ['name', 'type', 'durable', 'auto_delete', 'internal', 'arguments', 'policy']
-        return (yield from self.rabbitctl_list('list_exchanges', info, vhost=vhost, fully_qualified_name=fully_qualified_name))
+        return (yield from self.rabbitctl_list('list_exchanges', info, vhost=vhost,
+            fully_qualified_name=fully_qualified_name))
 
     @asyncio.coroutine
     def safe_queue_delete(self, queue_name, channel=None):
@@ -226,7 +231,7 @@ class RabbitTestCase:
 
     def local_name(self, name):
         if self.is_full_name(name):
-            return name[len(self.id())+1:]  # +1 because of the '.'
+            return name[len(self.id()) + 1:]  # +1 because of the '.'
         else:
             return name
 
@@ -273,6 +278,7 @@ class RabbitTestCase:
         def protocol_factory(*args, **kw):
             return ProxyAmqpProtocol(self, *args, **kw)
         vhost = vhost or self.vhost
-        amqp = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost, protocol_factory=protocol_factory)
+        amqp = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
+            protocol_factory=protocol_factory)
         self.amqps.append(amqp)
         return amqp
