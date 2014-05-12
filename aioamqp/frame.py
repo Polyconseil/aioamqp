@@ -47,6 +47,9 @@ from . import exceptions
 from . import constants as amqp_constants
 
 
+DUMP_FRAMES = False
+
+
 class AmqpEncoder:
 
     def __init__(self, writer=None):
@@ -381,7 +384,8 @@ class AmqpResponse:
         assert self.frame_end == amqp_constants.FRAME_END
 
     def frame(self):
-        return
+        if not DUMP_FRAMES:
+            return
         frame_data = {
             'type': self.frame_type or '',
             'channel': self.channel,
