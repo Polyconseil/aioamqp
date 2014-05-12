@@ -12,6 +12,8 @@ from .. import connect as amqp_connect
 
 class ProtocolTestCase(unittest.TestCase):
 
+    _multiprocess_can_split_ = True
+
     def setUp(self):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
@@ -23,7 +25,7 @@ class ProtocolTestCase(unittest.TestCase):
 
     def test_connect(self):
         proto = self.loop.run_until_complete(amqp_connect())
-        self.assertTrue(proto.is_connected)
+        self.assertTrue(proto.is_open)
 
     def test_connection_unexistant_vhost(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
