@@ -15,7 +15,7 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         def go():
             channel = yield from self.create_channel()
             self.assertTrue(channel.is_open)
-            yield from channel.close()
+            channel.close()
             yield from asyncio.wait_for(channel.wait_closed(), timeout=2)
             self.assertFalse(channel.is_open)
         self.loop.run_until_complete(go())
@@ -24,10 +24,10 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         @asyncio.coroutine
         def go():
             channel = yield from self.create_channel()
-            yield from channel.close()
+            channel.close()
             yield from asyncio.wait_for(channel.wait_closed(), timeout=2)
             self.assertFalse(channel.is_open)
-            yield from channel.close()
+            channel.close()
             yield from asyncio.wait_for(channel.wait_closed(), timeout=2)
         self.loop.run_until_complete(go())
 
@@ -35,7 +35,7 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         @asyncio.coroutine
         def go():
             channel = self.channel
-            yield from channel.close()
+            channel.close()
             yield from asyncio.wait_for(channel.wait_closed(), timeout=2)
             with self.assertRaises(exceptions.ChannelClosed):
                 yield from self.channel.publish("coucou", "my_e", "")
@@ -45,7 +45,7 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         @asyncio.coroutine
         def go():
             channel = self.channel
-            yield from channel.close()
+            channel.close()
             yield from asyncio.wait_for(channel.wait_closed(), timeout=2)
             with self.assertRaises(exceptions.ChannelClosed):
                 yield from self.channel.queue_declare("qq")

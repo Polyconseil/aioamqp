@@ -40,7 +40,6 @@ class Channel:
         frame.frame()
         logger.info('channel opened')
 
-    @asyncio.coroutine
     def close(self, reply_code=0, reply_text="Normal Shutdown"):
         """Close the channel"""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)

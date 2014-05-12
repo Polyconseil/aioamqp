@@ -90,7 +90,6 @@ class RabbitTestCase:
                 logger.debug('Delete exchange %s', self.full_name(exchange_name))
                 yield from self.safe_exchange_delete(exchange_name, channel)
         self.loop.run_until_complete(go())
-        # TODO channel.close is a coroutine...
         for channel in self.channels:
             logger.debug('Delete channel %s', channel)
             channel.close()
