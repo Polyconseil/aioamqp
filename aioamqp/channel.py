@@ -20,6 +20,7 @@ class Channel:
         self.message_queue = None
         self.is_open = False
         self.response_future = None
+        self.close_event = asyncio.Event()
 
     @asyncio.coroutine
     def open(self, timeout=None):
@@ -40,18 +41,28 @@ class Channel:
         logger.info('channel opened')
 
     @asyncio.coroutine
-    def close(self):
+    def close(self, reply_code=0, reply_text="Normal Shutdown"):
         """Close the channel"""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
-            amqp_constants.CLASS_CHANNEL, amqp_constants.CONNECTION_CLOSE)
+            amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE)
         request = amqp_frame.AmqpEncoder()
-        request.write_shortstr('')
+        request.write_short(reply_code)
+        request.write_shortstr(reply_text)
+        request.write_short(0)
+        request.write_short(0)
         frame.write_frame(request)
+
+    @asyncio.coroutine
+    def wait_closed(self):
+        yield from self.close_event.wait()
 
     @asyncio.coroutine
     def close_ok(self, frame):
         self.is_open = False
+        self.close_event.set()
+        frame.frame()
+        logger.info('channel closed')
 
     @asyncio.coroutine
     def dispatch_frame(self, frame):
@@ -71,7 +82,8 @@ class Channel:
 
     @asyncio.coroutine
     def _write_frame(self, frame, request, no_wait, timeout=None, no_check_open=False):
-        assert self.is_open or no_check_open, "channel is closed"
+        if not self.is_open and not no_check_open:
+            raise exceptions.ChannelClosed()
         if no_wait:
             frame.write_frame(request)
         else:
@@ -228,6 +240,8 @@ class Channel:
     @asyncio.coroutine
     def publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
         assert len(payload) != 0, "Payload cannot be empty"
+        if not self.is_open:
+            raise exceptions.ChannelClosed()
 
         method_frame = amqp_frame.AmqpRequest(
             self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
