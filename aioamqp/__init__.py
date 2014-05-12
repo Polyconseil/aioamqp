@@ -9,7 +9,7 @@ from .version import __packagename__
 
 @asyncio.coroutine
 def connect(host='localhost', port=5672, login='guest', password='guest',
-            virtualhost='/', login_method='AMQPLAIN', insist=False):
+            virtualhost='/', login_method='AMQPLAIN', insist=False, protocol_factory=AmqpProtocol):
     """Convenient method to connect to an AMQP broker
 
         @host:          the host to connect to
@@ -23,7 +23,7 @@ def connect(host='localhost', port=5672, login='guest', password='guest',
         Returns: an AmqpProtocol instance
     """
     _transport, protocol = yield from asyncio.get_event_loop().create_connection(
-        AmqpProtocol, host, port)
+        protocol_factory, host, port)
 
     yield from protocol.start_connection(host, port, login, password, virtualhost, login_method, insist)
 

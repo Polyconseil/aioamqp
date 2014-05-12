@@ -21,6 +21,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     See http://docs.python.org/3.4/library/asyncio-protocol.html#protocols for more information
     on asyncio's protocol API.
     """
+
+    CHANNEL_FACTORY = amqp_channel.Channel
+
     def __init__(self, *args, **kwargs):
         super().__init__(asyncio.StreamReader(), self.client_connected)
         self.connecting = asyncio.Future()
@@ -290,7 +293,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         """
         self.channels_max_id += 1
-        channel = amqp_channel.Channel(self, self.channels_max_id)
+        channel = self.CHANNEL_FACTORY(self, self.channels_max_id)
         self.channels[self.channels_max_id] = channel
 
         yield from channel.open()
