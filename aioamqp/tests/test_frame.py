@@ -54,3 +54,30 @@ class EncoderTestCase(unittest.TestCase):
         finally:
             frame_module.DUMP_FRAMES = False
             sys.stdout = saved_stout
+
+    def test_write_message_properties_dont_crash(self):
+        properties = {
+            'content_type': 'plain/text',
+            'content_encoding': 'utf8',
+            'headers': [],
+            'delivery_mode': 0,
+            'priority': 0,
+            'correlation_id': 0,
+            'reply_to': 'joe',
+            'expiration': 'someday',
+            'message_id': 'm_id',
+            'timestamp': 12345,
+            'type': 'a_type',
+            'user_id': 'joe_42',
+            'app_id': 'roxxor_app',
+            'cluster_id': 'a_cluster',
+        }
+        self.encoder.write_message_properties(properties)
+        self.assertNotEqual(0, len(self.encoder.payload.getvalue()))
+
+    def test_write_message_properties_raises_on_invalid_property_name(self):
+        properties = {
+            'invalid': 'coucou',
+        }
+        with self.assertRaises(ValueError):
+            self.encoder.write_message_properties(properties)

@@ -129,7 +129,9 @@ class AmqpEncoder:
             self.write_short(0)
             return
 
-        assert len(set(properties.keys() - set(amqp_constants.MESSAGE_PROPERTIES))) == 0
+        diff = set(properties.keys()) - set(amqp_constants.MESSAGE_PROPERTIES)
+        if diff:
+            raise ValueError("%s are not properties, valid properties are %s" % (diff, amqp_constants.MESSAGE_PROPERTIES))
 
         content_type = properties.get('content_type')
         if content_type:
@@ -170,7 +172,7 @@ class AmqpEncoder:
         timestamp = properties.get('timestamp')
         if timestamp:
             properties_flag_value |= amqp_constants.FLAG_TIMESTAMP
-            properties_encoder.write_timestamp(timestamp)
+            properties_encoder.write_long_long(timestamp)
         type_ = properties.get('type')
         if type_:
             properties_flag_value |= amqp_constants.FLAG_TYPE
