@@ -82,8 +82,8 @@ class Channel:
         }
         try:
             yield from methods[(frame.class_id, frame.method_id)](frame)
-        except KeyError:
-            raise NotImplementedError("Frame (%s, %s) is not implemented" % (frame.class_id, frame.method_id))
+        except KeyError as ex:
+            raise NotImplementedError("Frame (%s, %s) is not implemented" % (frame.class_id, frame.method_id)) from ex
 
     @asyncio.coroutine
     def _write_frame(self, frame, request, no_wait, timeout=None, no_check_open=False):
