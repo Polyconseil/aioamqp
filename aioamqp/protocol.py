@@ -229,7 +229,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         class_id = response.read_short()
         method_id = response.read_short()
         self.stop()
-        logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s", reply_text, reply_code, class_id, method_id)
+        logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
+            reply_text, reply_code, class_id, method_id)
 
     @asyncio.coroutine
     def tune(self, frame):

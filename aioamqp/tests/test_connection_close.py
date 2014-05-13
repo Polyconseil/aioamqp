@@ -2,7 +2,6 @@ import unittest
 
 import asyncio
 
-from .. import exceptions
 from . import testcase
 
 

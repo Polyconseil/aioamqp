@@ -1,9 +1,7 @@
-import logging
 import asyncio
 from urllib.parse import urlparse
 
 from .protocol import AmqpProtocol
-from .exceptions import *
 
 from .version import __version__
 from .version import __packagename__

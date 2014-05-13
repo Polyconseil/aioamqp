@@ -131,7 +131,8 @@ class AmqpEncoder:
 
         diff = set(properties.keys()) - set(amqp_constants.MESSAGE_PROPERTIES)
         if diff:
-            raise ValueError("%s are not properties, valid properties are %s" % (diff, amqp_constants.MESSAGE_PROPERTIES))
+            raise ValueError("%s are not properties, valid properties are %s" % (
+                diff, amqp_constants.MESSAGE_PROPERTIES))
 
         content_type = properties.get('content_type')
         if content_type:

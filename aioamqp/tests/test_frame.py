@@ -70,8 +70,8 @@ class AmqpResponseTestCase(unittest.TestCase):
     def test_dump_dont_crash(self):
         frame = AmqpResponse(None)
         frame.frame_type = amqp_constants.TYPE_METHOD
-        self.class_id = 0
-        self.method_id = 0
+        frame.class_id = 0
+        frame.method_id = 0
         saved_stout = sys.stdout
         frame_module.DUMP_FRAMES = True
         sys.stdout = io.StringIO()
