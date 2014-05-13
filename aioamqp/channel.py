@@ -18,9 +18,12 @@ class Channel:
         self.protocol = protocol
         self.channel_id = channel_id
         self.message_queue = None
-        self.is_open = False
         self.response_future = None
         self.close_event = asyncio.Event()
+
+    @property
+    def is_open(self):
+        return not self.close_event.is_set()
 
     @asyncio.coroutine
     def open(self, timeout=None):
@@ -34,7 +37,7 @@ class Channel:
 
     @asyncio.coroutine
     def open_ok(self, frame):
-        self.is_open = True
+        self.close_event.clear()
         if self.response_future is not None:
             self.response_future.set_result(frame)
         frame.frame()
@@ -58,7 +61,6 @@ class Channel:
 
     @asyncio.coroutine
     def close_ok(self, frame):
-        self.is_open = False
         self.close_event.set()
         frame.frame()
         logger.info('channel closed')
@@ -188,7 +190,7 @@ class Channel:
             exc_msg = "{} ({})".format(frame.arguments['reply_text'], frame.arguments['reply_code'])
             self.response_future.set_exception(exceptions.ChannelClosed(exc_msg, frame=frame))
         frame.frame()
-        self.is_open = False
+        self.close_event.set()
 
 #
 ## Public api
