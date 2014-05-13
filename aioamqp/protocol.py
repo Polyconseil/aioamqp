@@ -77,10 +77,20 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         logger.info("Recv close ok")
 
     @asyncio.coroutine
-    def start_connection(self, host, port, login, password, virtualhost, login_method, insist):
+    def start_connection(self, host, port, login, password, virtualhost, ssl=False,
+            login_method='AMQPLAIN', insist=False):
         """Initiate a connection at the protocol level
             We send `PROTOCOL_HEADER'
         """
+
+        if ssl:
+            # TODO
+            logger.warning('ssl is not supported yet, falling back to non-secure connection')
+
+        if login_method != 'AMQPLAIN':
+            # TODO
+            logger.warning('only AMQPLAIN login_method is supported, falling back to AMQPLAIN')
+
         self.writer.write(amqp_constants.PROTOCOL_HEADER)
 
         # Wait 'start' method from the server
