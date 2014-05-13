@@ -78,6 +78,7 @@ class Channel:
             (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_BIND_OK): self.queue_bind_ok,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CONSUME_OK): self.basic_consume_ok,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_DELIVER): self.basic_deliver,
+            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CANCEL): self.server_basic_cancel,
         }
         try:
             yield from methods[(frame.class_id, frame.method_id)](frame)
@@ -433,3 +434,10 @@ class Channel:
         content_body_frame = yield from self.protocol.get_frame()
         content_body_frame.frame()
         yield from self.message_queue.put((consumer_tag, deliver_tag, content_body_frame.payload))
+
+    @asyncio.coroutine
+    def server_basic_cancel(self, frame):
+        """From the server, means the server wont send anymore messages to this consumer"""
+        # TODO do something meaningful so a call to consume raises an exception
+        frame.frame()
+        logger.info('consume cancelled received')
