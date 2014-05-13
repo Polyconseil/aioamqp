@@ -413,8 +413,15 @@ class Channel:
     @asyncio.coroutine
     def consume(self, queue_name=''):
         assert self.message_queue, "No message_queue defined"
-        message = yield from self.message_queue.get()
-        return message
+        done, pending = yield from asyncio.wait([self.message_queue.get(), self.close_event.wait()],
+            return_when=asyncio.FIRST_COMPLETED)
+        if not self.is_open:
+            raise exceptions.ChannelClosed()
+        assert len(done) == 1
+        for task in done:
+            if task.exception():
+                raise task.exception()
+            return task.result()
 
     @asyncio.coroutine
     def basic_deliver(self, frame):
