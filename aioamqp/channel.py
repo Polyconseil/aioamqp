@@ -27,7 +27,7 @@ class Channel:
 
     @asyncio.coroutine
     def open(self, timeout=None):
-        """Open the channel on the server"""
+        """Open the channel on the server."""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_OPEN)
@@ -41,10 +41,10 @@ class Channel:
         if self.response_future is not None:
             self.response_future.set_result(frame)
         frame.frame()
-        logger.info('channel opened')
+        logger.info("channel opened")
 
     def close(self, reply_code=0, reply_text="Normal Shutdown"):
-        """Close the channel"""
+        """Close the channel."""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE)
@@ -63,7 +63,7 @@ class Channel:
     def close_ok(self, frame):
         self.close_event.set()
         frame.frame()
-        logger.info('channel closed')
+        logger.info("channel closed")
 
     @asyncio.coroutine
     def dispatch_frame(self, frame):
@@ -183,7 +183,7 @@ class Channel:
         if self.response_future is not None:
             self.response_future.set_result(frame)
         frame.frame()
-        logger.debug('queue deleted')
+        logger.debug("queue deleted")
 
     @asyncio.coroutine
     def server_channel_close(self, frame):
@@ -202,7 +202,7 @@ class Channel:
 
     @asyncio.coroutine
     def queue_bind(self, queue_name, exchange_name, routing_key, no_wait=False, arguments=None, timeout=None):
-        """Bind a queue and a channel"""
+        """Bind a queue and a channel."""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_BIND)
@@ -221,11 +221,11 @@ class Channel:
         if self.response_future is not None:
             self.response_future.set_result(frame)
         frame.frame()
-        logger.debug('queue bound')
+        logger.debug("queue bound")
 
     @asyncio.coroutine
     def exchange_bind(self, exchange_source, exchange_destination, routing_key, no_wait=False, arguments=None):
-        """bind two exhanges together"""
+        """Bind two exhanges together."""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_BIND)
@@ -382,7 +382,6 @@ class Channel:
 
     @asyncio.coroutine
     def basic_publish(self, message):
-        """publish"""
         pass
 
     @asyncio.coroutine
@@ -437,7 +436,7 @@ class Channel:
 
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
-        """From the server, means the server wont send anymore messages to this consumer"""
+        """From the server, means the server won't send anymore messages to this consumer."""
         # TODO do something meaningful so a call to consume raises an exception
         frame.frame()
-        logger.info('consume cancelled received')
+        logger.info("consume cancelled received")
