@@ -24,4 +24,10 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
             # now try to consume and get an exception
             with self.assertRaises(exceptions.ConsumerCancelled):
                 yield from self.channel.consume()
+
+            # get an exception on all following calls
+            with self.assertRaises(exceptions.ConsumerCancelled):
+                yield from self.channel.consume()
+            with self.assertRaises(exceptions.ConsumerCancelled):
+                yield from self.channel.consume()
         self.loop.run_until_complete(go())

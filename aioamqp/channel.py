@@ -21,7 +21,7 @@ class Channel:
         self.consumer_queues = {}
         self.response_future = None
         self.close_event = asyncio.Event()
-        self.cancelled_consumers = []
+        self.cancelled_consumers = set()
 
     @property
     def is_open(self):
@@ -437,6 +437,8 @@ class Channel:
         If consumer_tag is None, then the last consumer_tag declared in basic_consume will be used.
         """
         consumer_tag = consumer_tag or self.last_consumer_tag
+        if consumer_tag not in self.consumer_queues and consumer_tag in self.cancelled_consumers:
+            raise exceptions.ConsumerCancelled(consumer_tag)
         data = yield from self.consumer_queues[consumer_tag].get()
         if isinstance(data, exceptions.AioamqpException):
             if self.consumer_queues[consumer_tag].qsize() == 0:
@@ -459,7 +461,7 @@ class Channel:
     def server_basic_cancel(self, frame):
         """From the server, means the server won't send anymore messages to this consumer."""
         consumer_tag = frame.arguments['consumer_tag']
-        self.cancelled_consumers.append(consumer_tag)
+        self.cancelled_consumers.add(consumer_tag)
         if consumer_tag in self.consumer_queues:
             self.consumer_queues[consumer_tag].put_nowait(exceptions.ConsumerCancelled(consumer_tag))
         frame.frame()
