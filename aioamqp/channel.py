@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import uuid
 
 from . import constants as amqp_constants
 from . import frame as amqp_frame
@@ -17,14 +18,18 @@ class Channel:
     def __init__(self, protocol, channel_id):
         self.protocol = protocol
         self.channel_id = channel_id
-        self.message_queue = None
-        self.is_open = False
+        self.consumer_queues = {}
         self.response_future = None
         self.close_event = asyncio.Event()
+        self.cancelled_consumers = set()
+
+    @property
+    def is_open(self):
+        return not self.close_event.is_set()
 
     @asyncio.coroutine
     def open(self, timeout=None):
-        """Open the channel on the server"""
+        """Open the channel on the server."""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_OPEN)
@@ -34,14 +39,14 @@ class Channel:
 
     @asyncio.coroutine
     def open_ok(self, frame):
-        self.is_open = True
+        self.close_event.clear()
         if self.response_future is not None:
             self.response_future.set_result(frame)
         frame.frame()
-        logger.info('channel opened')
+        logger.info("channel opened")
 
     def close(self, reply_code=0, reply_text="Normal Shutdown"):
-        """Close the channel"""
+        """Close the channel."""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE)
@@ -58,10 +63,10 @@ class Channel:
 
     @asyncio.coroutine
     def close_ok(self, frame):
-        self.is_open = False
         self.close_event.set()
+        self._close_consumers()
         frame.frame()
-        logger.info('channel closed')
+        logger.info("channel closed")
 
     @asyncio.coroutine
     def dispatch_frame(self, frame):
@@ -76,8 +81,12 @@ class Channel:
             (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_BIND_OK): self.queue_bind_ok,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CONSUME_OK): self.basic_consume_ok,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_DELIVER): self.basic_deliver,
+            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CANCEL): self.server_basic_cancel,
         }
-        yield from methods[(frame.class_id, frame.method_id)](frame)
+        try:
+            yield from methods[(frame.class_id, frame.method_id)](frame)
+        except KeyError as ex:
+            raise NotImplementedError("Frame (%s, %s) is not implemented" % (frame.class_id, frame.method_id)) from ex
 
     @asyncio.coroutine
     def _write_frame(self, frame, request, no_wait, timeout=None, no_check_open=False):
@@ -177,7 +186,7 @@ class Channel:
         if self.response_future is not None:
             self.response_future.set_result(frame)
         frame.frame()
-        logger.debug('queue deleted')
+        logger.debug("queue deleted")
 
     @asyncio.coroutine
     def server_channel_close(self, frame):
@@ -185,7 +194,13 @@ class Channel:
             exc_msg = "{} ({})".format(frame.arguments['reply_text'], frame.arguments['reply_code'])
             self.response_future.set_exception(exceptions.ChannelClosed(exc_msg, frame=frame))
         frame.frame()
-        self.is_open = False
+        self.close_event.set()
+        self.close_consumers()
+
+    def _close_consumers(self, exc=None):
+        exc = exc or exceptions.ChannelClosed()
+        for queue in self.consumer_queues.values():
+            queue.put_nowait(exc)
 
 #
 ## Public api
@@ -196,7 +211,7 @@ class Channel:
 
     @asyncio.coroutine
     def queue_bind(self, queue_name, exchange_name, routing_key, no_wait=False, arguments=None, timeout=None):
-        """Bind a queue and a channel"""
+        """Bind a queue and a channel."""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_BIND)
@@ -215,11 +230,11 @@ class Channel:
         if self.response_future is not None:
             self.response_future.set_result(frame)
         frame.frame()
-        logger.debug('queue bound')
+        logger.debug("queue bound")
 
     @asyncio.coroutine
     def exchange_bind(self, exchange_source, exchange_destination, routing_key, no_wait=False, arguments=None):
-        """bind two exhanges together"""
+        """Bind two exhanges together."""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_BIND)
@@ -376,12 +391,17 @@ class Channel:
 
     @asyncio.coroutine
     def basic_publish(self, message):
-        """publish"""
         pass
 
     @asyncio.coroutine
     def basic_consume(self, queue_name='', consumer_tag='', no_local=False, no_ack=False, exclusive=False,
                       no_wait=False, callback=None, arguments=None, on_cancel=None, timeout=None):
+        # If a consumer tag was not passed, create one
+        consumer_tag = consumer_tag or 'ctag%i.%s' % (self.channel_id, uuid.uuid4().hex)
+
+        if consumer_tag in self.consumer_queues or consumer_tag in self.cancelled_consumers:
+            raise exceptions.DuplicateConsumerTag(consumer_tag)
+
         if not arguments:
             arguments = {}
         frame = amqp_frame.AmqpRequest(
@@ -395,21 +415,38 @@ class Channel:
         encoder.write_bits(no_local, no_ack, exclusive, no_wait)
         encoder.write_table(arguments)
 
-        self.message_queue = asyncio.Queue()
-        return (yield from self._write_frame(frame, encoder, no_wait, timeout=timeout))
+        self.consumer_queues[consumer_tag] = asyncio.Queue()
+        self.last_consumer_tag = consumer_tag
+
+        if no_wait:
+            return consumer_tag
+        else:
+            return (yield from self._write_frame(frame, encoder, no_wait, timeout=timeout))
 
     @asyncio.coroutine
     def basic_consume_ok(self, frame):
         if self.response_future is not None:
             self.response_future.set_result(frame)
         frame.frame()
-        logger.debug('basic consume ok received')
+        logger.debug("basic consume ok received")
 
     @asyncio.coroutine
-    def consume(self, queue_name=''):
-        assert self.message_queue, "No message_queue defined"
-        message = yield from self.message_queue.get()
-        return message
+    def consume(self, consumer_tag=None):
+        """Wait for a message and returns it.
+
+        If consumer_tag is None, then the last consumer_tag declared in basic_consume will be used.
+        """
+        consumer_tag = consumer_tag or self.last_consumer_tag
+        if consumer_tag not in self.consumer_queues and consumer_tag in self.cancelled_consumers:
+            raise exceptions.ConsumerCancelled(consumer_tag)
+        if not self.is_open:
+            raise exceptions.ChannelClosed()
+        data = yield from self.consumer_queues[consumer_tag].get()
+        if isinstance(data, exceptions.AioamqpException):
+            if self.consumer_queues[consumer_tag].qsize() == 0:
+                del self.consumer_queues[consumer_tag]
+            raise data
+        return data
 
     @asyncio.coroutine
     def basic_deliver(self, frame):
@@ -420,4 +457,14 @@ class Channel:
         content_header_frame.frame()
         content_body_frame = yield from self.protocol.get_frame()
         content_body_frame.frame()
-        yield from self.message_queue.put((consumer_tag, deliver_tag, content_body_frame.payload))
+        self.consumer_queues[consumer_tag].put_nowait((consumer_tag, deliver_tag, content_body_frame.payload))
+
+    @asyncio.coroutine
+    def server_basic_cancel(self, frame):
+        """From the server, means the server won't send anymore messages to this consumer."""
+        consumer_tag = frame.arguments['consumer_tag']
+        self.cancelled_consumers.add(consumer_tag)
+        if consumer_tag in self.consumer_queues:
+            self.consumer_queues[consumer_tag].put_nowait(exceptions.ConsumerCancelled(consumer_tag))
+        frame.frame()
+        logger.info("consume cancelled received")

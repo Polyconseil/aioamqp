@@ -27,9 +27,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     def __init__(self, *args, **kwargs):
         super().__init__(asyncio.StreamReader(), self.client_connected)
         self.connecting = asyncio.Future()
-        self.connection_closed = asyncio.Future()
+        self.connection_closed = asyncio.Event()
         self.stop_now = asyncio.Future()
-        self.is_connected = False
+        self.is_open = False
         self.version_major = None
         self.version_minor = None
         self.server_properties = None
@@ -53,22 +53,44 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             self.connection_closed.set_result(None)
         super().connection_lost(exc)
 
-    @asyncio.coroutine
-    def close_connection(self):
-        if self.is_client:
-            try:
-                yield from asyncio.wait_for(self.connection_closed)
-            except (asyncio.CancelledError, asyncio.TimeoutError):
-                pass
+    def close(self):
+        """Close connection (and all channels)"""
+        frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_METHOD, 0)
+        frame.declare_method(
+            amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE)
+        encoder = amqp_frame.AmqpEncoder(frame.payload)
+        # we request a clean connection close
+        encoder.write_short(0)
+        encoder.write_shortstr('')
+        encoder.write_short(0)
+        encoder.write_short(0)
+        frame.write_frame(encoder)
 
-            if self.state == 'CLOSED':
-                return
+    @asyncio.coroutine
+    def wait_closed(self):
+        yield from self.connection_closed.wait()
 
     @asyncio.coroutine
-    def start_connection(self, host, port, login, password, virtualhost, login_method, insist):
+    def close_ok(self, frame):
+        self.stop()
+        frame.frame()
+        logger.info("Recv close ok")
+
+    @asyncio.coroutine
+    def start_connection(self, host, port, login, password, virtualhost, ssl=False,
+            login_method='AMQPLAIN', insist=False):
         """Initiate a connection at the protocol level
             We send `PROTOCOL_HEADER'
         """
+
+        if ssl:
+            # TODO
+            logger.warning('ssl is not supported yet, falling back to non-secure connection')
+
+        if login_method != 'AMQPLAIN':
+            # TODO
+            logger.warning('only AMQPLAIN login_method is supported, falling back to AMQPLAIN')
+
         self.writer.write(amqp_constants.PROTOCOL_HEADER)
 
         # Wait 'start' method from the server
@@ -108,12 +130,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         # wait for open-ok
         yield from self.dispatch_frame()
 
-        self.is_connected = True
         # for now, we read server's responses asynchronously
         self.worker = asyncio.async(self.run())
 
-    @asyncio.coroutine
     def stop(self):
+        self.is_open = False
+        self.connection_closed.set()
         self.stop_now.set_result(None)
 
     @asyncio.coroutine
@@ -131,7 +153,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         method_dispatch = {
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE): self.server_close,
-            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK): self.server_close,
+            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK): self.close_ok,
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_TUNE): self.tune,
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_START): self.start,
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_OPEN_OK): self.open_ok,
@@ -169,7 +191,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def reply_to_hearbeat(self, frame):
-        print("replyin' to heartbeat")
+        logger.debug("replyin' to heartbeat")
         frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_HEARTBEAT, 0)
         request = amqp_frame.AmqpEncoder()
         frame.write_frame(request)
@@ -200,50 +222,15 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def server_close(self, frame):
-        """The server is closing the connection
-
-        """
-        yield from self.client_close_ok()
-
+        """The server is closing the connection"""
         response = amqp_frame.AmqpDecoder(frame.payload)
         reply_code = response.read_short()
         reply_text = response.read_shortstr()
-        #class_id = response.read_short()
-        #method_id = response.read_short()
-        raise exceptions.AmqpClosedConnection("{} ({})".format(reply_text, reply_code))
-
-    @asyncio.coroutine
-    def server_close_ok(self, frame):
-        """The server is accepting or connection close request
-
-        """
-        logger.debug("received close-ok frame")
-        yield from self.stop()
-
-    @asyncio.coroutine
-    def client_close(self):
-        """The client wants to close the connection
-
-        """
-        frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_METHOD, 0)
-        frame.declare_method(
-            amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE)
-        encoder = amqp_frame.AmqpEncoder(frame.payload)
-        # we request a clean connection close
-        encoder.write_short(0)
-        encoder.write_shortstr('')
-        encoder.write_short(0)
-        encoder.write_short(0)
-        frame.write_frame(encoder)
-
-    @asyncio.coroutine
-    def client_close_ok(self):
-        """The client ACK the connection close"""
-        frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_METHOD, 0)
-        frame.declare_method(
-            amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK)
-
-        yield from self.stop()
+        class_id = response.read_short()
+        method_id = response.read_short()
+        self.stop()
+        logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
+            reply_text, reply_code, class_id, method_id)
 
     @asyncio.coroutine
     def tune(self, frame):
@@ -283,7 +270,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def open_ok(self, frame):
-        pass
+        self.is_open = True
+        frame.frame()
+        logger.info("Recv open ok")
 
     #
     ## aioamqp public methods

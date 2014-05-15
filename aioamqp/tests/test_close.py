@@ -50,3 +50,19 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
             with self.assertRaises(exceptions.ChannelClosed):
                 yield from self.channel.queue_declare("qq")
         self.loop.run_until_complete(go())
+
+    def test_cannot_consume_after_close(self):
+        @asyncio.coroutine
+        def go():
+            yield from self.queue_declare("q")
+            channel = yield from self.create_channel()
+            yield from channel.basic_consume("q")
+            channel.close()
+            yield from asyncio.wait_for(channel.wait_closed(), timeout=2)
+            with self.assertRaises(exceptions.ChannelClosed):
+                yield from channel.consume()
+            with self.assertRaises(exceptions.ChannelClosed):
+                yield from channel.consume()
+            with self.assertRaises(exceptions.ChannelClosed):
+                yield from channel.consume()
+        self.loop.run_until_complete(go())

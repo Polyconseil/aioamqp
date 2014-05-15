@@ -47,6 +47,9 @@ from . import exceptions
 from . import constants as amqp_constants
 
 
+DUMP_FRAMES = False
+
+
 class AmqpEncoder:
 
     def __init__(self, writer=None):
@@ -126,7 +129,10 @@ class AmqpEncoder:
             self.write_short(0)
             return
 
-        assert len(set(properties.keys() - set(amqp_constants.MESSAGE_PROPERTIES))) == 0
+        diff = set(properties.keys()) - set(amqp_constants.MESSAGE_PROPERTIES)
+        if diff:
+            raise ValueError("%s are not properties, valid properties are %s" % (
+                diff, amqp_constants.MESSAGE_PROPERTIES))
 
         content_type = properties.get('content_type')
         if content_type:
@@ -167,7 +173,7 @@ class AmqpEncoder:
         timestamp = properties.get('timestamp')
         if timestamp:
             properties_flag_value |= amqp_constants.FLAG_TIMESTAMP
-            properties_encoder.write_timestamp(timestamp)
+            properties_encoder.write_long_long(timestamp)
         type_ = properties.get('type')
         if type_:
             properties_flag_value |= amqp_constants.FLAG_TYPE
@@ -291,7 +297,7 @@ class AmqpRequest:
             # no specific headers
             pass
         else:
-            raise Exception("frame_type {} not handlded".format(self.frame_type))
+            raise Exception("frame_type {} not handled".format(self.frame_type))
 
         header = struct.pack('!BHI', self.frame_type, self.channel, payload.tell() + len(content_header))
         transmission.write(header)
@@ -360,6 +366,15 @@ class AmqpResponse:
                         'class_id': decoder.read_short(),
                         'method_id': decoder.read_short(),
                     }
+            elif self.class_id == amqp_constants.CLASS_BASIC:
+                if self.method_id == amqp_constants.BASIC_CONSUME_OK:
+                    self.arguments = {
+                        'consumer_tag': decoder.read_shortstr(),
+                    }
+                elif self.method_id == amqp_constants.BASIC_CANCEL:
+                    self.arguments = {
+                        'consumer_tag': decoder.read_shortstr(),
+                    }
 
         elif self.frame_type == amqp_constants.TYPE_HEADER:
             self.payload = io.BytesIO(payload_data)
@@ -381,7 +396,8 @@ class AmqpResponse:
         assert self.frame_end == amqp_constants.FRAME_END
 
     def frame(self):
-        return
+        if not DUMP_FRAMES:
+            return
         frame_data = {
             'type': self.frame_type or '',
             'channel': self.channel,
