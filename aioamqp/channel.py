@@ -387,6 +387,12 @@ class Channel:
     @asyncio.coroutine
     def basic_consume(self, queue_name='', consumer_tag='', no_local=False, no_ack=False, exclusive=False,
                       no_wait=False, callback=None, arguments=None, on_cancel=None, timeout=None):
+        """Inform server we want to consume messages from a queue
+
+        If consumer_tag is empty, the server will decide one for use, and return it in the response.
+        if no_wait is False (default), the method return the response frame, the consumer tag can be
+        accessed from frame.arguments['consumer_tag']
+        """
         if not arguments:
             arguments = {}
         frame = amqp_frame.AmqpRequest(

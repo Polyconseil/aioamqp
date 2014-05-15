@@ -366,6 +366,11 @@ class AmqpResponse:
                         'class_id': decoder.read_short(),
                         'method_id': decoder.read_short(),
                     }
+            elif self.class_id == amqp_constants.CLASS_BASIC:
+                if self.method_id == amqp_constants.BASIC_CONSUME_OK:
+                    self.arguments = {
+                        'consumer_tag': decoder.read_shortstr(),
+                    }
 
         elif self.frame_type == amqp_constants.TYPE_HEADER:
             self.payload = io.BytesIO(payload_data)
