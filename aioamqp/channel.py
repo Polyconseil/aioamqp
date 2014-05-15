@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import uuid
 
 from . import constants as amqp_constants
 from . import frame as amqp_frame
@@ -17,7 +18,7 @@ class Channel:
     def __init__(self, protocol, channel_id):
         self.protocol = protocol
         self.channel_id = channel_id
-        self.message_queue = None
+        self.consumer_queues = {}
         self.response_future = None
         self.close_event = asyncio.Event()
 
@@ -387,12 +388,12 @@ class Channel:
     @asyncio.coroutine
     def basic_consume(self, queue_name='', consumer_tag='', no_local=False, no_ack=False, exclusive=False,
                       no_wait=False, callback=None, arguments=None, on_cancel=None, timeout=None):
-        """Inform server we want to consume messages from a queue
+        # If a consumer tag was not passed, create one
+        consumer_tag = consumer_tag or 'ctag%i.%s' % (self.channel_id, uuid.uuid4().hex)
 
-        If consumer_tag is empty, the server will decide one for use, and return it in the response.
-        if no_wait is False (default), the method return the response frame, the consumer tag can be
-        accessed from frame.arguments['consumer_tag']
-        """
+        if consumer_tag in self.consumer_queues:
+            raise exceptions.DuplicateConsumerTag(consumer_tag)
+
         if not arguments:
             arguments = {}
         frame = amqp_frame.AmqpRequest(
@@ -406,20 +407,29 @@ class Channel:
         encoder.write_bits(no_local, no_ack, exclusive, no_wait)
         encoder.write_table(arguments)
 
-        self.message_queue = asyncio.Queue()
-        return (yield from self._write_frame(frame, encoder, no_wait, timeout=timeout))
+        self.consumer_queues[consumer_tag] = asyncio.Queue()
+        self.last_consumer_tag = consumer_tag
+
+        if no_wait:
+            return consumer_tag
+        else:
+            return (yield from self._write_frame(frame, encoder, no_wait, timeout=timeout))
 
     @asyncio.coroutine
     def basic_consume_ok(self, frame):
         if self.response_future is not None:
             self.response_future.set_result(frame)
         frame.frame()
-        logger.debug('basic consume ok received')
+        logger.debug("basic consume ok received")
 
     @asyncio.coroutine
-    def consume(self, queue_name=''):
-        assert self.message_queue, "No message_queue defined"
-        done, pending = yield from asyncio.wait([self.message_queue.get(), self.close_event.wait()],
+    def consume(self, consumer_tag=None):
+        """Wait for a message and returns it.
+
+        If consumer_tag is None, then the last consumer_tag declared in basic_consume will be used.
+        """
+        consumer_tag = consumer_tag or self.last_consumer_tag
+        done, pending = yield from asyncio.wait([self.consumer_queues[consumer_tag].get(), self.close_event.wait()],
             return_when=asyncio.FIRST_COMPLETED)
         if not self.is_open:
             raise exceptions.ChannelClosed()
@@ -438,7 +448,7 @@ class Channel:
         content_header_frame.frame()
         content_body_frame = yield from self.protocol.get_frame()
         content_body_frame.frame()
-        yield from self.message_queue.put((consumer_tag, deliver_tag, content_body_frame.payload))
+        self.consumer_queues[consumer_tag].put_nowait((consumer_tag, deliver_tag, content_body_frame.payload))
 
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
