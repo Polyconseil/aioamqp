@@ -439,6 +439,8 @@ class Channel:
         consumer_tag = consumer_tag or self.last_consumer_tag
         if consumer_tag not in self.consumer_queues and consumer_tag in self.cancelled_consumers:
             raise exceptions.ConsumerCancelled(consumer_tag)
+        if not self.is_open:
+            raise exceptions.ChannelClosed()
         data = yield from self.consumer_queues[consumer_tag].get()
         if isinstance(data, exceptions.AioamqpException):
             if self.consumer_queues[consumer_tag].qsize() == 0:
