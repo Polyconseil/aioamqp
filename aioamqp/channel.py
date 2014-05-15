@@ -21,6 +21,7 @@ class Channel:
         self.consumer_queues = {}
         self.response_future = None
         self.close_event = asyncio.Event()
+        self.cancelled_consumers = []
 
     @property
     def is_open(self):
@@ -63,6 +64,7 @@ class Channel:
     @asyncio.coroutine
     def close_ok(self, frame):
         self.close_event.set()
+        self._close_consumers()
         frame.frame()
         logger.info("channel closed")
 
@@ -193,6 +195,12 @@ class Channel:
             self.response_future.set_exception(exceptions.ChannelClosed(exc_msg, frame=frame))
         frame.frame()
         self.close_event.set()
+        self.close_consumers()
+
+    def _close_consumers(self, exc=None):
+        exc = exc or exceptions.ChannelClosed()
+        for queue in self.consumer_queues.values():
+            queue.put_nowait(exc)
 
 #
 ## Public api
@@ -391,7 +399,7 @@ class Channel:
         # If a consumer tag was not passed, create one
         consumer_tag = consumer_tag or 'ctag%i.%s' % (self.channel_id, uuid.uuid4().hex)
 
-        if consumer_tag in self.consumer_queues:
+        if consumer_tag in self.consumer_queues or consumer_tag in self.cancelled_consumers:
             raise exceptions.DuplicateConsumerTag(consumer_tag)
 
         if not arguments:
@@ -429,15 +437,12 @@ class Channel:
         If consumer_tag is None, then the last consumer_tag declared in basic_consume will be used.
         """
         consumer_tag = consumer_tag or self.last_consumer_tag
-        done, pending = yield from asyncio.wait([self.consumer_queues[consumer_tag].get(), self.close_event.wait()],
-            return_when=asyncio.FIRST_COMPLETED)
-        if not self.is_open:
-            raise exceptions.ChannelClosed()
-        assert len(done) == 1
-        for task in done:
-            if task.exception():
-                raise task.exception()
-            return task.result()
+        data = yield from self.consumer_queues[consumer_tag].get()
+        if isinstance(data, exceptions.AioamqpException):
+            if self.consumer_queues[consumer_tag].qsize() == 0:
+                del self.consumer_queues[consumer_tag]
+            raise data
+        return data
 
     @asyncio.coroutine
     def basic_deliver(self, frame):
@@ -453,6 +458,9 @@ class Channel:
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
         """From the server, means the server won't send anymore messages to this consumer."""
-        # TODO do something meaningful so a call to consume raises an exception
+        consumer_tag = frame.arguments['consumer_tag']
+        self.cancelled_consumers.append(consumer_tag)
+        if consumer_tag in self.consumer_queues:
+            self.consumer_queues[consumer_tag].put_nowait(exceptions.ConsumerCancelled(consumer_tag))
         frame.frame()
         logger.info("consume cancelled received")
