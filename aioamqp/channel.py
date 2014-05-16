@@ -22,6 +22,7 @@ class Channel:
         self.response_future = None
         self.close_event = asyncio.Event()
         self.cancelled_consumers = set()
+        self.last_consumer_tag = None
 
     @property
     def is_open(self):
