@@ -3,6 +3,7 @@ import unittest
 import asyncio
 
 from . import testcase
+from . import testing
 from .. import exceptions
 
 
@@ -15,7 +16,7 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # declare queue
         frame = yield from self.queue_declare(
             queue_name, no_wait=False, exclusive=exclusive, durable=durable,
-            auto_delete=auto_delete, timeout=self.RABBIT_TIMEOUT)
+            auto_delete=auto_delete)
 
         # assert returned frame has the good arguments
         # in test the channel declared queues with prefixed names, to get the full name of the
@@ -52,51 +53,45 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.loop.run_until_complete(
             self._test_queue_declare('q', exclusive=False, durable=False, auto_delete=False))
 
+    @testing.coroutine
     def test_exclusive(self):
-        @asyncio.coroutine
-        def go():
-            # create an exclusive queue
-            yield from self.queue_declare("q", exclusive=True)
-            # consume it
-            yield from self.channel.basic_consume("q", no_wait=False, timeout=self.RABBIT_TIMEOUT)
-            # create an other amqp connection
-            amqp2 = yield from self.create_amqp()
-            channel = yield from self.create_channel(amqp=amqp2)
-            # assert that this connection cannot connect to the queue
-            with self.assertRaises(exceptions.ChannelClosed):
-                yield from channel.basic_consume("q", no_wait=False, timeout=self.RABBIT_TIMEOUT)
-            # amqp and channels are auto deleted by test case
-        self.loop.run_until_complete(go())
+        # create an exclusive queue
+        yield from self.queue_declare("q", exclusive=True)
+        # consume it
+        yield from self.channel.basic_consume("q", no_wait=False)
+        # create an other amqp connection
+        amqp2 = yield from self.create_amqp()
+        channel = yield from self.create_channel(amqp=amqp2)
+        # assert that this connection cannot connect to the queue
+        with self.assertRaises(exceptions.ChannelClosed):
+            yield from channel.basic_consume("q", no_wait=False)
+        # amqp and channels are auto deleted by test case
 
+    @testing.coroutine
     def test_not_exclusive(self):
-        @asyncio.coroutine
-        def go():
             # create a non-exclusive queue
             yield from self.queue_declare('q', exclusive=False)
             # consume it
-            yield from self.channel.basic_consume('q', no_wait=False, timeout=self.RABBIT_TIMEOUT)
+            yield from self.channel.basic_consume('q', no_wait=False)
             # create an other amqp connection
             amqp2 = yield from self.create_amqp()
             channel = yield from self.create_channel(amqp=amqp2)
             # assert that this connection can connect to the queue
-            yield from channel.basic_consume('q', no_wait=False, timeout=self.RABBIT_TIMEOUT)
-        self.loop.run_until_complete(go())
+            yield from channel.basic_consume('q', no_wait=False)
 
+    @testing.coroutine
     def test_passive(self):
-        @asyncio.coroutine
-        def go():
-            yield from self.safe_queue_delete('q')
-            # ask for non-existing queue
-            channel = yield from self.create_channel()
-            with self.assertRaises(exceptions.ChannelClosed):
-                yield from channel.queue_declare('q', passive=True)
-            # create queue
-            yield from self.queue_declare('q')
-            # get info
-            channel = yield from self.create_channel()
-            frame = yield from channel.queue_declare('q', passive=True)
-            # We have to use the fully qualified name of the queue here
-            # 'q' is just the local name for this test, see ProxyChannel
-            # class for more information
-            self.assertEqual(self.full_name('q'), frame.arguments['queue'])
-        self.loop.run_until_complete(go())
+        yield from self.safe_queue_delete('q')
+        # ask for non-existing queue
+        channel = yield from self.create_channel()
+        with self.assertRaises(exceptions.ChannelClosed):
+            yield from channel.queue_declare('q', passive=True)
+        # create queue
+        yield from self.queue_declare('q')
+        # get info
+        channel = yield from self.create_channel()
+        frame = yield from channel.queue_declare('q', passive=True)
+        # We have to use the fully qualified name of the queue here
+        # 'q' is just the local name for this test, see ProxyChannel
+        # class for more information
+        self.assertEqual(self.full_name('q'), frame.arguments['queue'])

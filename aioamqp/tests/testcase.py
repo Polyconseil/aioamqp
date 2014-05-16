@@ -5,6 +5,7 @@ import os
 import asyncio
 from asyncio import subprocess
 
+from . import testing
 from .. import connect as aioamqp_connect
 from ..channel import Channel
 from ..protocol import AmqpProtocol
@@ -59,14 +60,13 @@ class ProxyAmqpProtocol(AmqpProtocol):
     CHANNEL_FACTORY = channel_factory
 
 
-class RabbitTestCase:
+class RabbitTestCase(testing.AsyncioTestCaseMixin):
     """TestCase with a rabbit running in background"""
 
     RABBIT_TIMEOUT = 1.0
 
     def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+        super().setUp()
         self.vhost = '/'
         self.host = 'localhost'
         self.port = 5672
@@ -100,7 +100,7 @@ class RabbitTestCase:
         for amqp in self.amqps:
             logger.debug('Delete amqp %s', amqp)
             del amqp
-        self.loop.close()
+        super().tearDown()
 
     @property
     def amqp(self):

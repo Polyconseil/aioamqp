@@ -4,6 +4,7 @@ import unittest
 import asyncio
 
 from . import testcase
+from . import testing
 from .. import exceptions
 
 
@@ -18,7 +19,7 @@ class ExchangeDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def _test_exchange_declare(self, exchange_name, type_name, durable=False, auto_delete=False):
         # declare exchange
         yield from self.exchange_declare(exchange_name, type_name, no_wait=False,
-            durable=durable, auto_delete=auto_delete, timeout=self.RABBIT_TIMEOUT)
+            durable=durable, auto_delete=auto_delete)
 
         # retrieve exchange info from rabbitmqctl
         exchanges = yield from self.list_exchanges()
@@ -50,17 +51,14 @@ class ExchangeDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
             durable=False, auto_delete=False))
 
     def test_passive(self):
-        @asyncio.coroutine
-        def go():
-            yield from self.safe_exchange_delete('e')
-            # ask for non-existing exchange
-            channel = yield from self.create_channel()
-            with self.assertRaises(exceptions.ChannelClosed):
-                yield from channel.exchange_declare("e", 'direct', passive=True)
-            # create exchange
-            yield from self.exchange_declare('e', 'direct')
-            # get info
-            channel = yield from self.create_channel()
-            frame = yield from channel.exchange_declare("e", 'direct', passive=True)
-            self.assertIsNotNone(frame)
-        self.loop.run_until_complete(go())
+        yield from self.safe_exchange_delete('e')
+        # ask for non-existing exchange
+        channel = yield from self.create_channel()
+        with self.assertRaises(exceptions.ChannelClosed):
+            yield from channel.exchange_declare("e", 'direct', passive=True)
+        # create exchange
+        yield from self.exchange_declare('e', 'direct')
+        # get info
+        channel = yield from self.create_channel()
+        frame = yield from channel.exchange_declare("e", 'direct', passive=True)
+        self.assertIsNotNone(frame)
