@@ -14,7 +14,7 @@ class Handler(logging.Handler):
         super().__init__(level=logging.ERROR)
         self.messages = []
 
-    def handle(self, record):
+    def emit(self, record):
         message = record.msg % record.args
         print(message)
         self.messages.append(message)
@@ -37,8 +37,8 @@ def coroutine(func):
     def wrapper(self):
         handler.messages = []
         coro = asyncio.coroutine(func)
-        timeout = getattr(func, '__timeout__', self.__timeout__)
-        self.loop.run_until_complete(asyncio.wait_for(coro(self), timeout=timeout))
+        timeout_ = getattr(func, '__timeout__', self.__timeout__)
+        self.loop.run_until_complete(asyncio.wait_for(coro(self), timeout=timeout_))
         if len(handler.messages) != 0:
             raise AsyncioErrors(handler.messages)
     return wrapper

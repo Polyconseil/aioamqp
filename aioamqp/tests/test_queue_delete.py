@@ -1,7 +1,5 @@
 import unittest
 
-import asyncio
-
 from . import testcase
 from . import testing
 

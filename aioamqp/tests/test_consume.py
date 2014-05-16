@@ -1,7 +1,5 @@
 import unittest
 
-import asyncio
-
 from . import testcase
 from . import testing
 from .. import exceptions
@@ -82,6 +80,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         data = (yield from channel.consume(ctag_q1))
         consumer_tag, delivery_tag, payload = data
         self.assertEqual(ctag_q1, consumer_tag)
+        self.assertIsNotNone(delivery_tag)
         self.assertEqual(b"coucou1", payload)
 
         # put message in q2

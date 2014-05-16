@@ -50,6 +50,7 @@ class ExchangeDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.loop.run_until_complete(self._test_exchange_declare('e', 'direct',
             durable=False, auto_delete=False))
 
+    @testing.coroutine
     def test_passive(self):
         yield from self.safe_exchange_delete('e')
         # ask for non-existing exchange

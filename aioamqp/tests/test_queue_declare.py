@@ -69,15 +69,15 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_not_exclusive(self):
-            # create a non-exclusive queue
-            yield from self.queue_declare('q', exclusive=False)
-            # consume it
-            yield from self.channel.basic_consume('q', no_wait=False)
-            # create an other amqp connection
-            amqp2 = yield from self.create_amqp()
-            channel = yield from self.create_channel(amqp=amqp2)
-            # assert that this connection can connect to the queue
-            yield from channel.basic_consume('q', no_wait=False)
+        # create a non-exclusive queue
+        yield from self.queue_declare('q', exclusive=False)
+        # consume it
+        yield from self.channel.basic_consume('q', no_wait=False)
+        # create an other amqp connection
+        amqp2 = yield from self.create_amqp()
+        channel = yield from self.create_channel(amqp=amqp2)
+        # assert that this connection can connect to the queue
+        yield from channel.basic_consume('q', no_wait=False)
 
     @testing.coroutine
     def test_passive(self):
