@@ -25,14 +25,13 @@ def exchange_routing():
     routing_key = sys.argv[1] if len(sys.argv) > 1 else 'anonymous.info'
 
     yield from channel.exchange(exchange_name, 'topic')
-    yield from asyncio.sleep(2)
 
     yield from channel.publish(
         message, exchange_name=exchange_name, routing_key=routing_key)
     print(" [x] Sent %r" % (message,))
 
-    yield from asyncio.sleep(1)
-    yield from asyncio.wait_for(protocol.client_close(), timeout=10)
+    protocol.close()
+    yield from protocol.wait_closed()
 
 
 asyncio.get_event_loop().run_until_complete(exchange_routing())
