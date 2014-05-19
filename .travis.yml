@@ -1,0 +1,30 @@
+language: python
+
+python:
+    - 3.3
+
+services:
+    - rabbitmq
+
+env:
+    - PYTHONASYNCIODEBUG=1 RABBITMQCTL_CMD="sudo rabbitmqctl"
+
+install:
+    - pip install -r requirements_dev.txt
+    - pip install --editable .
+    - pip freeze
+
+before_script:
+    - ./patch_asyncio.sh
+
+script: nosetests --verbosity=2 aioamqp
+
+notifications:
+    email: true
+    irc:
+        channels:
+            - "chat.freenode.net#aioamqp"
+        on_success: change
+        on_failure: always
+        use_notice: true
+        skip_join: true
