@@ -12,15 +12,12 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def test_close(self):
         amqp = self.amqp
         self.assertTrue(amqp.is_open)
-        amqp.close()
-        yield from amqp.wait_closed()
+        yield from amqp.close()
         self.assertFalse(amqp.is_open)
 
     @testing.coroutine
     def test_multiple_close(self):
         amqp = self.amqp
-        amqp.close()
-        yield from amqp.wait_closed()
+        yield from amqp.close()
         self.assertFalse(amqp.is_open)
-        amqp.close()
-        yield from amqp.wait_closed()
+        yield from amqp.close()

@@ -46,7 +46,8 @@ class Channel:
         frame.frame()
         logger.info("channel opened")
 
-    def close(self, reply_code=0, reply_text="Normal Shutdown"):
+    @asyncio.coroutine
+    def close(self, reply_code=0, reply_text="Normal Shutdown", no_wait=False, timeout=None):
         """Close the channel."""
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
@@ -57,10 +58,12 @@ class Channel:
         request.write_short(0)
         request.write_short(0)
         frame.write_frame(request)
+        if not no_wait:
+            yield from self.wait_closed(timeout=timeout)
 
     @asyncio.coroutine
-    def wait_closed(self):
-        yield from self.close_event.wait()
+    def wait_closed(self, timeout=None):
+        yield from asyncio.wait_for(self.close_event.wait(), timeout=timeout)
 
     @asyncio.coroutine
     def close_ok(self, frame):

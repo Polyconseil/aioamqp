@@ -30,8 +30,7 @@ def exchange_routing():
         message, exchange_name=exchange_name, routing_key=routing_key)
     print(" [x] Sent %r" % (message,))
 
-    protocol.close()
-    yield from protocol.wait_closed()
+    yield from protocol.close()
 
 
 asyncio.get_event_loop().run_until_complete(exchange_routing())

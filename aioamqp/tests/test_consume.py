@@ -49,8 +49,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from channel.basic_consume("q")
 
         # close
-        channel.close()
-        yield from channel.wait_closed()
+        yield from channel.close()
 
         # get one
         with self.assertRaises(exceptions.ChannelClosed):
