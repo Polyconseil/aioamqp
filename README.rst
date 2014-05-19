@@ -1,6 +1,8 @@
 aioamqp
 =======
 
+.. image:: https://badge.fury.io/py/aioamqp.svg
+    :target: http://badge.fury.io/py/aioamqp
 .. image:: https://travis-ci.org/Polyconseil/aioamqp.svg?branch=master
     :target: https://travis-ci.org/Polyconseil/aioamqp
 
