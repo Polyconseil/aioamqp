@@ -1,7 +1,7 @@
 aioamqp
 =======
 
-.. image:: https://travis-ci.org/Polyconseil/aioamqp.svg?branch=trecouvr/travis
+.. image:: https://travis-ci.org/Polyconseil/aioamqp.svg?branch=master
     :target: https://travis-ci.org/Polyconseil/aioamqp
 
 
