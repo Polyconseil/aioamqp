@@ -24,7 +24,5 @@ def produce():
         yield from channel.publish("py3.message", '', queue_name)
         yield from asyncio.sleep(10)
 
-    protocol.close()
-    yield from protocol.wait_closed()
 
 asyncio.get_event_loop().run_until_complete(produce())

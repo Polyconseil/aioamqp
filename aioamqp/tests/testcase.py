@@ -112,14 +112,15 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             for exchange_name, channel in self.exchanges.values():
                 logger.debug('Delete exchange %s', self.full_name(exchange_name))
                 yield from self.safe_exchange_delete(exchange_name, channel)
+            for channel in self.channels:
+                logger.debug('Delete channel %s', channel)
+                yield from channel.close(no_wait=True)
+                del channel
+            for amqp in self.amqps:
+                logger.debug('Delete amqp %s', amqp)
+                yield from amqp.close(no_wait=True)
+                del amqp
         self.loop.run_until_complete(go())
-        for channel in self.channels:
-            logger.debug('Delete channel %s', channel)
-            channel.close()
-            del channel
-        for amqp in self.amqps:
-            logger.debug('Delete amqp %s', amqp)
-            del amqp
         super().tearDown()
 
     @property

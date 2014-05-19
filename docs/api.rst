@@ -34,8 +34,7 @@ Starting a connection to AMQP really mean instanciate a new asyncio Protocol sub
         yield from asyncio.sleep(1)
 
         print("close connection")
-        protocol.close()
-        yield from asyncio.wait_for(protocol.wait_closed(), timeout=10)
+        yield from protocol.close()
 
     asyncio.get_event_loop().run_until_complete(connect())
 
