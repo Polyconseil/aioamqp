@@ -47,7 +47,6 @@ def receive_log():
     while True:
         consumer_tag, delivery_tag, message = yield from channel.consume()
         print("consumer {} recved {} ({})".format(consumer_tag, message, delivery_tag))
-    yield from asyncio.sleep(10)
-    yield from asyncio.wait_for(protocol.client_close(), timeout=10)
+
 
 asyncio.get_event_loop().run_until_complete(receive_log())

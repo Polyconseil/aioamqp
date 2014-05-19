@@ -25,14 +25,13 @@ def exchange_routing():
     message = ' '.join(sys.argv[2:]) or 'Hello World!'
 
     yield from channel.exchange(exchange_name, 'direct')
-    yield from asyncio.sleep(2)
 
     yield from channel.publish(
         message, exchange_name=exchange_name, routing_key=severity)
     print(" [x] Sent %r" % (message,))
 
-    yield from asyncio.sleep(1)
-    yield from asyncio.wait_for(protocol.client_close(), timeout=10)
+    protocol.close()
+    yield from protocol.wait_closed()
 
 
 asyncio.get_event_loop().run_until_complete(exchange_routing())
