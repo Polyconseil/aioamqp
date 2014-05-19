@@ -60,10 +60,30 @@ class ProxyAmqpProtocol(AmqpProtocol):
     CHANNEL_FACTORY = channel_factory
 
 
+def get_rabbitmqctl_exe():
+    cmd = os.environ.get('RABBITMQCTL_CMD', None)
+    if cmd:
+        return cmd
+    paths = [
+        os.path.join(os.path.expanduser('~'), 'sbin/rabbitmqctl'),
+        '/usr/local/sbin/rabbitmqctl',
+        '/usr/sbin/rabbitmqctl',
+    ]
+    for path in paths:
+        if os.path.exists(path):
+            return path
+    return 'rabbitmqctl'
+
+
 class RabbitTestCase(testing.AsyncioTestCaseMixin):
     """TestCase with a rabbit running in background"""
 
     RABBIT_TIMEOUT = 1.0
+
+    @classmethod
+    def setUpClass(cls):
+        super(RabbitTestCase, cls).setUpClass()
+        cls.rabbitctl_exe = get_rabbitmqctl_exe() 
 
     def setUp(self):
         super().setUp()
@@ -110,22 +130,10 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
     def channel(self):
         return self.channels[0]
 
-    def get_rabbitmqctl_exe(self):
-        paths = [
-            os.path.join(os.path.expanduser('~'), 'sbin/rabbitmqctl'),
-            '/usr/local/sbin/rabbitmqctl',
-            '/usr/sbin/rabbitmqctl',
-        ]
-        for path in paths:
-            if os.path.exists(path):
-                return path
-        return 'rabbitmqctl'
-
     @asyncio.coroutine
     def rabbitctl(self, *args):
-        exe_name = self.get_rabbitmqctl_exe()
-        proc = yield from asyncio.create_subprocess_exec(
-            exe_name, *args,
+        proc = yield from asyncio.create_subprocess_shell(
+            self.rabbitctl_exe + " " + " ".join(args),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         try:

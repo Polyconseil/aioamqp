@@ -1,1 +1,1 @@
-asyncio==0.3.1
+asyncio>=0.4.1
