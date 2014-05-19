@@ -1,0 +1,13 @@
+include README.rst
+include CHANGES.rst
+include LICENSE
+include AUTHORS.rst
+
+recursive-include docs *
+recursive-include examples *.py
+
+recursive-exclude * *.pyc
+recursive-exclude * *.pyo
+recursive-exclude * *.swp
+
+prune docs/_build

@@ -14,11 +14,11 @@ description = 'AMQP implementation using asyncio'
 setuptools.setup(
     name=PACKAGE_NAME,
     version=VERSION,
-    author='Benoît Calvez',
-    author_email='benoit.calvez@polyconseil.fr',
+    author="Polyconseil dev' team",
+    author_email='opensource+aioamqp@polyconseil',
     url='https://github.com/polyconseil/aioamqp',
     description=description,
-    long_description=description,
+    long_description=open('README.rst').read(),
     download_url='https://pypi.python.org/pypi/aioamqp',
     packages=[
         'aioamqp',
@@ -26,7 +26,6 @@ setuptools.setup(
     install_requires=['asyncio'] if py_version <= (3, 3) else [],
     classifiers=[
         "Development Status :: 4 - Beta",
-        "Environment :: Web Environment",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
