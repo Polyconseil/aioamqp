@@ -123,8 +123,8 @@ class AmqpEncoder:
         self._write_string(string)
 
     def write_message_properties(self, properties):
+
         properties_flag_value = 0
-        properties_encoder = AmqpEncoder()
         if properties is None:
             self.write_short(0)
             return
@@ -134,66 +134,69 @@ class AmqpEncoder:
             raise ValueError("%s are not properties, valid properties are %s" % (
                 diff, amqp_constants.MESSAGE_PROPERTIES))
 
+        start = self.payload.tell()                 # record the position
+        self.write_short(properties_flag_value)     # set the flag later
+
         content_type = properties.get('content_type')
         if content_type:
             properties_flag_value |= amqp_constants.FLAG_CONTENT_TYPE
-            properties_encoder.write_shortstr(content_type)
+            self.write_shortstr(content_type)
         content_encoding = properties.get('content_encoding')
         if content_encoding:
             properties_flag_value |= amqp_constants.FLAG_CONTENT_ENCODING
-            properties_encoder.write_shortstr(content_encoding)
+            self.write_shortstr(content_encoding)
         headers = properties.get('headers')
         if headers:
             properties_flag_value |= amqp_constants.FLAG_HEADERS
-            properties_encoder.write_table(headers)
+            self.write_table(headers)
         delivery_mode = properties.get('delivery_mode')
         if delivery_mode:
             properties_flag_value |= amqp_constants.FLAG_DELIVERY_MODE
-            properties_encoder.write_octet(delivery_mode)
+            self.write_octet(delivery_mode)
         priority = properties.get('priority')
         if priority:
             properties_flag_value |= amqp_constants.FLAG_PRIORITY
-            properties_encoder.write_octet(priority)
+            self.write_octet(priority)
         correlation_id = properties.get('correlation_id')
         if correlation_id:
             properties_flag_value |= amqp_constants.FLAG_CORRELATION_ID
-            properties_encoder.write_octet(correlation_id)
+            self.write_octet(correlation_id)
         reply_to = properties.get('reply_to')
         if reply_to:
             properties_flag_value |= amqp_constants.FLAG_REPLY_TO
-            properties_encoder.write_shortstr(reply_to)
+            self.write_shortstr(reply_to)
         expiration = properties.get('expiration')
         if expiration:
             properties_flag_value |= amqp_constants.FLAG_EXPIRATION
-            properties_encoder.write_shortstr(expiration)
+            self.write_shortstr(expiration)
         message_id = properties.get('message_id')
         if message_id:
             properties_flag_value |= amqp_constants.FLAG_MESSAGE_ID
-            properties_encoder.write_shortstr(message_id)
+            self.write_shortstr(message_id)
         timestamp = properties.get('timestamp')
         if timestamp:
             properties_flag_value |= amqp_constants.FLAG_TIMESTAMP
-            properties_encoder.write_long_long(timestamp)
+            self.write_long_long(timestamp)
         type_ = properties.get('type')
         if type_:
             properties_flag_value |= amqp_constants.FLAG_TYPE
-            properties_encoder.write_shortstr(type_)
+            self.write_shortstr(type_)
         user_id = properties.get('user_id')
         if user_id:
             properties_flag_value |= amqp_constants.FLAG_USER_ID
-            properties_encoder.write_shortstr(user_id)
+            self.write_shortstr(user_id)
         app_id = properties.get('app_id')
         if app_id:
             properties_flag_value |= amqp_constants.FLAG_APP_ID
-            properties_encoder.write_shortstr(app_id)
+            self.write_shortstr(app_id)
         cluster_id = properties.get('cluster_id')
         if cluster_id:
             properties_flag_value |= amqp_constants.FLAG_CLUSTER_ID
-            properties_encoder.write_shortstr(cluster_id)
+            self.write_shortstr(cluster_id)
 
-        self.write_short(properties_flag_value)
-        self.payload.write(properties_encoder.payload.getvalue())
-
+        self.payload.seek(start)                    # move before the flag
+        self.write_short(properties_flag_value)     # set the flag
+        self.payload.seek(0, 2)
 
 class AmqpDecoder:
     def __init__(self, reader):
