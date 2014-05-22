@@ -56,18 +56,17 @@ class AmqpEncoder:
         self.payload = io.BytesIO()
 
     def write_table(self, data_dict):
-        if data_dict is None:
-            data_dict = {}
 
-        table_encoder = AmqpEncoder()
-        for key, value in data_dict.items():
-            table_encoder.write_shortstr(key)
-            table_encoder.write_value(value)
-
-        table_len = table_encoder.payload.tell()
-        self.write_long(table_len)
-        if table_len:
-            self.payload.write(table_encoder.payload.getvalue())
+        self.write_long(0)                  # the table length (set later)
+        if data_dict is not None and len(data_dict):
+            start = self.payload.tell()
+            for key, value in data_dict.items():
+                self.write_shortstr(key)
+                self.write_value(value)
+            table_length = self.payload.tell() - start
+            self.payload.seek(start - 4)    # move before the long
+            self.write_long(table_length)   # and set the table length
+            self.payload.seek(0, 2)         # return at the end
 
     def write_value(self, value):
         if isinstance(value, (bytes, str)):
