@@ -201,7 +201,7 @@ class Channel:
             self.response_future.set_exception(exceptions.ChannelClosed(exc_msg, frame=frame))
         frame.frame()
         self.close_event.set()
-        self.close_consumers()
+        self._close_consumers()
 
     def _close_consumers(self, exc=None):
         exc = exc or exceptions.ChannelClosed()
