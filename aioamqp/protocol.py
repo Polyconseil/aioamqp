@@ -190,7 +190,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             except exceptions.AmqpClosedConnection:
                 logger.info("Close connection")
                 self.stop_now.set_result(None)
-            except:
+            except Exception:
                 logger.exception('error on dispatch')
 
     @asyncio.coroutine
