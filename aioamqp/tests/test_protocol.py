@@ -50,7 +50,7 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
                 login='tom',
                 host='example.com',
                 protocol_factory=protocol.AmqpProtocol,
-                virtualhost='/myvhost',
+                virtualhost='myvhost',
                 port=7777
             )
 

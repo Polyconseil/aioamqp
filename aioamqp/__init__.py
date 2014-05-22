@@ -45,7 +45,7 @@ def from_url(url, login_method='AMQPLAIN', insist=False, protocol_factory=AmqpPr
         port=url.port or 5672,
         login=url.username or 'guest',
         password=url.password or 'guest',
-        virtualhost=url.path or '/',
+        virtualhost=(url.path[1:] if len(url.path) > 1 else '/'),
         ssl=(url.scheme == 'amqps'),
         login_method=login_method,
         insist=insist,
