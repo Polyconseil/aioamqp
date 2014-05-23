@@ -40,6 +40,7 @@ Content Payload
 
 import asyncio
 import io
+import binascii
 import struct
 import socket
 
@@ -402,17 +403,18 @@ class AmqpResponse:
     def frame(self):
         if not DUMP_FRAMES:
             return
+
         frame_data = {
-            'type': self.frame_type or '',
+            'type': self.frame_type,
             'channel': self.channel,
-            'size': self.payload_size or '',
-            'frame_end': self.frame_end or '',
-            'payload': self.frame_payload or '',
+            'size': self.payload_size,
+            'frame_end': self.frame_end,
+            'payload': self.frame_payload,
         }
         print("""
 0        1           3            7                        size+7        size+8
 +--------+-----------+------------+    +---------------+     +--------------+
-|{type:^8}|{channel:^11}|{size:^12}|    |{payload:^15}|     |{frame_end:^14}|
+|{type!r:^8}|{channel!r:^11}|{size!r:^12}|    |{payload!r:^15}|     |{frame_end!r:^14}|
 +--------+-----------+------------+    +---------------+     +--------------+
    type    channel       size                payload            frame-end
 """.format(**frame_data))
