@@ -43,6 +43,8 @@ import io
 import struct
 import socket
 
+from os import SEEK_END
+
 from . import exceptions
 from . import constants as amqp_constants
 
@@ -66,7 +68,7 @@ class AmqpEncoder:
             table_length = self.payload.tell() - start
             self.payload.seek(start - 4)    # move before the long
             self.write_long(table_length)   # and set the table length
-            self.payload.seek(0, 2)         # return at the end
+            self.payload.seek(0, SEEK_END)  # return at the end
 
     def write_value(self, value):
         if isinstance(value, (bytes, str)):
@@ -195,7 +197,7 @@ class AmqpEncoder:
 
         self.payload.seek(start)                    # move before the flag
         self.write_short(properties_flag_value)     # set the flag
-        self.payload.seek(0, 2)
+        self.payload.seek(0, SEEK_END)
 
 class AmqpDecoder:
     def __init__(self, reader):
