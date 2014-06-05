@@ -38,6 +38,34 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertEqual(b"coucou", message)
 
     @testing.coroutine
+    def test_big_consume(self):
+        # declare
+        yield from self.queue_declare("q", exclusive=True, no_wait=False)
+        yield from self.exchange_declare("e", "fanout")
+        yield from self.channel.queue_bind("q", "e", routing_key='')
+
+        # get a different channel
+        channel = yield from self.create_channel()
+
+        # publish
+        yield from channel.publish("a"*1000000, "e", routing_key='')
+
+        # assert there is a message to consume
+        queues = yield from self.list_queues()
+        self.assertIn("q", queues)
+        self.assertEqual(1, queues["q"]['messages'])
+
+        # start consume
+        yield from channel.basic_consume("q")
+
+        # get one
+        consume_data = yield from channel.consume()
+        consumer_tag, delivery_tag, message = consume_data
+        self.assertIsNotNone(consumer_tag)
+        self.assertIsNotNone(delivery_tag)
+        self.assertEqual(b"a"*1000000, message)
+
+    @testing.coroutine
     def test_stuck(self):
         # declare
         yield from self.queue_declare("q", exclusive=True, no_wait=False)

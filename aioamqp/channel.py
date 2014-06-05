@@ -5,6 +5,7 @@
 import asyncio
 import logging
 import uuid
+import io
 
 from . import constants as amqp_constants
 from . import frame as amqp_frame
@@ -87,6 +88,7 @@ class Channel:
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_DELIVER): self.basic_deliver,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CANCEL): self.server_basic_cancel,
         }
+
         try:
             yield from methods[(frame.class_id, frame.method_id)](frame)
         except KeyError as ex:
@@ -282,15 +284,21 @@ class Channel:
 
         header_frame.write_frame(encoder)
 
-        content_frame = amqp_frame.AmqpRequest(
-            self.protocol.writer, amqp_constants.TYPE_BODY, self.channel_id)
-        content_frame.declare_class(amqp_constants.CLASS_BASIC)
-        encoder = amqp_frame.AmqpEncoder()
-        if isinstance(payload, str):
-            encoder.payload.write(payload.encode())
-        else:
-            encoder.payload.write(payload)
-        content_frame.write_frame(encoder)
+        # split the payload
+
+        frame_max = self.protocol.server_frame_max
+        for chunk in (payload[0+i:frame_max+i] for i in range(0, len(payload), frame_max)):
+
+            content_frame = amqp_frame.AmqpRequest(
+                self.protocol.writer, amqp_constants.TYPE_BODY, self.channel_id)
+            content_frame.declare_class(amqp_constants.CLASS_BASIC)
+            encoder = amqp_frame.AmqpEncoder()
+            if isinstance(chunk, str):
+                encoder.payload.write(chunk.encode())
+            else:
+                encoder.payload.write(chunk)
+            content_frame.write_frame(encoder)
+
         yield from self.protocol.writer.drain()
 #
 ## Basic
@@ -459,9 +467,14 @@ class Channel:
         deliver_tag = response.read_long_long()
         content_header_frame = yield from self.protocol.get_frame()
         content_header_frame.frame()
-        content_body_frame = yield from self.protocol.get_frame()
-        content_body_frame.frame()
-        self.consumer_queues[consumer_tag].put_nowait((consumer_tag, deliver_tag, content_body_frame.payload))
+
+        buffer = io.BytesIO()
+        while(buffer.tell() < content_header_frame.body_size):
+            content_body_frame = yield from self.protocol.get_frame()
+            content_body_frame.frame()
+            buffer.write(content_body_frame.payload)
+
+        self.consumer_queues[consumer_tag].put_nowait((consumer_tag, deliver_tag, buffer.getvalue()))
 
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
