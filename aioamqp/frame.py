@@ -40,7 +40,6 @@ Content Payload
 
 import asyncio
 import io
-import binascii
 import struct
 import socket
 
