@@ -41,14 +41,14 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
     @testing.coroutine
     def test_connection_from_url(self):
         with mock.patch('aioamqp.connect') as connect:
-            yield from amqp_from_url('amqp://tom:pass@chev.eu:7777/myvhost')
+            yield from amqp_from_url('amqp://tom:pass@example.com:7777/myvhost')
             connect.assert_called_once_with(
                 insist=False,
                 password='pass',
                 login_method='AMQPLAIN',
                 ssl=False,
                 login='tom',
-                host='chev.eu',
+                host='example.com',
                 protocol_factory=protocol.AmqpProtocol,
                 virtualhost='/myvhost',
                 port=7777
