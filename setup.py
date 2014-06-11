@@ -15,7 +15,7 @@ setuptools.setup(
     name=PACKAGE_NAME,
     version=VERSION,
     author="Polyconseil dev' team",
-    author_email='opensource+aioamqp@polyconseil',
+    author_email='opensource+aioamqp@polyconseil.fr',
     url='https://github.com/polyconseil/aioamqp',
     description=description,
     long_description=open('README.rst').read(),
