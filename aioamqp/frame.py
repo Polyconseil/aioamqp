@@ -147,15 +147,15 @@ class AmqpEncoder:
             properties_flag_value |= amqp_constants.FLAG_CONTENT_ENCODING
             self.write_shortstr(content_encoding)
         headers = properties.get('headers')
-        if headers:
+        if headers is not None:
             properties_flag_value |= amqp_constants.FLAG_HEADERS
             self.write_table(headers)
         delivery_mode = properties.get('delivery_mode')
-        if delivery_mode:
+        if delivery_mode is not None:
             properties_flag_value |= amqp_constants.FLAG_DELIVERY_MODE
             self.write_octet(delivery_mode)
         priority = properties.get('priority')
-        if priority:
+        if priority is not None:
             properties_flag_value |= amqp_constants.FLAG_PRIORITY
             self.write_octet(priority)
         correlation_id = properties.get('correlation_id')
@@ -175,7 +175,7 @@ class AmqpEncoder:
             properties_flag_value |= amqp_constants.FLAG_MESSAGE_ID
             self.write_shortstr(message_id)
         timestamp = properties.get('timestamp')
-        if timestamp:
+        if timestamp is not None:
             properties_flag_value |= amqp_constants.FLAG_TIMESTAMP
             self.write_long_long(timestamp)
         type_ = properties.get('type')
