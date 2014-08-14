@@ -161,7 +161,7 @@ class AmqpEncoder:
         correlation_id = properties.get('correlation_id')
         if correlation_id:
             properties_flag_value |= amqp_constants.FLAG_CORRELATION_ID
-            self.write_octet(correlation_id)
+            self.write_shortstr(correlation_id)
         reply_to = properties.get('reply_to')
         if reply_to:
             properties_flag_value |= amqp_constants.FLAG_REPLY_TO
