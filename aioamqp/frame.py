@@ -429,3 +429,8 @@ class AmqpResponse:
 |{class_id:^10}|{method_id:^11}| arguments...
 +----------+-----------+-------------- - -
   class-id   method-id       ...""".format(**method_data))
+
+    def __str__(self):
+        if DUMP_FRAMES:
+            return self.frame()
+        return super().__str__()

@@ -19,9 +19,13 @@ def receive():
 
     yield from asyncio.wait_for(channel.basic_consume(queue_name), timeout=10)
 
+    msg_count = 0
     while True:
         consumer_tag, delivery_tag, message = yield from channel.consume()
-        print("consumer {} recved {} ({})".format(consumer_tag, message, delivery_tag))
+        msg_count += 1
+        if msg_count % 10000 == 0:
+            print(msg_count)
+            print("consumer {} recved {} ({})".format(consumer_tag, message, delivery_tag))
 
 
 asyncio.get_event_loop().run_until_complete(receive())

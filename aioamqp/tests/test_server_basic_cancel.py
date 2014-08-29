@@ -5,19 +5,18 @@ from . import testing
 from .. import exceptions
 
 
-class ServerBasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class ServerBasicCancelTestCase(testcase.AmqpTestCase, unittest.TestCase):
 
-    _multiprocess_can_split_ = True
-
-    @testing.coroutine
     def test_consumer_is_cancelled(self):
-        yield from self.queue_declare("q", exclusive=True, no_wait=False)
+        queue_name = "test_consumer_is_cancelled"
+        yield from self.create_channel()
+        yield from self.queue_declare(queue_name, exclusive=True, no_wait=False)
 
         # start consume
-        yield from self.channel.basic_consume("q")
+        yield from self.channel.basic_consume(queue_name)
 
         # delete queue (so the server send a cancel)
-        yield from self.channel.queue_delete("q")
+        yield from self.channel.queue_delete(queue_name)
 
         # now try to consume and get an exception
         with self.assertRaises(exceptions.ConsumerCancelled):

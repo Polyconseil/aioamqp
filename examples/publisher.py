@@ -22,7 +22,7 @@ def produce():
 
     while True:
         yield from channel.publish("py3.message", '', queue_name)
-        yield from asyncio.sleep(10)
+        #yield from asyncio.sleep(10)
 
 
 asyncio.get_event_loop().run_until_complete(produce())
