@@ -4,36 +4,38 @@ from . import testcase
 from . import testing
 
 
-class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class PublishTestCase(testcase.AmqpTestCase, unittest.TestCase):
 
-    _multiprocess_can_split_ = True
-
-    @testing.coroutine
     def test_publish(self):
         # declare
-        yield from self.queue_declare("q", exclusive=True, no_wait=False)
-        yield from self.exchange_declare("e", "fanout")
-        yield from self.channel.queue_bind("q", "e", routing_key='')
+        queue_name = "test_publish"
+        exchange_name = "test_publish"
+        yield from self.create_channel()
+        yield from self.queue_declare(queue_name, exclusive=True, no_wait=False)
+        yield from self.exchange_declare(exchange_name, "fanout")
+        yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
 
         # publish
-        yield from self.channel.publish("coucou", "e", routing_key='')
+        yield from self.channel.publish("payload", exchange_name, routing_key='')
 
-        # retrieve queue info from rabbitmqctl
-        queues = yield from self.list_queues()
-        self.assertIn("q", queues)
-        self.assertEqual(1, queues["q"]['messages'])
+        yield from self.channel.basic_consume()
+        ctags, count, message = yield from self.channel.consume()
+        self.assertEqual(message, b"payload")
 
-    @testing.coroutine
     def test_big_publish(self):
         # declare
-        yield from self.queue_declare("q", exclusive=True, no_wait=False)
-        yield from self.exchange_declare("e", "fanout")
-        yield from self.channel.queue_bind("q", "e", routing_key='')
+        queue_name = "test_big_publish"
+        exchange_name = "test_big_publish"
+        yield from self.create_channel()
+        yield from self.queue_declare(queue_name, exclusive=True, no_wait=False)
+        yield from self.exchange_declare(exchange_name, "fanout")
+        yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
 
         # publish
-        yield from self.channel.publish("a"*1000000, "e", routing_key='')
+        payload = "a"*1000000
+        yield from self.channel.publish(payload, exchange_name, routing_key='')
 
-        # retrieve queue info from rabbitmqctl
-        queues = yield from self.list_queues()
-        self.assertIn("q", queues)
-        self.assertEqual(1, queues["q"]['messages'])
+        yield from self.channel.basic_consume()
+        message = yield from self.channel.consume()
+        ctags, count, message = yield from self.channel.consume()
+        self.assertEqual(message, payload)

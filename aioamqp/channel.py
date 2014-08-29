@@ -20,7 +20,6 @@ class Channel:
         self.protocol = protocol
         self.channel_id = channel_id
         self.consumer_queues = {}
-        self.response_future = None
         self.close_event = asyncio.Event()
         self.cancelled_consumers = set()
         self.last_consumer_tag = None
@@ -42,14 +41,14 @@ class Channel:
     @asyncio.coroutine
     def open_ok(self, frame):
         self.close_event.clear()
-        if self.response_future is not None:
-            self.response_future.set_result(frame)
         frame.frame()
         logger.info("channel opened")
 
     @asyncio.coroutine
     def close(self, reply_code=0, reply_text="Normal Shutdown", no_wait=False, timeout=None):
         """Close the channel."""
+        if not self.is_open:
+            raise ChannelClosed("Channel is already closed")
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE)
@@ -58,9 +57,8 @@ class Channel:
         request.write_shortstr(reply_text)
         request.write_short(0)
         request.write_short(0)
-        frame.write_frame(request)
-        if not no_wait:
-            yield from self.wait_closed(timeout=timeout)
+        return (yield from self._write_frame(frame, request, no_wait, timeout=timeout))
+
 
     @asyncio.coroutine
     def wait_closed(self, timeout=None):
@@ -70,7 +68,6 @@ class Channel:
     def close_ok(self, frame):
         self.close_event.set()
         self._close_consumers()
-        frame.frame()
         logger.info("channel closed")
 
     @asyncio.coroutine
@@ -91,7 +88,7 @@ class Channel:
         }
 
         try:
-            yield from methods[(frame.class_id, frame.method_id)](frame)
+            return (yield from methods[(frame.class_id, frame.method_id)](frame))
         except KeyError as ex:
             raise NotImplementedError("Frame (%s, %s) is not implemented" % (frame.class_id, frame.method_id)) from ex
 
@@ -99,17 +96,16 @@ class Channel:
     def _write_frame(self, frame, request, no_wait, timeout=None, no_check_open=False):
         if not self.is_open and not no_check_open:
             raise exceptions.ChannelClosed()
-        if no_wait:
-            frame.write_frame(request)
-        else:
-            assert self.response_future is None, "Already waiting for some event"
-            self.response_future = asyncio.Future()
-            frame.write_frame(request)
-            try:
-                response_frame = yield from asyncio.wait_for(self.response_future, timeout=timeout)
-            finally:
-                self.response_future = None
-            return response_frame
+        frame.write_frame(request)
+        if no_wait is False:
+            return (yield from self.protocol.dispatch_frame())
+
+        # else:
+        #     assert self.esponse_future is None, "Already waiting for some event"
+        #     frame.write_frame(request)
+        #     try:
+        #     finally:
+        #     return response_frame
 
     @asyncio.coroutine
     def exchange_declare(self, exchange_name, type_name, passive=False, durable=False,
@@ -131,8 +127,6 @@ class Channel:
 
     @asyncio.coroutine
     def exchange_declare_ok(self, frame):
-        if self.response_future is not None:
-            self.response_future.set_result(frame)
         frame.frame()
         logger.debug("exchange declared")
 
@@ -150,8 +144,6 @@ class Channel:
 
     @asyncio.coroutine
     def exchange_delete_ok(self, frame):
-        if self.response_future is not None:
-            self.response_future.set_result(frame)
         frame.frame()
         logger.debug("exchange deleted")
 
@@ -171,8 +163,6 @@ class Channel:
 
     @asyncio.coroutine
     def queue_declare_ok(self, frame):
-        if self.response_future is not None:
-            self.response_future.set_result(frame)
         frame.frame()
         logger.debug("queue declared")
 
@@ -190,19 +180,16 @@ class Channel:
 
     @asyncio.coroutine
     def queue_delete_ok(self, frame):
-        if self.response_future is not None:
-            self.response_future.set_result(frame)
         frame.frame()
         logger.debug("queue deleted")
 
     @asyncio.coroutine
     def server_channel_close(self, frame):
-        if self.response_future is not None:
-            exc_msg = "{} ({})".format(frame.arguments['reply_text'], frame.arguments['reply_code'])
-            self.response_future.set_exception(exceptions.ChannelClosed(exc_msg, frame=frame))
         frame.frame()
         self.close_event.set()
         self._close_consumers()
+        exc_msg = "{} ({})".format(frame.arguments['reply_text'], frame.arguments['reply_code'])
+        raise exceptions.ChannelClosed(exc_msg, frame=frame)
 
     def _close_consumers(self, exc=None):
         exc = exc or exceptions.ChannelClosed()
@@ -234,8 +221,6 @@ class Channel:
 
     @asyncio.coroutine
     def queue_bind_ok(self, frame):
-        if self.response_future is not None:
-            self.response_future.set_result(frame)
         frame.frame()
         logger.debug("queue bound")
 
@@ -410,6 +395,8 @@ class Channel:
     def basic_consume(self, queue_name='', consumer_tag='', no_local=False, no_ack=False, exclusive=False,
                       no_wait=False, callback=None, arguments=None, on_cancel=None, timeout=None):
         # If a consumer tag was not passed, create one
+        if not self.is_open:
+            raise exceptions.ChannelClosed()
         consumer_tag = consumer_tag or 'ctag%i.%s' % (self.channel_id, uuid.uuid4().hex)
 
         if consumer_tag in self.consumer_queues or consumer_tag in self.cancelled_consumers:
@@ -438,10 +425,7 @@ class Channel:
 
     @asyncio.coroutine
     def basic_consume_ok(self, frame):
-        if self.response_future is not None:
-            self.response_future.set_result(frame)
-        frame.frame()
-        logger.debug("basic consume ok received")
+        return frame.arguments['consumer_tag']
 
     @asyncio.coroutine
     def consume(self, consumer_tag=None):
@@ -449,6 +433,7 @@ class Channel:
 
         If consumer_tag is None, then the last consumer_tag declared in basic_consume will be used.
         """
+        yield from self.protocol.dispatch_frame()
         consumer_tag = consumer_tag or self.last_consumer_tag
         if consumer_tag not in self.consumer_queues and consumer_tag in self.cancelled_consumers:
             raise exceptions.ConsumerCancelled(consumer_tag)

@@ -4,7 +4,7 @@ from . import testcase
 from . import testing
 
 
-class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class CloseTestCase(testcase.AmqpTestCase, unittest.TestCase):
 
     _multiprocess_can_split_ = True
 

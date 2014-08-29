@@ -37,7 +37,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_locales = None
         self.reader = None
         self.writer = None
-        self.worker = None
         self.hearbeat = None
         self.channels = {}
         self.server_frame_max = None
@@ -68,6 +67,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder.write_short(0)
         frame.write_frame(encoder)
         if not no_wait:
+            return (yield from self.dispatch_frame())
             yield from self.wait_closed(timeout=timeout)
 
     @asyncio.coroutine
@@ -77,7 +77,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def close_ok(self, frame):
         self.stop()
-        frame.frame()
         logger.info("Recv close ok")
 
     @asyncio.coroutine
@@ -134,13 +133,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         # wait for open-ok
         yield from self.dispatch_frame()
 
-        # for now, we read server's responses asynchronously
-        self.worker = asyncio.async(self.run())
-
     def stop(self):
         self.is_open = False
         self.connection_closed.set()
-        self.stop_now.set_result(None)
 
     @asyncio.coroutine
     def get_frame(self):
@@ -172,26 +167,15 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         if frame.channel is not 0:
             try:
-                yield from self.channels[frame.channel].dispatch_frame(frame)
+                return (yield from self.channels[frame.channel].dispatch_frame(frame))
             except KeyError:
                 logger.info("Unknown channel %s", frame.channel)
             return
 
         try:
-            yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
+            return (yield from method_dispatch[(frame.class_id, frame.method_id)](frame))
         except KeyError:
             logger.info("frame {} {} is not handled".format(frame.class_id, frame.method_id))
-
-    @asyncio.coroutine
-    def run(self):
-        while not self.stop_now.done():
-            try:
-                yield from self.dispatch_frame()
-            except exceptions.AmqpClosedConnection:
-                logger.info("Close connection")
-                self.stop_now.set_result(None)
-            except Exception:
-                logger.exception('error on dispatch')
 
     @asyncio.coroutine
     def reply_to_hearbeat(self, frame):
