@@ -2,6 +2,7 @@ language: python
 
 python:
     - 3.3
+    - 3.4.1
 
 services:
     - rabbitmq
@@ -15,7 +16,10 @@ install:
     - pip freeze
 
 before_script:
-    - ./patch_asyncio.sh
+    - sudo rabbitmqctl delete_vhost "/aioamqptest" || true
+    - sudo rabbitmqctl add_vhost "/aioamqptest"
+    - sudo rabbitmqctl set_permissions -p /aioamqptest guest ".*" ".*" ".*"
+
 
 script: nosetests --verbosity=2 aioamqp
 
