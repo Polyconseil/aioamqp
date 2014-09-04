@@ -16,6 +16,9 @@ install:
 
 before_script:
     - ./patch_asyncio.sh
+    - sudo rabbitmqctl delete_vhost "/aioamqptest" || true
+    - sudo rabbitmqctl add_vhost "/aioamqptest"
+    - sudo rabbitmqctl set_permissions -p /aioamqptest guest ".*" ".*" ".*"
 
 script: nosetests --verbosity=2 aioamqp
 

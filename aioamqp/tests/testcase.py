@@ -87,7 +87,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
     def setUp(self):
         super().setUp()
-        self.vhost = '/'
+        self.vhost = '/aioamqptest'
         self.host = 'localhost'
         self.port = 5672
         self.queues = {}
