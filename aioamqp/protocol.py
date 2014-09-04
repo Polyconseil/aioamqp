@@ -25,7 +25,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     CHANNEL_FACTORY = amqp_channel.Channel
 
     def __init__(self, *args, **kwargs):
-        super().__init__(asyncio.StreamReader(), self.client_connected)
+        loop = asyncio.get_event_loop()
+        super().__init__(asyncio.StreamReader(loop=loop), self.client_connected, loop=loop)
         self.connecting = asyncio.Future()
         self.connection_closed = asyncio.Event()
         self.stop_now = asyncio.Future()
