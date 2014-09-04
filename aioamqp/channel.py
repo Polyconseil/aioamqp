@@ -20,6 +20,7 @@ class Channel:
         self.protocol = protocol
         self.channel_id = channel_id
         self.consumer_queues = {}
+        self.consumer_callbacks = {}
         self.response_future = None
         self.close_event = asyncio.Event()
         self.cancelled_consumers = set()
@@ -69,8 +70,6 @@ class Channel:
     @asyncio.coroutine
     def close_ok(self, frame):
         self.close_event.set()
-        self._close_consumers()
-        frame.frame()
         logger.info("channel closed")
 
     @asyncio.coroutine
@@ -174,8 +173,7 @@ class Channel:
     def queue_declare_ok(self, frame):
         if self.response_future is not None:
             self.response_future.set_result(frame)
-        frame.frame()
-        logger.debug("queue declared")
+
 
     @asyncio.coroutine
     def queue_delete(self, queue_name, if_unused=False, if_empty=False, no_wait=False, timeout=None):
@@ -203,12 +201,7 @@ class Channel:
             self.response_future.set_exception(exceptions.ChannelClosed(exc_msg, frame=frame))
         frame.frame()
         self.close_event.set()
-        self._close_consumers()
 
-    def _close_consumers(self, exc=None):
-        exc = exc or exceptions.ChannelClosed()
-        for queue in self.consumer_queues.values():
-            queue.put_nowait(exc)
 
 #
 ## Public api
@@ -421,6 +414,10 @@ class Channel:
 
         if not arguments:
             arguments = {}
+
+        if callback is None or not asyncio.iscoroutine(callback()):
+            raise exceptions.ConfigurationError("basic_consume requires a callback")
+
         frame = amqp_frame.AmqpRequest(
             self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
@@ -432,7 +429,7 @@ class Channel:
         encoder.write_bits(no_local, no_ack, exclusive, no_wait)
         encoder.write_table(arguments)
 
-        self.consumer_queues[consumer_tag] = asyncio.Queue()
+        self.consumer_callbacks[consumer_tag] = callback
         self.last_consumer_tag = consumer_tag
 
         if no_wait:
@@ -444,26 +441,7 @@ class Channel:
     def basic_consume_ok(self, frame):
         if self.response_future is not None:
             self.response_future.set_result(frame)
-        frame.frame()
-        logger.debug("basic consume ok received")
-
-    @asyncio.coroutine
-    def consume(self, consumer_tag=None):
-        """Wait for a message and returns it.
-
-        If consumer_tag is None, then the last consumer_tag declared in basic_consume will be used.
-        """
-        consumer_tag = consumer_tag or self.last_consumer_tag
-        if consumer_tag not in self.consumer_queues and consumer_tag in self.cancelled_consumers:
-            raise exceptions.ConsumerCancelled(consumer_tag)
-        if not self.is_open:
-            raise exceptions.ChannelClosed()
-        data = yield from self.consumer_queues[consumer_tag].get()
-        if isinstance(data, exceptions.AioamqpException):
-            if self.consumer_queues[consumer_tag].qsize() == 0:
-                del self.consumer_queues[consumer_tag]
-            raise data
-        return data
+        return frame.arguments['consumer_tag']
 
     @asyncio.coroutine
     def basic_deliver(self, frame):
@@ -479,14 +457,12 @@ class Channel:
             content_body_frame.frame()
             buffer.write(content_body_frame.payload)
 
-        self.consumer_queues[consumer_tag].put_nowait((consumer_tag, deliver_tag, buffer.getvalue()))
+        callback = self.consumer_callbacks[consumer_tag]
+        yield from callback(consumer_tag, deliver_tag, buffer.getvalue())
 
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
         """From the server, means the server won't send anymore messages to this consumer."""
         consumer_tag = frame.arguments['consumer_tag']
         self.cancelled_consumers.add(consumer_tag)
-        if consumer_tag in self.consumer_queues:
-            self.consumer_queues[consumer_tag].put_nowait(exceptions.ConsumerCancelled(consumer_tag))
-        frame.frame()
         logger.info("consume cancelled received")

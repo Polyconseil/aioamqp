@@ -6,6 +6,8 @@
 class AioamqpException(Exception):
     pass
 
+class ConfigurationError(AioamqpException):
+    pass
 
 class AmqpClosedConnection(AioamqpException):
     pass

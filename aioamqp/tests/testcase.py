@@ -188,7 +188,39 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         return datadict
 
     @asyncio.coroutine
+    def check_exchange_exists(self, exchange_name):
+        """Check if the exchange exist"""
+        try:
+            yield from self.exchange_declare(exchange_name, passive=True)
+        except exceptions.ChannelClosed:
+            return False
+
+        return True
+
+    @asyncio.coroutine
+    def assertExchangeExists(self, exchange_name):
+        if not self.check_exchange_exists(exchange_name):
+            self.fail("Exchange {} does not exists".format(exchange_name))
+
+    @asyncio.coroutine
+    def check_queue_exists(self, queue_name):
+        """Check if the queue exist"""
+        try:
+            yield from self.queue_declare(queue_name, passive=True)
+        except exceptions.ChannelClosed:
+            return False
+
+        return True
+
+    @asyncio.coroutine
+    def assertQueueExists(self, queue_name):
+        if not self.check_queue_exists(queue_name):
+            self.fail("Queue {} does not exists".format(queue_name))
+
+    @asyncio.coroutine
     def list_queues(self, vhost=None, fully_qualified_name=False):
+        if vhost is None:
+            vhost = self.vhost
         info = ['name', 'durable', 'auto_delete',
             'arguments', 'policy', 'pid', 'owner_pid', 'exclusive_consumer_pid',
             'exclusive_consumer_tag', 'messages_ready', 'messages_unacknowledged', 'messages',
@@ -198,6 +230,8 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
     @asyncio.coroutine
     def list_exchanges(self, vhost=None, fully_qualified_name=False):
+        if vhost is None:
+            vhost = self.vhost
         info = ['name', 'type', 'durable', 'auto_delete', 'internal', 'arguments', 'policy']
         return (yield from self.rabbitctl_list('list_exchanges', info, vhost=vhost,
             fully_qualified_name=fully_qualified_name))
@@ -256,6 +290,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         full_queue_name = self.full_name(queue_name)
         try:
             rep = yield from channel.queue_declare(full_queue_name, *args, **kw)
+
         finally:
             self.queues[queue_name] = (queue_name, channel)
         return rep

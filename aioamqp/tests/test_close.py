@@ -39,13 +39,8 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_cannot_consume_after_close(self):
-        yield from self.queue_declare("q")
-        channel = yield from self.create_channel()
-        yield from channel.basic_consume("q")
+        channel = self.channel
+        yield from self.channel.queue_declare("q")
         yield from channel.close()
         with self.assertRaises(exceptions.ChannelClosed):
-            yield from channel.consume()
-        with self.assertRaises(exceptions.ChannelClosed):
-            yield from channel.consume()
-        with self.assertRaises(exceptions.ChannelClosed):
-            yield from channel.consume()
+            yield from channel.basic_consume()
