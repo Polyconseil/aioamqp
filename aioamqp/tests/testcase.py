@@ -41,7 +41,11 @@ class ProxyChannel(Channel):
     queue_declare = use_full_name(Channel.queue_declare, ['queue_name'])
     queue_delete = use_full_name(Channel.queue_delete, ['queue_name'])
     queue_bind = use_full_name(Channel.queue_bind, ['queue_name', 'exchange_name'])
+    queue_unbind = use_full_name(Channel.queue_unbind, ['queue_name', 'exchange_name'])
+    queue_purge = use_full_name(Channel.queue_purge, ['queue_name'])
+
     exchange_bind = use_full_name(Channel.exchange_bind, ['exchange_source', 'exchange_destination'])
+    exchange_unbind = use_full_name(Channel.exchange_unbind, ['exchange_source', 'exchange_destination'])
     publish = use_full_name(Channel.publish, ['exchange_name'])
     basic_get = use_full_name(Channel.basic_get, ['queue_name'])
     basic_consume = use_full_name(Channel.basic_consume, ['queue_name'])

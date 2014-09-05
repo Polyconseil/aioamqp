@@ -11,8 +11,8 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_publish(self):
         # declare
-        yield from self.queue_declare("q", exclusive=True, no_wait=False)
-        yield from self.exchange_declare("e", "fanout")
+        yield from self.channel.queue_declare("q", exclusive=True, no_wait=False)
+        yield from self.channel.exchange_declare("e", "fanout")
         yield from self.channel.queue_bind("q", "e", routing_key='')
 
         # publish
@@ -26,8 +26,8 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_big_publish(self):
         # declare
-        yield from self.queue_declare("q", exclusive=True, no_wait=False)
-        yield from self.exchange_declare("e", "fanout")
+        yield from self.channel.queue_declare("q", exclusive=True, no_wait=False)
+        yield from self.channel.exchange_declare("e", "fanout")
         yield from self.channel.queue_bind("q", "e", routing_key='')
 
         # publish
