@@ -12,12 +12,18 @@ class ConfigurationError(AioamqpException):
 class AmqpClosedConnection(AioamqpException):
     pass
 
+class SynchronizationError(AioamqpException):
+    pass
+
+class EmptyQueue(AioamqpException):
+    pass
+
 
 class ChannelClosed(AioamqpException):
-    def __init__(self, message='Channel is closed', frame=None):
-        super().__init__(message, frame)
+    def __init__(self, code=0, message='Channel is closed'):
+        super().__init__(code, message)
+        self.code = code
         self.message = message
-        self.frame = frame
 
 
 class DuplicateConsumerTag(AioamqpException):
