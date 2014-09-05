@@ -517,8 +517,8 @@ class Channel:
         if arguments is None:
             arguments = {}
 
-        if callback is None or not asyncio.iscoroutine(callback()):
-            raise exceptions.ConfigurationError("basic_consume requires a callback")
+        if callback is None or not asyncio.iscoroutinefunction(callback):
+            raise exceptions.ConfigurationError("basic_consume requires a coroutine callback")
 
         frame = amqp_frame.AmqpRequest(
             self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
