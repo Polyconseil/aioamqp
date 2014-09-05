@@ -183,6 +183,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         except KeyError:
             logger.info("frame {} {} is not handled".format(frame.class_id, frame.method_id))
 
+
+    def _close_channels(self, reply_code, reply_text):
+        for channel_id, channel in self.channels.items():
+            channel.server_close(reply_code, reply_text)
+
+
     @asyncio.coroutine
     def run(self):
         while not self.stop_now.done():
@@ -236,6 +242,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.stop()
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
             reply_text, reply_code, class_id, method_id)
+        self._close_channels(reply_code, reply_text)
 
     @asyncio.coroutine
     def tune(self, frame):
