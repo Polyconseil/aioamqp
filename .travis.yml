@@ -16,6 +16,7 @@ install:
     - pip freeze
 
 before_script:
+    - sudo rabbitmqctl status
     - sudo rabbitmqctl delete_vhost "/aioamqptest" || true
     - sudo rabbitmqctl add_vhost "/aioamqptest"
     - sudo rabbitmqctl set_permissions -p /aioamqptest guest ".*" ".*" ".*"
