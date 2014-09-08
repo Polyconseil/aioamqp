@@ -164,11 +164,15 @@ class QueueDeleteTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_delete_inexistant_queue(self):
         queue_name = 'queue_name'
-        with self.assertRaises(exceptions.ChannelClosed) as cm:
+        if self.server_version() < (3,3,5):
+            with self.assertRaises(exceptions.ChannelClosed) as cm:
+                result = yield from self.channel.queue_delete(queue_name)
+
+            self.assertEqual(cm.exception.code, 404)
+
+        else:
             result = yield from self.channel.queue_delete(queue_name)
-
-        self.assertEqual(cm.exception.code, 404)
-
+            self.assertTrue(result)
 
 class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
 

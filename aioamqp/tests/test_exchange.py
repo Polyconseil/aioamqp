@@ -111,11 +111,16 @@ class ExchangeDelete(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.exchange_declare(exchange_name, type_name='direct')
         result = yield from self.channel.exchange_delete(exchange_name)
         self.assertTrue(result)
-        with self.assertRaises(exceptions.ChannelClosed) as cm:
-            yield from self.channel.exchange_delete(exchange_name)
+        if self.server_version() < (3,3,5):
+            with self.assertRaises(exceptions.ChannelClosed) as cm:
+                yield from self.channel.exchange_delete(exchange_name)
 
-        self.assertEqual(cm.exception.code, 404)
+            self.assertEqual(cm.exception.code, 404)
 
+        else:
+            # weird result from rabbitmq 3.3.5
+            result = yield from self.channel.exchange_delete(exchange_name)
+            self.assertTrue(result)
 
 class ExchangeBind(testcase.RabbitTestCase, unittest.TestCase):
 
@@ -164,8 +169,15 @@ class ExchangeUnbind(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.exchange_bind(
             ex_destination, ex_source, routing_key='')
 
-        with self.assertRaises(exceptions.ChannelClosed) as cm:
-            result = yield from self.channel.exchange_unbind(
-                ex_source, ex_destination, routing_key='')
+        if self.server_version() < (3,3,5):
+            with self.assertRaises(exceptions.ChannelClosed) as cm:
+                result = yield from self.channel.exchange_unbind(
+                    ex_source, ex_destination, routing_key='')
 
-        self.assertEqual(cm.exception.code, 404)
+            self.assertEqual(cm.exception.code, 404)
+
+        else:
+            # weird result from rabbitmq 3.3.5
+            result = yield from self.channel.exchange_unbind(ex_source, ex_destination, routing_key='')
+            self.assertTrue(result)
+

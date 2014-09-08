@@ -135,6 +135,13 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
     def channel(self):
         return self.channels[0]
 
+    def server_version(self, amqp=None):
+        if amqp is None:
+            amqp = self.amqp
+
+        server_version = tuple(int(x) for x in amqp.server_properties['version'].split('.'))
+        return server_version
+
     @asyncio.coroutine
     def rabbitctl(self, *args):
         proc = yield from asyncio.create_subprocess_shell(
