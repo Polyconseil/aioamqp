@@ -137,7 +137,13 @@ class Channel:
 
     @asyncio.coroutine
     def server_channel_close(self, frame):
-        self.server_close(frame.arguments['reply_code'], frame.arguments['reply_text'])
+        results = {
+            'reply_code': frame.payload_decoder.read_short(),
+            'reply_text': frame.payload_decoder.read_shortstr(),
+            'class_id': frame.payload_decoder.read_short(),
+            'method_id': frame.payload_decoder.read_short(),
+        }
+        self.server_close(results['reply_code'], results['reply_text'])
         self.close_event.set()
 
     @asyncio.coroutine

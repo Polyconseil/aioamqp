@@ -360,15 +360,6 @@ class AmqpResponse:
             self.class_id = self.payload_decoder.read_short()
             self.method_id = self.payload_decoder.read_short()
 
-            if self.class_id == amqp_constants.CLASS_CHANNEL:
-                if self.method_id == amqp_constants.CHANNEL_CLOSE:
-                    self.arguments = {
-                        'reply_code': self.payload_decoder.read_short(),
-                        'reply_text': self.payload_decoder.read_shortstr(),
-                        'class_id': self.payload_decoder.read_short(),
-                        'method_id': self.payload_decoder.read_short(),
-                    }
-
         elif self.frame_type == amqp_constants.TYPE_HEADER:
             self.payload = io.BytesIO(payload_data)
             self.payload_decoder = AmqpDecoder(self.payload)
