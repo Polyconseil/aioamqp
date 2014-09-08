@@ -336,6 +336,9 @@ class AmqpResponse:
         self.arguments = {}
         self.frame_length = 0
 
+        self.payload_decoder = None
+        self.header_decoder = None
+
     @asyncio.coroutine
     def read_frame(self):
         """Decode the frame"""
@@ -345,49 +348,43 @@ class AmqpResponse:
             raise exceptions.AmqpClosedConnection() from ex
 
         frame_header = io.BytesIO(data)
-        decoder = AmqpDecoder(frame_header)
-        self.frame_type = decoder.read_octet()
-        self.channel = decoder.read_short()
-        self.frame_length = decoder.read_long()
+        self.header_decoder = AmqpDecoder(frame_header)
+        self.frame_type = self.header_decoder.read_octet()
+        self.channel = self.header_decoder.read_short()
+        self.frame_length = self.header_decoder.read_long()
         payload_data = yield from self.reader.readexactly(self.frame_length)
 
         if self.frame_type == amqp_constants.TYPE_METHOD:
             self.payload = io.BytesIO(payload_data)
-            decoder = AmqpDecoder(self.payload)
-            self.class_id = decoder.read_short()
-            self.method_id = decoder.read_short()
-            if self.class_id == amqp_constants.CLASS_QUEUE:
-                if self.method_id == amqp_constants.QUEUE_DECLARE_OK:
-                    self.arguments = {
-                        'queue': decoder.read_shortstr(),
-                        'message_count': decoder.read_long(),
-                        'consumer_count': decoder.read_long(),
-                    }
-            elif self.class_id == amqp_constants.CLASS_CHANNEL:
+            self.payload_decoder = AmqpDecoder(self.payload)
+            self.class_id = self.payload_decoder.read_short()
+            self.method_id = self.payload_decoder.read_short()
+
+            if self.class_id == amqp_constants.CLASS_CHANNEL:
                 if self.method_id == amqp_constants.CHANNEL_CLOSE:
                     self.arguments = {
-                        'reply_code': decoder.read_short(),
-                        'reply_text': decoder.read_shortstr(),
-                        'class_id': decoder.read_short(),
-                        'method_id': decoder.read_short(),
+                        'reply_code': self.payload_decoder.read_short(),
+                        'reply_text': self.payload_decoder.read_shortstr(),
+                        'class_id': self.payload_decoder.read_short(),
+                        'method_id': self.payload_decoder.read_short(),
                     }
             elif self.class_id == amqp_constants.CLASS_BASIC:
                 if self.method_id == amqp_constants.BASIC_CONSUME_OK:
                     self.arguments = {
-                        'consumer_tag': decoder.read_shortstr(),
+                        'consumer_tag': self.payload_decoder.read_shortstr(),
                     }
                 elif self.method_id == amqp_constants.BASIC_CANCEL:
                     self.arguments = {
-                        'consumer_tag': decoder.read_shortstr(),
+                        'consumer_tag': self.payload_decoder.read_shortstr(),
                     }
 
         elif self.frame_type == amqp_constants.TYPE_HEADER:
             self.payload = io.BytesIO(payload_data)
-            decoder = AmqpDecoder(self.payload)
-            self.class_id = decoder.read_short()
-            self.weight = decoder.read_short()
-            self.body_size = decoder.read_long_long()
-            self.property_flags = decoder.read_short()
+            self.payload_decoder = AmqpDecoder(self.payload)
+            self.class_id = self.payload_decoder.read_short()
+            self.weight = self.payload_decoder.read_short()
+            self.body_size = self.payload_decoder.read_long_long()
+            self.property_flags = self.payload_decoder.read_short()
 
         elif self.frame_type == amqp_constants.TYPE_BODY:
             self.payload = payload_data

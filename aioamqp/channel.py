@@ -306,8 +306,13 @@ class Channel:
 
     @asyncio.coroutine
     def queue_declare_ok(self, frame):
+        results = {
+            'queue': frame.payload_decoder.read_shortstr(),
+            'message_count': frame.payload_decoder.read_long(),
+            'consumer_count': frame.payload_decoder.read_long(),
+        }
         future = self._get_waiter('queue_declare')
-        future.set_result(frame.arguments)
+        future.set_result(results)
         logger.debug("Queue declared")
 
 
