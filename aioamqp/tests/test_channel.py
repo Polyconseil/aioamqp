@@ -2,7 +2,6 @@
     Tests the "Channel" amqp class implementation
 """
 
-import asyncio
 import os
 import unittest
 

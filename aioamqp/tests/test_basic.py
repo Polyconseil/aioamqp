@@ -1,5 +1,5 @@
 """
-    Amqp basic class tests 
+    Amqp basic class tests
 """
 
 import asyncio
@@ -15,7 +15,6 @@ class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_basic_qos(self):
-        queue_name = 'queue_name'
         result = yield from self.channel.basic_qos(
             prefetch_size=0,
             prefetch_count=100,
@@ -25,10 +24,8 @@ class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_basic_qos_prefetch_size(self):
-        queue_name = 'queue_name'
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-
-            result = yield from self.channel.basic_qos(
+            yield from self.channel.basic_qos(
                 prefetch_size=10,
                 prefetch_count=100,
                 connection_global=False)
@@ -37,9 +34,8 @@ class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_basic_qos_wrong_values(self):
-        queue_name = 'queue_name'
         with self.assertRaises(struct.error):
-            result = yield from self.channel.basic_qos(
+            yield from self.channel.basic_qos(
                 prefetch_size=100000,
                 prefetch_count=1000000000,
                 connection_global=False)
@@ -109,7 +105,7 @@ class BasicGetTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_bind(queue_name, exchange_name, routing_key=routing_key)
 
         with self.assertRaises(exceptions.EmptyQueue):
-            result = yield from self.channel.basic_get(queue_name)
+            yield from self.channel.basic_get(queue_name)
 
 
 class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):

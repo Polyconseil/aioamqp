@@ -400,7 +400,7 @@ class AmqpResponse:
                 'class_id': self.class_id,
                 'method_id': self.method_id,
             }
-            type_output ="""
+            type_output = """
 0          2           4
 +----------+-----------+-------------- - -
 |{class_id:^10}|{method_id:^11}| arguments...

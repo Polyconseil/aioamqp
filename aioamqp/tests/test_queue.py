@@ -1,5 +1,5 @@
 """
-    Amqp queue class tests 
+    Amqp queue class tests
 """
 
 import asyncio
@@ -164,7 +164,7 @@ class QueueDeleteTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_delete_inexistant_queue(self):
         queue_name = 'queue_name'
-        if self.server_version() < (3,3,5):
+        if self.server_version() < (3, 3, 5):
             with self.assertRaises(exceptions.ChannelClosed) as cm:
                 result = yield from self.channel.queue_delete(queue_name)
 
@@ -188,7 +188,6 @@ class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
         result = yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
         self.assertTrue(result)
 
-
     @testing.coroutine
     def test_bind_unexistant_exchange(self):
         queue_name = 'queue_name'
@@ -199,7 +198,6 @@ class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
         with self.assertRaises(exceptions.ChannelClosed) as cm:
             result = yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
         self.assertEqual(cm.exception.code, 404)
-
 
     @testing.coroutine
     def test_bind_unexistant_queue(self):
@@ -213,7 +211,6 @@ class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
             result = yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
         self.assertEqual(cm.exception.code, 404)
 
-
     @testing.coroutine
     def test_unbind_queue(self):
         queue_name = 'queue_name'
@@ -223,7 +220,7 @@ class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.exchange_declare(exchange_name, type_name='direct')
 
         yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
-        
+
         result = yield from self.channel.queue_unbind(queue_name, exchange_name, routing_key='')
         self.assertTrue(result)
 
@@ -246,4 +243,3 @@ class QueuePurgeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         with self.assertRaises(exceptions.ChannelClosed) as cm:
             yield from self.channel.queue_purge(queue_name)
         self.assertEqual(cm.exception.code, 404)
-    

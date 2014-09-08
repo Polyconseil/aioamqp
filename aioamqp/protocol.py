@@ -184,7 +184,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
 
     def _close_channels(self, reply_code, reply_text):
-        for channel_id, channel in self.channels.items():
+        for channel in self.channels.values():
             channel.server_close(reply_code, reply_text)
 
 

@@ -7,6 +7,7 @@ from asyncio import subprocess
 
 from . import testing
 from .. import connect as aioamqp_connect
+from .. import exceptions
 from ..channel import Channel
 from ..protocol import AmqpProtocol
 
@@ -87,7 +88,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
     @classmethod
     def setUpClass(cls):
         super(RabbitTestCase, cls).setUpClass()
-        cls.rabbitctl_exe = get_rabbitmqctl_exe() 
+        cls.rabbitctl_exe = get_rabbitmqctl_exe()
 
     def setUp(self):
         super().setUp()

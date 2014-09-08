@@ -254,7 +254,7 @@ class Channel:
     def exchange_bind_ok(self, frame):
         future = self._get_waiter('exchange_bind')
         future.set_result(True)
-        logger.debug("Exchange bound")        
+        logger.debug("Exchange bound")
 
     @asyncio.coroutine
     def exchange_unbind(self, exchange_destination, exchange_source, routing_key, no_wait=False, arguments=None, timeout=None):
@@ -283,7 +283,7 @@ class Channel:
     def exchange_unbind_ok(self, frame):
         future = self._get_waiter('exchange_unbind')
         future.set_result(True)
-        logger.debug("Exchange bound")        
+        logger.debug("Exchange bound")
 
 #
 ## Queue class implementation

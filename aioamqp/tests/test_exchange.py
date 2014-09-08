@@ -1,5 +1,5 @@
 """
-    Amqp exchange class tests 
+    Amqp exchange class tests
 """
 
 import asyncio
@@ -18,28 +18,24 @@ class ExchangeDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def test_exchange_direct_declare(self):
         result = yield from self.channel.exchange_declare(
             'exchange_name', type_name='direct')
-        
         self.assertTrue(result)
 
     @testing.coroutine
     def test_exchange_fanout_declare(self):
         result = yield from self.channel.exchange_declare(
             'exchange_name', type_name='fanout')
-        
         self.assertTrue(result)
 
     @testing.coroutine
     def test_exchange_topic_declare(self):
         result = yield from self.channel.exchange_declare(
             'exchange_name', type_name='topic')
-        
         self.assertTrue(result)
 
     @testing.coroutine
     def test_exchange_headers_declare(self):
         result = yield from self.channel.exchange_declare(
             'exchange_name', type_name='headers')
-        
         self.assertTrue(result)
 
     @testing.coroutine
@@ -111,7 +107,7 @@ class ExchangeDelete(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.exchange_declare(exchange_name, type_name='direct')
         result = yield from self.channel.exchange_delete(exchange_name)
         self.assertTrue(result)
-        if self.server_version() < (3,3,5):
+        if self.server_version() < (3, 3, 5):
             with self.assertRaises(exceptions.ChannelClosed) as cm:
                 yield from self.channel.exchange_delete(exchange_name)
 
@@ -169,7 +165,7 @@ class ExchangeUnbind(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.exchange_bind(
             ex_destination, ex_source, routing_key='')
 
-        if self.server_version() < (3,3,5):
+        if self.server_version() < (3, 3, 5):
             with self.assertRaises(exceptions.ChannelClosed) as cm:
                 result = yield from self.channel.exchange_unbind(
                     ex_source, ex_destination, routing_key='')
