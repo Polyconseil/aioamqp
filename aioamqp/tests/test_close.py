@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 
 from . import testcase
@@ -8,6 +9,21 @@ from .. import exceptions
 class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     _multiprocess_can_split_ = True
+
+    def setUp(self):
+        super().setUp()
+        self.consume_future = asyncio.Future()
+
+    @asyncio.coroutine
+    def callback(self, consumer_tag, deliver_tag, message):
+        self.consume_future.set_result((consumer_tag, deliver_tag, message))
+
+    @asyncio.coroutine
+    def get_callback_result(self):
+        yield from self.consume_future
+        result = self.consume_future.result()
+        self.consume_future = asyncio.Future()
+        return result
 
     @testing.coroutine
     def test_close(self):
@@ -46,4 +62,4 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_declare("q")
         yield from channel.close()
         with self.assertRaises(exceptions.ChannelClosed):
-            yield from channel.basic_consume()
+            yield from channel.basic_consume(callback=self.callback)
