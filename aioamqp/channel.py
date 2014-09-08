@@ -551,8 +551,11 @@ class Channel:
 
     @asyncio.coroutine
     def basic_consume_ok(self, frame):
+        results = {
+            'consumer_tag': frame.payload_decoder.read_shortstr(),
+        }
         future = self._get_waiter('basic_consume')
-        future.set_result({'consumer_tag': frame.arguments['consumer_tag']})
+        future.set_result(results)
 
     @asyncio.coroutine
     def basic_deliver(self, frame):
@@ -594,8 +597,11 @@ class Channel:
 
     @asyncio.coroutine
     def basic_cancel_ok(self, frame):
+        results = {
+            'consumer_tag': frame.payload_decoder.read_shortstr(),
+        }
         future = self._get_waiter('basic_cancel')
-        future.set_result(True)
+        future.set_result(results)
         logger.debug("Cancel ok")
 
     @asyncio.coroutine
