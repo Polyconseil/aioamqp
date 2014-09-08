@@ -122,7 +122,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
                 del channel
             for amqp in self.amqps:
                 logger.debug('Delete amqp %s', amqp)
-                yield from amqp.close(no_wait=True)
+                yield from amqp.close()
                 del amqp
         self.loop.run_until_complete(go())
         super().tearDown()
