@@ -86,7 +86,7 @@ class AmqpResponseTestCase(unittest.TestCase):
         sys.stdout = io.StringIO()
         try:
             last_len = len(sys.stdout.getvalue())
-            frame.frame()
+            print(self)
             # assert something has been writen
             self.assertLess(last_len, len(sys.stdout.getvalue()))
         finally:

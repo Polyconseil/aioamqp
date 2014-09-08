@@ -555,12 +555,10 @@ class Channel:
         consumer_tag = response.read_shortstr()
         deliver_tag = response.read_long_long()
         content_header_frame = yield from self.protocol.get_frame()
-        content_header_frame.frame()
 
         buffer = io.BytesIO()
         while(buffer.tell() < content_header_frame.body_size):
             content_body_frame = yield from self.protocol.get_frame()
-            content_body_frame.frame()
             buffer.write(content_body_frame.payload)
 
         callback = self.consumer_callbacks[consumer_tag]
@@ -619,12 +617,10 @@ class Channel:
         data['routing_key'] = decoder.read_shortstr()
         data['message_count'] = decoder.read_long()
         content_header_frame = yield from self.protocol.get_frame()
-        content_header_frame.frame()
 
         buffer = io.BytesIO()
         while(buffer.tell() < content_header_frame.body_size):
             content_body_frame = yield from self.protocol.get_frame()
-            content_body_frame.frame()
             buffer.write(content_body_frame.payload)
 
         data['message'] = buffer.getvalue()

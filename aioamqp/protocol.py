@@ -78,7 +78,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def close_ok(self, frame):
         self.stop()
-        frame.frame()
         logger.info("Recv close ok")
 
     @asyncio.coroutine
@@ -283,7 +282,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def open_ok(self, frame):
         self.is_open = True
-        frame.frame()
         logger.info("Recv open ok")
 
     #

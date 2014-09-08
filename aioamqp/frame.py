@@ -43,7 +43,7 @@ import io
 import struct
 import socket
 
-from os import SEEK_END
+import os
 
 from . import exceptions
 from . import constants as amqp_constants
@@ -68,7 +68,7 @@ class AmqpEncoder:
             table_length = self.payload.tell() - start
             self.payload.seek(start - 4)    # move before the long
             self.write_long(table_length)   # and set the table length
-            self.payload.seek(0, SEEK_END)  # return at the end
+            self.payload.seek(0, os.SEEK_END)  # return at the end
 
     def write_value(self, value):
         if isinstance(value, (bytes, str)):
@@ -197,7 +197,8 @@ class AmqpEncoder:
 
         self.payload.seek(start)                    # move before the flag
         self.write_short(properties_flag_value)     # set the flag
-        self.payload.seek(0, SEEK_END)
+        self.payload.seek(0, os.SEEK_END)
+
 
 class AmqpDecoder:
     def __init__(self, reader):
@@ -399,10 +400,7 @@ class AmqpResponse:
         self.frame_end = yield from self.reader.readexactly(1)
         assert self.frame_end == amqp_constants.FRAME_END
 
-    def frame(self):
-        if not DUMP_FRAMES:
-            return
-
+    def __str__(self):
         frame_data = {
             'type': self.frame_type,
             'channel': self.channel,
@@ -410,22 +408,26 @@ class AmqpResponse:
             'frame_end': self.frame_end,
             'payload': self.frame_payload,
         }
-        print("""
+        output = """
 0        1           3            7                        size+7        size+8
 +--------+-----------+------------+    +---------------+     +--------------+
 |{type!r:^8}|{channel!r:^11}|{size!r:^12}|    |{payload!r:^15}|     |{frame_end!r:^14}|
 +--------+-----------+------------+    +---------------+     +--------------+
    type    channel       size                payload            frame-end
-""".format(**frame_data))
+""".format(**frame_data)
 
         if self.frame_type == amqp_constants.TYPE_METHOD:
             method_data = {
                 'class_id': self.class_id,
                 'method_id': self.method_id,
             }
-            print("""
+            type_output ="""
 0          2           4
 +----------+-----------+-------------- - -
 |{class_id:^10}|{method_id:^11}| arguments...
 +----------+-----------+-------------- - -
-  class-id   method-id       ...""".format(**method_data))
+  class-id   method-id       ...""".format(**method_data)
+
+            output += os.linesep + type_output
+
+        return output
