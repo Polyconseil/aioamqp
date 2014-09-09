@@ -177,10 +177,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 logger.info("Unknown channel %s", frame.channel)
             return
 
-        try:
-            yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
-        except KeyError:
+
+        if (frame.class_id, frame.method_id) not in method_dispatch:
             logger.info("frame {} {} is not handled".format(frame.class_id, frame.method_id))
+            return
+        yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
+
 
 
     def _close_channels(self, reply_code, reply_text):
