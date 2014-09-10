@@ -172,3 +172,31 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
             yield from self.channel.basic_consume("q2", consumer_tag='tag', callback=self.callback)
 
         self.assertEqual(cm.exception.code, 530)
+
+    @testing.coroutine
+    def test_consume_callaback_synced(self):
+        # declare
+        yield from self.channel.queue_declare("q", exclusive=True, no_wait=False)
+        yield from self.channel.exchange_declare("e", "fanout")
+        yield from self.channel.queue_bind("q", "e", routing_key='')
+
+        # get a different channel
+        channel = yield from self.create_channel()
+
+        # publish
+        yield from channel.publish("coucou", "e", routing_key='',)
+
+        # assert there is a message to consume
+        queues = yield from self.list_queues()
+        self.assertIn("q", queues)
+        self.assertEqual(1, queues["q"]['messages'])
+
+
+        sync_future = asyncio.Future()
+        @asyncio.coroutine
+        def callback(consumer_tag, deliver_tag, message):
+            self.assertTrue(sync_future.done())
+            pass
+
+        result = yield from channel.basic_consume("q", callback=callback)
+        sync_future.set_result(True)
