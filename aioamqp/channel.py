@@ -27,6 +27,7 @@ class Channel:
         self.last_consumer_tag = None
 
         self._futures = {}
+        self._ctag_events = {}
 
     def _set_waiter(self, rpc_name):
         if rpc_name in self._futures:
@@ -548,6 +549,7 @@ class Channel:
             future = self._set_waiter('basic_consume')
             yield from self._write_frame(frame, request, no_wait=no_wait, timeout=timeout)
             yield from future
+            self._ctag_events[future.result()['consumer_tag']].set()
             return future.result()
 
         yield from self._write_frame(frame, request, no_wait=no_wait, timeout=timeout)
@@ -556,11 +558,13 @@ class Channel:
 
     @asyncio.coroutine
     def basic_consume_ok(self, frame):
+        ctag = frame.payload_decoder.read_shortstr()
         results = {
-            'consumer_tag': frame.payload_decoder.read_shortstr(),
+            'consumer_tag': ctag,
         }
         future = self._get_waiter('basic_consume')
         future.set_result(results)
+        self._ctag_events[ctag] = asyncio.Event()
 
     @asyncio.coroutine
     def basic_deliver(self, frame):
@@ -575,6 +579,10 @@ class Channel:
             buffer.write(content_body_frame.payload)
 
         callback = self.consumer_callbacks[consumer_tag]
+
+        event = self._ctag_events.get(consumer_tag)
+        if event:
+            yield from event.wait()
         yield from callback(consumer_tag, deliver_tag, buffer.getvalue())
 
     @asyncio.coroutine
