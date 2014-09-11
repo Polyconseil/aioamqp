@@ -549,7 +549,7 @@ class Channel:
             future = self._set_waiter('basic_consume')
             yield from self._write_frame(frame, request, no_wait=no_wait, timeout=timeout)
             yield from future
-            self._ctag_events[future.result()['consumer_tag']].set()
+            self._ctag_events[consumer_tag].set()
             return future.result()
 
         yield from self._write_frame(frame, request, no_wait=no_wait, timeout=timeout)
@@ -583,6 +583,7 @@ class Channel:
         event = self._ctag_events.get(consumer_tag)
         if event:
             yield from event.wait()
+            del self._ctag_events[consumer_tag]
         yield from callback(consumer_tag, deliver_tag, buffer.getvalue())
 
     @asyncio.coroutine
