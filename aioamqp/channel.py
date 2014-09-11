@@ -80,7 +80,7 @@ class Channel:
         }
 
         if (frame.class_id, frame.method_id) not in methods:
-            raise NotImplementedError("Frame (%s, %s) is not implemented" % (frame.class_id, frame.method_id)) from ex
+            raise NotImplementedError("Frame (%s, %s) is not implemented" % (frame.class_id, frame.method_id))
         yield from methods[(frame.class_id, frame.method_id)](frame)
 
     @asyncio.coroutine
