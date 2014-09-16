@@ -522,10 +522,6 @@ class Channel:
         pass
 
     @asyncio.coroutine
-    def basic_publish(self, message):
-        pass
-
-    @asyncio.coroutine
     def basic_consume(self, queue_name='', consumer_tag='', no_local=False, no_ack=False, exclusive=False,
                       no_wait=False, callback=None, arguments=None, on_cancel=None, timeout=None):
         # If a consumer tag was not passed, create one
@@ -560,7 +556,6 @@ class Channel:
 
         yield from self._write_frame(frame, request, no_wait=no_wait, timeout=timeout)
         return {'consumer_tag': consumer_tag}
-
 
     @asyncio.coroutine
     def basic_consume_ok(self, frame):
@@ -694,7 +689,6 @@ class Channel:
 #
     queue = queue_declare
     exchange = exchange_declare
-    publish = basic_publish
 
     @asyncio.coroutine
     def publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
