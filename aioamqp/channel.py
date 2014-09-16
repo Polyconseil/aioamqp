@@ -16,11 +16,12 @@ logger = logging.getLogger(__name__)
 
 class Channel:
 
-    def __init__(self, protocol, channel_id):
+    def __init__(self, protocol, channel_id, on_error=None):
         self.protocol = protocol
         self.channel_id = channel_id
         self.consumer_queues = {}
         self.consumer_callbacks = {}
+        self._on_error_callback = on_error
         self.response_future = None
         self.close_event = asyncio.Event()
         self.cancelled_consumers = set()
@@ -47,9 +48,15 @@ class Channel:
     def is_open(self):
         return not self.close_event.is_set()
 
-    def server_close(self, server_code, server_reason):
+    def _close_channel(self):
+        self.close_event.set()
+
+    @asyncio.coroutine
+    def connection_closed(self, server_code, server_reason):
         for future in self._futures.values():
             future.set_exception(exceptions.ChannelClosed(server_code, server_reason))
+
+        self._close_channel()
 
     @asyncio.coroutine
     def dispatch_frame(self, frame):
@@ -131,9 +138,9 @@ class Channel:
 
     @asyncio.coroutine
     def close_ok(self, frame):
-        self.close_event.set()
         self._get_waiter('close').set_result(True)
         logger.info("Channel closed")
+        self._close_channel()
 
     @asyncio.coroutine
     def server_channel_close(self, frame):
@@ -143,8 +150,7 @@ class Channel:
             'class_id': frame.payload_decoder.read_short(),
             'method_id': frame.payload_decoder.read_short(),
         }
-        self.server_close(results['reply_code'], results['reply_text'])
-        self.close_event.set()
+        yield from self.connection_closed(results['reply_code'], results['reply_text'])
 
     @asyncio.coroutine
     def flow(self, active, timeout=None):

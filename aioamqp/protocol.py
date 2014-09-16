@@ -25,8 +25,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     CHANNEL_FACTORY = amqp_channel.Channel
 
     def __init__(self, *args, **kwargs):
-        loop = asyncio.get_event_loop()
+        loop = kwargs.get('loop') or asyncio.get_event_loop()
         super().__init__(asyncio.StreamReader(loop=loop), self.client_connected, loop=loop)
+        self._on_error_callback = kwargs.get('on_error')
+
         self.connecting = asyncio.Future()
         self.connection_closed = asyncio.Event()
         self.stop_now = asyncio.Future()
@@ -177,18 +179,15 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 logger.info("Unknown channel %s", frame.channel)
             return
 
-
         if (frame.class_id, frame.method_id) not in method_dispatch:
             logger.info("frame {} {} is not handled".format(frame.class_id, frame.method_id))
             return
         yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
 
-
-
+    @asyncio.coroutine
     def _close_channels(self, reply_code, reply_text):
         for channel in self.channels.values():
-            channel.server_close(reply_code, reply_text)
-
+            yield from channel.connection_closed(reply_code, reply_text)
 
     @asyncio.coroutine
     def run(self):
@@ -243,7 +242,13 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.stop()
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
             reply_text, reply_code, class_id, method_id)
-        self._close_channels(reply_code, reply_text)
+        yield from self._close_channels(reply_code, reply_text)
+
+        if self._on_error_callback:
+            if asyncio.iscoroutinefunction(self._on_error_callback):
+                yield from self._on_error_callback(exceptions.ChannelClosed(reply_code, reply_text))
+            else:
+                self._on_error_callback(exceptions.ChannelClosed(reply_code, reply_text))
 
     @asyncio.coroutine
     def tune(self, frame):
@@ -291,14 +296,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     #
 
     @asyncio.coroutine
-    def channel(self):
+    def channel(self, **kwargs):
         """Factory to create a new channel
 
         """
         self.channels_max_id += 1
-        channel = self.CHANNEL_FACTORY(self, self.channels_max_id)
+        channel = self.CHANNEL_FACTORY(self, self.channels_max_id, **kwargs)
         self.channels[self.channels_max_id] = channel
-
         yield from channel.open()
-
         return channel
