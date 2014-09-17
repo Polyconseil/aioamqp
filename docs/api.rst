@@ -62,13 +62,17 @@ Consuming messages
 
 When consuming message, you connect to the same queue you previously created::
 
-    channel = yield from protocol.channel()
-    yield from channel.basic_consume("my_queue")
-    while True:
-        consumer_tag, delivery_tag, payload = yield from channel.consume()
-        print(payload)
+    import asyncio
+    import aioamqp
 
-The ``basic_consume`` method tells the server to send us the messages, and ``consume`` effectively unqueue a message.
+    @asyncio.coroutine
+    def callback(consumer_tag, delivery_tag, message):
+        print(message)
+
+    channel = yield from protocol.channel()
+    yield from channel.basic_consume("my_queue", callback=callback)
+
+The ``basic_consume`` method tells the server to send us the messages, and will call ``callback`` with amqp response arguments.
 
 The ``consumer_tag`` is the id of your consumer, and the ``delivery_tag`` is the tag used if you want to acknowledge the message.
 
