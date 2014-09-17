@@ -5,8 +5,7 @@ import aioamqp
 
 @asyncio.coroutine
 def callback(consumer_tag, deliver_tag, message):
-    #print(message)
-    pass
+    print(message)
 
 @asyncio.coroutine
 def receive():

@@ -11,6 +11,12 @@ import aioamqp
 import random
 
 
+
+@asyncio.coroutine
+def callback(consumer_tag, deliver_tag, message):
+    print(message)
+
+
 @asyncio.coroutine
 def receive_log():
     try:
@@ -33,11 +39,7 @@ def receive_log():
 
     print(' [*] Waiting for logs. To exit press CTRL+C')
 
-    yield from asyncio.wait_for(channel.basic_consume(queue_name), timeout=10)
-
-    while True:
-        consumer_tag, delivery_tag, message = yield from channel.consume()
-        print("consumer {} recved {} ({})".format(consumer_tag, message, delivery_tag))
+    yield from asyncio.wait_for(channel.basic_consume(queue_name, callback=callback), timeout=10)
 
 
 asyncio.get_event_loop().run_until_complete(receive_log())
