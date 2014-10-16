@@ -23,7 +23,9 @@ setuptools.setup(
     packages=[
         'aioamqp',
     ],
-    install_requires=['asyncio'] if py_version <= (3, 3) else [],
+    extras_require={
+        ':python_version=="3.3"': ['asyncio'],
+    },
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
