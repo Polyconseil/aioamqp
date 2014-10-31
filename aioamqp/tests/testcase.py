@@ -175,7 +175,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             args += ['-p', vhost]
         rep = yield from self.rabbitctl(*args)
         lines = rep.strip().split('\n')
-        lines = lines[1:-1]
+        lines = lines[1:]
         lines = [line.split('\t') for line in lines]
         datadict = {}
         for datainfo in lines:
