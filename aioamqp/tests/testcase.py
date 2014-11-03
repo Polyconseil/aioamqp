@@ -102,8 +102,8 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
         @asyncio.coroutine
         def go():
-            amqp = yield from self.create_amqp()
-            self.amqps.append(amqp)
+            transport, protocol = yield from self.create_amqp()
+            self.amqps.append(protocol)
             channel = yield from self.create_channel()
             self.channels.append(channel)
         self.loop.run_until_complete(go())
@@ -334,7 +334,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         def protocol_factory(*args, **kw):
             return ProxyAmqpProtocol(self, *args, **kw)
         vhost = vhost or self.vhost
-        amqp = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
+        transport, protocol = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
             protocol_factory=protocol_factory)
-        self.amqps.append(amqp)
-        return amqp
+        self.amqps.append(protocol)
+        return transport, protocol

@@ -20,7 +20,7 @@ def callback(consumer_tag, delivery_tag, message):
 @asyncio.coroutine
 def receive_log():
     try:
-        protocol = yield from aioamqp.connect('localhost', 5672)
+        transport, protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.AmqpClosedConnection:
         print("closed connections")
         return

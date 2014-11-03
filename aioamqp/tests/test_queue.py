@@ -131,8 +131,8 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.basic_consume("q", no_wait=False, callback=self.callback)
         # create an other amqp connection
 
-        amqp2 = yield from self.create_amqp()
-        channel = yield from self.create_channel(amqp=amqp2)
+        transport, protocol = yield from self.create_amqp()
+        channel = yield from self.create_channel(amqp=protocol)
         # assert that this connection cannot connect to the queue
         with self.assertRaises(exceptions.ChannelClosed):
             yield from channel.basic_consume("q", no_wait=False, callback=self.callback)
@@ -145,8 +145,8 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # consume it
         yield from self.channel.basic_consume('q', no_wait=False, callback=self.callback)
         # create an other amqp connection
-        amqp2 = yield from self.create_amqp()
-        channel = yield from self.create_channel(amqp=amqp2)
+        transport, protocol = yield from self.create_amqp()
+        channel = yield from self.create_channel(amqp=protocol)
         # assert that this connection can connect to the queue
         yield from channel.basic_consume('q', no_wait=False, callback=self.callback)
 

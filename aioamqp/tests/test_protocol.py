@@ -27,8 +27,8 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
         super().tearDown()
 
     def test_connect(self):
-        proto = self.loop.run_until_complete(amqp_connect())
-        self.assertTrue(proto.is_open)
+        transport, protocol = self.loop.run_until_complete(amqp_connect())
+        self.assertTrue(protocol.is_open)
 
     def test_connection_unexistant_vhost(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):

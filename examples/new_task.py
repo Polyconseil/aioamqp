@@ -9,7 +9,7 @@ import sys
 @asyncio.coroutine
 def exchange_routing():
     try:
-        protocol = yield from aioamqp.connect('localhost', 5672)
+        transport, protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.AmqpClosedConnection:
         print("closed connections")
         return
@@ -27,7 +27,7 @@ def exchange_routing():
     yield from channel.publish("Message ", '', queue_name, properties=message_properties)
     print(" [x] Sent %r" % (message,))
 
-    yield from protocol.close()
+    yield from transport.close()
 
 
 asyncio.get_event_loop().run_until_complete(exchange_routing())

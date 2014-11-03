@@ -23,20 +23,20 @@ def connect(host='localhost', port=5672, login='guest', password='guest',
 
         @kwargs:        Arguments to be given to the protocol_factory instance
 
-        Returns:        an AmqpProtocol instance
+        Returns:        a tuple (transport, protocol) of an AmqpProtocol instance
     """
     if kwargs:
-        _transport, protocol = yield from asyncio.get_event_loop().create_connection(
+        transport, protocol = yield from asyncio.get_event_loop().create_connection(
         lambda: protocol_factory(**kwargs), host, port)
 
     else:
-        _transport, protocol = yield from asyncio.get_event_loop().create_connection(
+        transport, protocol = yield from asyncio.get_event_loop().create_connection(
         protocol_factory, host, port)
 
     yield from protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl,
         login_method=login_method, insist=insist)
 
-    return protocol
+    return (transport, protocol)
 
 
 @asyncio.coroutine
@@ -48,7 +48,7 @@ def from_url(url, login_method='AMQPLAIN', insist=False, protocol_factory=AmqpPr
     if url.scheme not in ('amqp', 'amqps'):
         raise ValueError('Invalid protocol %s, valid protocols are amqp or amqps' % url.scheme)
 
-    protocol = yield from connect(
+    transport, protocol = yield from connect(
         host=url.hostname or 'localhost',
         port=url.port or 5672,
         login=url.username or 'guest',

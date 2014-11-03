@@ -11,7 +11,7 @@ import aioamqp
 @asyncio.coroutine
 def produce():
     try:
-        protocol = yield from aioamqp.connect('localhost', 5672)
+        transport, protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.AmqpClosedConnection:
         print("closed connections")
         return
