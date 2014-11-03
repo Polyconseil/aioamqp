@@ -43,9 +43,9 @@ class EncoderTestCase(unittest.TestCase):
             'content_type': 'plain/text',
             'content_encoding': 'utf8',
             'headers': {'key': 'value'},
-            'delivery_mode': 42,
+            'delivery_mode': 2,
             'priority': 10,
-            'correlation_id': 122,
+            'correlation_id': '122',
             'reply_to': 'joe',
             'expiration': 'someday',
             'message_id': 'm_id',
@@ -57,6 +57,15 @@ class EncoderTestCase(unittest.TestCase):
         }
         self.encoder.write_message_properties(properties)
         self.assertNotEqual(0, len(self.encoder.payload.getvalue()))
+
+    def test_write_message_correlation_id_encode(self):
+        properties = {
+            'delivery_mode': 2,
+            'priority': 0,
+            'correlation_id': '122',
+            }
+        self.encoder.write_message_properties(properties)
+        self.assertEqual(self.encoder.payload.getvalue(), b'\x1c\x00\x02\x00\x03122')
 
     def test_write_message_priority_zero(self):
         properties = {
