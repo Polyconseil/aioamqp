@@ -45,7 +45,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'aioamqp'
-copyright = '2014, Benoît Calvez'
+copyright = u'2014, Benoît Calvez'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
