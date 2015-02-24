@@ -1,4 +1,5 @@
 import asyncio
+import ssl as ssl_module
 from urllib.parse import urlparse
 
 from .protocol import AmqpProtocol
@@ -25,13 +26,17 @@ def connect(host='localhost', port=5672, login='guest', password='guest',
 
         Returns:        a tuple (transport, protocol) of an AmqpProtocol instance
     """
+    if ssl:
+        ssl_context = ssl_module.create_default_context()
+    else:
+        ssl_context = None
     if kwargs:
         transport, protocol = yield from asyncio.get_event_loop().create_connection(
-        lambda: protocol_factory(**kwargs), host, port)
+        lambda: protocol_factory(**kwargs), host, port, ssl=ssl_context)
 
     else:
         transport, protocol = yield from asyncio.get_event_loop().create_connection(
-        protocol_factory, host, port)
+        protocol_factory, host, port, ssl=ssl_context)
 
     yield from protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl,
         login_method=login_method, insist=insist)
