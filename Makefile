@@ -15,3 +15,7 @@ test:
 	sudo rabbitmqctl add_vhost "/aioamqptest"
 	sudo rabbitmqctl set_permissions -p /aioamqptest guest ".*" ".*" ".*"
 	TRAVIS=true PYTHONASYNCIODEBUG=1 RABBITMQCTL_CMD="sudo rabbitmqctl" nosetests --verbosity=2 aioamqp
+
+
+update:
+	pip install -r requirements_dev.txt
