@@ -238,7 +238,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         if vhost is None:
             vhost = self.vhost
         info = ['name', 'durable', 'auto_delete',
-            'arguments', 'policy', 'pid', 'owner_pid', 'exclusive_consumer_pid',
+            'arguments',  'pid', 'owner_pid', 'exclusive_consumer_pid',
             'exclusive_consumer_tag', 'messages_ready', 'messages_unacknowledged', 'messages',
             'consumers', 'memory', 'slave_pids', 'synchronised_slave_pids']
         return (yield from self.rabbitctl_list('list_queues', info, vhost=vhost,
