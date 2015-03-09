@@ -55,6 +55,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         logger.warning("Connection lost exc=%r", exc)
         self.connection_closed.set()
         self.is_open = False
+        self._close_channels(reply_code=None, reply_text='Connection lost')
         super().connection_lost(exc)
 
     @asyncio.coroutine
@@ -184,10 +185,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             return
         yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
 
-    @asyncio.coroutine
     def _close_channels(self, reply_code, reply_text):
         for channel in self.channels.values():
-            yield from channel.connection_closed(reply_code, reply_text)
+            channel.connection_closed(reply_code, reply_text)
 
     @asyncio.coroutine
     def run(self):
@@ -242,7 +242,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.stop()
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
             reply_text, reply_code, class_id, method_id)
-        yield from self._close_channels(reply_code, reply_text)
+        self._close_channels(reply_code, reply_text)
 
         if self._on_error_callback:
             if asyncio.iscoroutinefunction(self._on_error_callback):

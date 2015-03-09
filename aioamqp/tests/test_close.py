@@ -15,7 +15,7 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.consume_future = asyncio.Future()
 
     @asyncio.coroutine
-    def callback(self, consumer_tag, deliver_tag, message):
+    def callback(self, consumer_tag, deliver_tag, message, **kwargs):
         self.consume_future.set_result((consumer_tag, deliver_tag, message))
 
     @asyncio.coroutine

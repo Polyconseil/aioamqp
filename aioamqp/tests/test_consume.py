@@ -17,8 +17,8 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.consume_future = asyncio.Future()
 
     @asyncio.coroutine
-    def callback(self, consumer_tag, deliver_tag, message):
-        self.consume_future.set_result((consumer_tag, deliver_tag, message))
+    def callback(self, delivery):
+        self.consume_future.set_result(delivery)
 
     @asyncio.coroutine
     def get_callback_result(self):
@@ -79,10 +79,10 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         self.assertTrue(self.consume_future.done())
         # get one
-        consumer_tag, delivery_tag, message = yield from self.get_callback_result()
-        self.assertIsNotNone(consumer_tag)
-        self.assertIsNotNone(delivery_tag)
-        self.assertEqual(b"coucou", message)
+        delivery = yield from self.get_callback_result()
+        self.assertIsNotNone(delivery.consumer_tag)
+        self.assertIsNotNone(delivery.delivery_tag)
+        self.assertEqual(b"coucou", delivery.body)
 
     @testing.coroutine
     def test_big_consume(self):
@@ -111,10 +111,10 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         self.assertTrue(self.consume_future.done())
         # get one
-        consumer_tag, delivery_tag, message = yield from self.get_callback_result()
-        self.assertIsNotNone(consumer_tag)
-        self.assertIsNotNone(delivery_tag)
-        self.assertEqual(b"a"*1000000, message)
+        delivery = yield from self.get_callback_result()
+        self.assertIsNotNone(delivery.consumer_tag)
+        self.assertIsNotNone(delivery.delivery_tag)
+        self.assertEqual(b"a"*1000000, delivery.body)
 
     @testing.coroutine
     def test_consume_multiple_queues(self):
@@ -130,14 +130,14 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         q1_future = asyncio.Future()
 
         @asyncio.coroutine
-        def q1_callback(consumer_tag, deliver_tag, message):
-            q1_future.set_result((consumer_tag, deliver_tag, message))
+        def q1_callback(delivery):
+            q1_future.set_result(delivery)
 
         q2_future = asyncio.Future()
 
         @asyncio.coroutine
-        def q2_callback(consumer_tag, deliver_tag, message):
-            q2_future.set_result((consumer_tag, deliver_tag, message))
+        def q2_callback(delivery):
+            q2_future.set_result(delivery)
 
         # start consumers
         result = yield from channel.basic_consume("q1", callback=q1_callback)
@@ -149,18 +149,18 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from channel.publish("coucou1", "e", "q1")
 
         # get it
-        consumer_tag, delivery_tag, payload = yield from q1_future
-        self.assertEqual(ctag_q1, consumer_tag)
-        self.assertIsNotNone(delivery_tag)
-        self.assertEqual(b"coucou1", payload)
+        delivery = yield from q1_future
+        self.assertEqual(ctag_q1, delivery.consumer_tag)
+        self.assertIsNotNone(delivery.delivery_tag)
+        self.assertEqual(b"coucou1", delivery.body)
 
         # put message in q2
         yield from channel.publish("coucou2", "e", "q2")
 
         # get it
-        consumer_tag, delivery_tag, payload = yield from q2_future
-        self.assertEqual(ctag_q2, consumer_tag)
-        self.assertEqual(b"coucou2", payload)
+        delivery = yield from q2_future
+        self.assertEqual(ctag_q2, delivery.consumer_tag)
+        self.assertEqual(b"coucou2", delivery.body)
 
     @testing.coroutine
     def test_duplicate_consumer_tag(self):
@@ -194,7 +194,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         sync_future = asyncio.Future()
         @asyncio.coroutine
-        def callback(consumer_tag, deliver_tag, message):
+        def callback(delivery):
             self.assertTrue(sync_future.done())
             pass
 
