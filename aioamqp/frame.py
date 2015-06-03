@@ -80,6 +80,9 @@ class AmqpEncoder:
         elif isinstance(value, dict):
             self.payload.write(b'F')
             self.write_table(value)
+        elif isinstance(value, int):
+            self.payload.write(b'I')
+            self.write_long(value)
         else:
             raise Exception("type({}) unsupported".format(type(value)))
 
