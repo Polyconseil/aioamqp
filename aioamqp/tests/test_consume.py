@@ -1,6 +1,7 @@
 
 import asyncio
 import unittest
+import functools
 
 from . import testcase
 from . import testing
@@ -52,7 +53,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # start consume
         with self.assertRaises(exceptions.ConfigurationError):
             yield from channel.basic_consume("q", callback=badcallback)
-
+ 
     @testing.coroutine
     def test_consume(self):
         # declare
@@ -74,6 +75,37 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from asyncio.sleep(2)
         # start consume
         yield from channel.basic_consume("q", callback=self.callback)
+        # required ?
+        yield from asyncio.sleep(2)
+
+        self.assertTrue(self.consume_future.done())
+        # get one
+        consumer_tag, delivery_tag, message = yield from self.get_callback_result()
+        self.assertIsNotNone(consumer_tag)
+        self.assertIsNotNone(delivery_tag)
+        self.assertEqual(b"coucou", message)
+
+    @testing.coroutine
+    def test_consume_with_partial_callback(self):
+        # declare
+        yield from self.channel.queue_declare("q", exclusive=True, no_wait=False)
+        yield from self.channel.exchange_declare("e", "fanout")
+        yield from self.channel.queue_bind("q", "e", routing_key='')
+
+        # get a different channel
+        channel = yield from self.create_channel()
+
+        # publish
+        yield from channel.publish("coucou", "e", routing_key='',)
+
+        # assert there is a message to consume
+        queues = yield from self.list_queues()
+        self.assertIn("q", queues)
+        self.assertEqual(1, queues["q"]['messages'])
+
+        yield from asyncio.sleep(2)
+        # start consume
+        yield from channel.basic_consume("q", callback=functools.partial(self.callback))
         # required ?
         yield from asyncio.sleep(2)
 

@@ -10,6 +10,7 @@ import io
 from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
+from . import utils 
 
 logger = logging.getLogger(__name__)
 
@@ -530,7 +531,7 @@ class Channel:
         if arguments is None:
             arguments = {}
 
-        if callback is None or not asyncio.iscoroutinefunction(callback):
+        if callback is None or not utils.iscoroutinefunction(callback):
             raise exceptions.ConfigurationError("basic_consume requires a coroutine callback")
 
         frame = amqp_frame.AmqpRequest(

@@ -10,7 +10,7 @@ from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
 from . import version
-
+from . import utils
 
 logger = logging.getLogger(__name__)
 
@@ -245,7 +245,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from self._close_channels(reply_code, reply_text)
 
         if self._on_error_callback:
-            if asyncio.iscoroutinefunction(self._on_error_callback):
+            if utils.iscoroutinefunction(self._on_error_callback):
                 yield from self._on_error_callback(exceptions.ChannelClosed(reply_code, reply_text))
             else:
                 self._on_error_callback(exceptions.ChannelClosed(reply_code, reply_text))
