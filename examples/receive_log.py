@@ -13,7 +13,7 @@ import random
 
 
 @asyncio.coroutine
-def callback(consumer_tag, deliver_tag, message):
+def callback(consumer_tag, deliver_tag, message, properties):
     print(message)
 
 

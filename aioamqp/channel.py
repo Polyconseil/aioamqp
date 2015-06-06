@@ -585,7 +585,12 @@ class Channel:
         if event:
             yield from event.wait()
             del self._ctag_events[consumer_tag]
-        yield from callback(consumer_tag, deliver_tag, buffer.getvalue())
+        try:
+            yield from callback(consumer_tag, deliver_tag, buffer.getvalue(), content_header_frame.properties)
+        except TypeError as exc:
+            if 'positional arguments' not in str(exc):
+                raise
+            yield from callback(consumer_tag, deliver_tag, buffer.getvalue())
 
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
