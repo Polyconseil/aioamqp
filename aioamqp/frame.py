@@ -265,6 +265,47 @@ class AmqpDecoder:
             #return True
         print("value_type {} unknown".format(value_type))
 
+    def read_message_properties(self):
+        properties = {}
+        flags = 0
+        shift = 0
+        while True:
+            flags |= self.read_short() << shift
+            if not (flags & 1):
+                break
+            shift += 16
+
+        if flags & amqp_constants.FLAG_CONTENT_TYPE:
+            properties['content_type'] = self.read_shortstr()
+        if flags & amqp_constants.FLAG_CONTENT_ENCODING:
+            properties['content_encoding'] = self.read_shortstr()
+        if flags & amqp_constants.FLAG_HEADERS:
+            properties['headers'] = self.read_table()
+        if flags & amqp_constants.FLAG_DELIVERY_MODE:
+            properties['delivery_mode'] = self.read_octet()
+        if flags & amqp_constants.FLAG_PRIORITY:
+            properties['priority'] = self.read_octet()
+        if flags & amqp_constants.FLAG_CORRELATION_ID:
+            properties['correlation_id'] = self.read_shortstr()
+        if flags & amqp_constants.FLAG_REPLY_TO:
+            properties['reply_to'] = self.read_shortstr()
+        if flags & amqp_constants.FLAG_EXPIRATION:
+            properties['expiration'] = self.read_shortstr()
+        if flags & amqp_constants.FLAG_MESSAGE_ID:
+            properties['message_id'] = self.read_shortstr()
+        if flags & amqp_constants.FLAG_TIMESTAMP:
+            properties['timestamp'] = self.read_long_long()
+        if flags & amqp_constants.FLAG_TYPE:
+            properties['type'] = self.read_shortstr()
+        if flags & amqp_constants.FLAG_USER_ID:
+            properties['user_id'] = self.read_shortstr()
+        if flags & amqp_constants.FLAG_APP_ID:
+            properties['app_id'] = self.read_shortstr()
+        if flags & amqp_constants.FLAG_CLUSTER_ID:
+            properties['cluster_id'] = self.read_shortstr()
+
+        return properties
+
 
 class AmqpRequest:
     def __init__(self, writer, frame_type, channel):
@@ -335,7 +376,7 @@ class AmqpResponse:
         self.method_id = None
         self.weight = None
         self.body_size = None
-        self.property_flags = None
+        self.properties = None
         self.arguments = {}
         self.frame_length = 0
 
@@ -369,7 +410,7 @@ class AmqpResponse:
             self.class_id = self.payload_decoder.read_short()
             self.weight = self.payload_decoder.read_short()
             self.body_size = self.payload_decoder.read_long_long()
-            self.property_flags = self.payload_decoder.read_short()
+            self.properties = self.payload_decoder.read_message_properties()
 
         elif self.frame_type == amqp_constants.TYPE_BODY:
             self.payload = payload_data

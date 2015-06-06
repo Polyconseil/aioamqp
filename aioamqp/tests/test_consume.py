@@ -17,8 +17,8 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.consume_future = asyncio.Future()
 
     @asyncio.coroutine
-    def callback(self, consumer_tag, deliver_tag, message):
-        self.consume_future.set_result((consumer_tag, deliver_tag, message))
+    def callback(self, consumer_tag, deliver_tag, message, properties):
+        self.consume_future.set_result((consumer_tag, deliver_tag, message, properties))
 
     @asyncio.coroutine
     def get_callback_result(self):
@@ -64,7 +64,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         channel = yield from self.create_channel()
 
         # publish
-        yield from channel.publish("coucou", "e", routing_key='',)
+        yield from channel.publish("coucou", "e", routing_key='', properties={'user_id': 'test'})
 
         # assert there is a message to consume
         queues = yield from self.list_queues()
@@ -79,10 +79,11 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         self.assertTrue(self.consume_future.done())
         # get one
-        consumer_tag, delivery_tag, message = yield from self.get_callback_result()
+        consumer_tag, delivery_tag, message, properties = yield from self.get_callback_result()
         self.assertIsNotNone(consumer_tag)
         self.assertIsNotNone(delivery_tag)
         self.assertEqual(b"coucou", message)
+        self.assertEqual(b"test", properties['user_id'])
 
     @testing.coroutine
     def test_big_consume(self):
@@ -111,7 +112,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         self.assertTrue(self.consume_future.done())
         # get one
-        consumer_tag, delivery_tag, message = yield from self.get_callback_result()
+        consumer_tag, delivery_tag, message, properties = yield from self.get_callback_result()
         self.assertIsNotNone(consumer_tag)
         self.assertIsNotNone(delivery_tag)
         self.assertEqual(b"a"*1000000, message)
@@ -194,7 +195,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         sync_future = asyncio.Future()
         @asyncio.coroutine
-        def callback(consumer_tag, deliver_tag, message):
+        def callback(consumer_tag, deliver_tag, message, properties):
             self.assertTrue(sync_future.done())
             pass
 

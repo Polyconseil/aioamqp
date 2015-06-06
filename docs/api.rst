@@ -66,7 +66,7 @@ When consuming message, you connect to the same queue you previously created::
     import aioamqp
 
     @asyncio.coroutine
-    def callback(consumer_tag, delivery_tag, message):
+    def callback(consumer_tag, delivery_tag, message, properties):
         print(message)
 
     channel = yield from protocol.channel()
