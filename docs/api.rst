@@ -66,7 +66,7 @@ When consuming message, you connect to the same queue you previously created::
     import aioamqp
 
     @asyncio.coroutine
-    def callback(body, enveloppe, properties):
+    def callback(body, envelope, properties):
         print(body)
 
     channel = yield from protocol.channel()
@@ -79,7 +79,7 @@ The ``consumer_tag`` is the id of your consumer, and the ``delivery_tag`` is the
 In the callback:
 
 * the first ``body`` parameter is the message
-* the ``enveloppe`` is an instance of enveloppe.Enveloppe class which encapsulate a group of amqp parameter such as::
+* the ``envelope`` is an instance of envelope.Envelope class which encapsulate a group of amqp parameter such as::
 
     consumer_tag
     delivery_tag
