@@ -17,8 +17,8 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.consume_future = asyncio.Future()
 
     @asyncio.coroutine
-    def callback(self, delivery):
-        self.consume_future.set_result(delivery)
+    def callback(self, body, envelope, properties):
+        self.consume_future.set_result((body, envelope, properties))
 
     @asyncio.coroutine
     def get_callback_result(self):

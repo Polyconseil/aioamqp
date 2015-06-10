@@ -21,7 +21,7 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_declare(queue_name)
 
         @asyncio.coroutine
-        def callback():
+        def callback(body, envelope, properties):
             pass
 
         channel2 = yield from self.amqp.channel()

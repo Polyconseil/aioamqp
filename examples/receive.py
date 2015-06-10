@@ -4,8 +4,8 @@ import asyncio
 import aioamqp
 
 @asyncio.coroutine
-def callback(delivery):
-    print(delivery.body)
+def callback(body, envelope, properties):
+    print(body)
 
 @asyncio.coroutine
 def receive():

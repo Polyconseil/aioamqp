@@ -11,7 +11,7 @@ from itertools import count
 from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
-from . import delivery as amqp_delivery
+from .envelope import Envelope
 
 
 logger = logging.getLogger(__name__)
@@ -656,9 +656,9 @@ class Channel:
             content_body_frame = yield from self.protocol.get_frame()
             buffer.write(content_body_frame.payload)
 
-        delivery = amqp_delivery.Delivery(
-            consumer_tag, delivery_tag, exchange_name, routing_key, is_redeliver,
-            content_header_frame.properties, buffer.getvalue())
+        body = buffer.getvalue()
+        envelope = Envelope(consumer_tag, delivery_tag, exchange_name, routing_key, is_redeliver)
+        properties = content_header_frame.properties
 
         callback = self.consumer_callbacks[consumer_tag]
 
@@ -666,7 +666,7 @@ class Channel:
         if event:
             yield from event.wait()
             del self._ctag_events[consumer_tag]
-        yield from callback(delivery)
+        yield from callback(body, envelope, properties)
 
     @asyncio.coroutine
     def server_basic_cancel(self, frame):

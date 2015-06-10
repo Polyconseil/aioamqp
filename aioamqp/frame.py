@@ -47,6 +47,7 @@ import os
 
 from . import exceptions
 from . import constants as amqp_constants
+from .properties import Properties
 from itertools import count
 from decimal import Decimal
 
@@ -450,35 +451,36 @@ class AmqpResponse:
                 self.property_flags |= partial_flags << (flagword_index * 16)
                 if partial_flags & 1 == 0:
                     break
-            self.properties = {}
+            decoded_properties = {}
             if self.property_flags & amqp_constants.FLAG_CONTENT_TYPE:
-                self.properties['content_type'] = self.payload_decoder.read_shortstr()
+                decoded_properties['content_type'] = self.payload_decoder.read_shortstr()
             if self.property_flags & amqp_constants.FLAG_CONTENT_ENCODING:
-                self.properties['content_encoding'] = self.payload_decoder.read_shortstr()
+                decoded_properties['content_encoding'] = self.payload_decoder.read_shortstr()
             if self.property_flags & amqp_constants.FLAG_HEADERS:
-                self.properties['headers'] = self.payload_decoder.read_table()
+                decoded_properties['headers'] = self.payload_decoder.read_table()
             if self.property_flags & amqp_constants.FLAG_DELIVERY_MODE:
-                self.properties['delivery_mode'] = self.payload_decoder.read_octet()
+                decoded_properties['delivery_mode'] = self.payload_decoder.read_octet()
             if self.property_flags & amqp_constants.FLAG_PRIORITY:
-                self.properties['priority'] = self.payload_decoder.read_octet()
+                decoded_properties['priority'] = self.payload_decoder.read_octet()
             if self.property_flags & amqp_constants.FLAG_CORRELATION_ID:
-                self.properties['correlation_id'] = self.payload_decoder.read_shortstr()
+                decoded_properties['correlation_id'] = self.payload_decoder.read_shortstr()
             if self.property_flags & amqp_constants.FLAG_REPLY_TO:
-                self.properties['reply_to'] = self.payload_decoder.read_shortstr()
+                decoded_properties['reply_to'] = self.payload_decoder.read_shortstr()
             if self.property_flags & amqp_constants.FLAG_EXPIRATION:
-                self.properties['expiration'] = self.payload_decoder.read_shortstr()
+                decoded_properties['expiration'] = self.payload_decoder.read_shortstr()
             if self.property_flags & amqp_constants.FLAG_MESSAGE_ID:
-                self.properties['message_id'] = self.payload_decoder.read_shortstr()
+                decoded_properties['message_id'] = self.payload_decoder.read_shortstr()
             if self.property_flags & amqp_constants.FLAG_TIMESTAMP:
-                self.properties['timestamp'] = self.payload_decoder.read_long_long()
+                decoded_properties['timestamp'] = self.payload_decoder.read_long_long()
             if self.property_flags & amqp_constants.FLAG_TYPE:
-                self.properties['type_'] = self.payload_decoder.read_shortstr()
+                decoded_properties['type'] = self.payload_decoder.read_shortstr()
             if self.property_flags & amqp_constants.FLAG_USER_ID:
-                self.properties['user_id'] = self.payload_decoder.read_shortstr()
+                decoded_properties['user_id'] = self.payload_decoder.read_shortstr()
             if self.property_flags & amqp_constants.FLAG_APP_ID:
-                self.properties['app_id'] = self.payload_decoder.read_shortstr()
+                decoded_properties['app_id'] = self.payload_decoder.read_shortstr()
             if self.property_flags & amqp_constants.FLAG_CLUSTER_ID:
-                self.properties['cluster_id'] = self.payload_decoder.read_shortstr()
+                decoded_properties['cluster_id'] = self.payload_decoder.read_shortstr()
+            self.properties = Properties(**decoded_properties)
 
         elif self.frame_type == amqp_constants.TYPE_BODY:
             self.payload = payload_data
