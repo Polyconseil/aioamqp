@@ -47,7 +47,7 @@ class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def test_basic_cancel(self):
 
         @asyncio.coroutine
-        def callback(ctag, dtag, message):
+        def callback(body, envelope, properties):
             pass
 
         queue_name = 'queue_name'
@@ -124,14 +124,14 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future()
 
         @asyncio.coroutine
-        def qcallback(consumer_tag, deliver_tag, message):
-            qfuture.set_result((consumer_tag, deliver_tag, message))
+        def qcallback(body, envelope, properties):
+            qfuture.set_result(envelope)
 
         yield from self.channel.basic_consume(queue_name, callback=qcallback)
-        ctag, dtag, message = yield from qfuture
+        envelope = yield from qfuture
 
         yield from qfuture
-        yield from self.channel.basic_client_ack(dtag)
+        yield from self.channel.basic_client_ack(envelope.delivery_tag)
 
     @testing.coroutine
     def test_basic_reject(self):
@@ -146,10 +146,10 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future()
 
         @asyncio.coroutine
-        def qcallback(consumer_tag, deliver_tag, message):
-            qfuture.set_result((consumer_tag, deliver_tag, message))
+        def qcallback(body, envelope, properties):
+            qfuture.set_result(envelope)
 
         yield from self.channel.basic_consume(queue_name, callback=qcallback)
-        ctag, dtag, message = yield from qfuture
+        envelope = yield from qfuture
 
-        yield from self.channel.basic_reject(dtag)
+        yield from self.channel.basic_reject(envelope.delivery_tag)

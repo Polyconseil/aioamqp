@@ -1,5 +1,6 @@
 .PHONY: reset_rabbitmq test
 
+NOSETESTS ?= nosetests
 
 reset_rabbitmq:
 	sudo rabbitmqctl stop_app
@@ -14,7 +15,7 @@ test:
 	sudo rabbitmqctl delete_vhost "/aioamqptest" || true
 	sudo rabbitmqctl add_vhost "/aioamqptest"
 	sudo rabbitmqctl set_permissions -p /aioamqptest guest ".*" ".*" ".*"
-	TRAVIS=true PYTHONASYNCIODEBUG=1 RABBITMQCTL_CMD="sudo rabbitmqctl" nosetests --verbosity=2 aioamqp
+	TRAVIS=true PYTHONASYNCIODEBUG=1 RABBITMQCTL_CMD="sudo rabbitmqctl" $(NOSETESTS) --verbosity=2 aioamqp
 
 
 update:
