@@ -66,8 +66,8 @@ When consuming message, you connect to the same queue you previously created::
     import aioamqp
 
     @asyncio.coroutine
-    def callback(consumer_tag, delivery_tag, message):
-        print(message)
+    def callback(body, enveloppe, properties):
+        print(body)
 
     channel = yield from protocol.channel()
     yield from channel.basic_consume("my_queue", callback=callback)
@@ -76,6 +76,34 @@ The ``basic_consume`` method tells the server to send us the messages, and will 
 
 The ``consumer_tag`` is the id of your consumer, and the ``delivery_tag`` is the tag used if you want to acknowledge the message.
 
+In the callback:
+
+* the first ``body`` parameter is the message
+* the ``enveloppe`` is an instance of enveloppe.Enveloppe class which encapsulate a group of amqp parameter such as::
+
+    consumer_tag
+    delivery_tag
+    exchange_name
+    routing_key
+    is_redeliver
+
+* the ``properties`` are message properties, an instance of properties.Properties with the following members::
+
+    content_type
+    content_encoding
+    headers
+    delivery_mode
+    priority
+    correlation_id
+    reply_to
+    expiration
+    message_id
+    timestamp
+    type
+    user_id
+    app_id
+    cluster_id
+
 
 Using exchanges
 ---------------
@@ -83,7 +111,7 @@ Using exchanges
 You can bind an exchange to a queue::
 
     channel = yield from protocol.channel()
-    exchange = yield from channel.exchange_declare(exchange_name="my_exchange", type_name='fanout') 
+    exchange = yield from channel.exchange_declare(exchange_name="my_exchange", type_name='fanout')
     yield from channel.queue_declare("my_queue")
     yield from channel.queue_bind("my_queue", "my_exchange")
 
