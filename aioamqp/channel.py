@@ -169,7 +169,7 @@ class Channel:
             'class_id': frame.payload_decoder.read_short(),
             'method_id': frame.payload_decoder.read_short(),
         }
-        yield from self.connection_closed(results['reply_code'], results['reply_text'])
+        self.connection_closed(results['reply_code'], results['reply_text'])
 
     @asyncio.coroutine
     def flow(self, active, timeout=None):
