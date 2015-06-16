@@ -72,3 +72,16 @@ class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         result = yield from channel.flow(active=False)
         self.assertFalse(result['active'])
 
+
+class ChannelIdTestCase(testcase.RabbitTestCase, unittest.TestCase):
+
+    @testing.coroutine
+    def test_channel_id_release_close(self):
+        channels_count = len(self.amqp.channels_ids)
+        channel = yield from self.amqp.channel()
+
+        self.assertEqual(len(self.amqp.channels_ids), channels_count - 1)
+        result = yield from channel.close()
+        self.assertEqual(len(self.amqp.channels_ids), channels_count)
+        self.assertEqual(result, True)
+        self.assertFalse(channel.is_open)

@@ -19,6 +19,10 @@ class EmptyQueue(AioamqpException):
     pass
 
 
+class NoChannelAvailable(AioamqpException):
+    """There is no room left for more channels"""
+
+
 class ChannelClosed(AioamqpException):
     def __init__(self, code=0, message='Channel is closed'):
         super().__init__(code, message)

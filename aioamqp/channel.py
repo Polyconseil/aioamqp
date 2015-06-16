@@ -54,6 +54,7 @@ class Channel:
         return not self.close_event.is_set()
 
     def _close_channel(self):
+        self.protocol.release_channel_id(self.channel_id)
         self.close_event.set()
 
     def connection_closed(self, server_code=None, server_reason=None):
