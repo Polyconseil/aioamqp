@@ -34,11 +34,39 @@ Starting a connection to AMQP really mean instanciate a new asyncio Protocol sub
         yield from asyncio.sleep(1)
 
         print("close connection")
-        yield from transport.close()
+        yield from protocol.close()
+        transport.close()
 
     asyncio.get_event_loop().run_until_complete(connect())
 
 In this example, we just use the method "start_connection" to begin a communication with the server, which deals with credentials and connection tunning.
+
+
+Handling errors
+---------------
+
+The connect() method has an extra 'on_error' kwarg option. This on_error is a callback or a coroutine function which is called with an exception as the argument::
+
+    import asyncio
+    import aioamqp
+
+    @asyncio.coroutine
+    def error_callback(exception):
+        print(exception)
+
+    @asyncio.coroutine
+    def connect():
+        try:
+            transport, protocol = yield from aioamqp.connect(
+                host='nonexistant.com',
+                on_error=error_callback,
+            )
+        except aioamqp.AmqpClosedConnection:
+            print("closed connections")
+            return
+
+    asyncio.get_event_loop().run_until_complete(connect())
+
 
 
 Publishing messages

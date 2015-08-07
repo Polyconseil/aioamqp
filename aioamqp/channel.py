@@ -57,15 +57,16 @@ class Channel:
         self.protocol.release_channel_id(self.channel_id)
         self.close_event.set()
 
-    def connection_closed(self, server_code=None, server_reason=None):
+    def connection_closed(self, server_code=None, server_reason=None, exception=None):
         for future in self._futures.values():
-            kwargs = {}
-            if server_code is not None:
-                kwargs['code'] = server_code
-            if server_reason is not None:
-                kwargs['message'] = server_reason
-            exc = exceptions.ChannelClosed(**kwargs)
-            future.set_exception(exc)
+            if exception is None:
+                kwargs = {}
+                if server_code is not None:
+                    kwargs['code'] = server_code
+                if server_reason is not None:
+                    kwargs['message'] = server_reason
+                exception = exceptions.ChannelClosed(**kwargs)
+            future.set_exception(exception)
 
         self._close_channel()
 
