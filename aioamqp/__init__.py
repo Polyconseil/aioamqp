@@ -1,6 +1,8 @@
 import asyncio
+
 from urllib.parse import urlparse
 
+from .exceptions import *
 from .protocol import AmqpProtocol
 
 from .version import __version__
