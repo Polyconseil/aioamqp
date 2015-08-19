@@ -1,8 +1,13 @@
 Changelog
 =========
 
+
 Next version (not yet released)
 -------------------------------
+
+
+Aioamqp 0.4.0
+-------------
 
  * Call the error callback on all circumtstances.
 
