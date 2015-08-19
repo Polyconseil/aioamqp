@@ -103,12 +103,12 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         self.exchanges = {}
         self.channels = []
         self.amqps = []
+        self.transports = []
 
         @asyncio.coroutine
         def go():
             transport, protocol = yield from self.create_amqp()
-            self.amqps.append(protocol)
-            channel = yield from self.create_channel()
+            channel = yield from self.create_channel(amqp=protocol)
             self.channels.append(channel)
         self.loop.run_until_complete(go())
 
@@ -129,12 +129,17 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
                 logger.debug('Delete amqp %s', amqp)
                 yield from amqp.close()
                 del amqp
+                self.transports.pop(0)
         self.loop.run_until_complete(go())
         super().tearDown()
 
     @property
     def amqp(self):
         return self.amqps[0]
+
+    @property
+    def transport(self):
+        return self.transports[0]
 
     @property
     def channel(self):
@@ -341,4 +346,5 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         transport, protocol = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
             protocol_factory=protocol_factory)
         self.amqps.append(protocol)
+        self.transports.append(transport)
         return transport, protocol

@@ -6,6 +6,8 @@ PROTOCOL_DEFAULT_TIMEOUT = 60
 PROTOCOL_DEFAULT_PORT = 5672
 PROTOCOL_HEADER = b'AMQP\x01\x01\x00\x09'
 
+MAX_CHANNELS = 65535
+
 # protocol
 TYPE_METHOD = 1
 TYPE_HEADER = 2
@@ -21,6 +23,7 @@ CLASS_EXCHANGE = 40
 CLASS_QUEUE = 50
 CLASS_BASIC = 60
 CLASS_TX = 90
+CLASS_CONFIRM = 85
 
 CONNECTION_START = 10
 CONNECTION_START_OK = 11
@@ -77,6 +80,7 @@ BASIC_REJECT = 90
 BASIC_RECOVER_ASYNC = 100
 BASIC_RECOVER = 110
 BASIC_RECOVER_OK = 111
+BASIC_NACK = 120
 
 TX_SELECT = 10
 TX_SELECT_OK = 11
@@ -85,6 +89,8 @@ TX_COMMIT_OK = 21
 TX_ROLLBACK = 30
 TX_ROLLBACK_OK = 31
 
+CONFIRM_SELECT = 10
+CONFIRM_SELECT_OK = 11
 
 MESSAGE_PROPERTIES = ('content_type', 'content_encoding', 'headers', 'delivery_mode', 'priority', 'correlation_id',
                       'reply_to', 'expiration', 'message_id', 'timestamp', 'type', 'user_id', 'app_id', 'cluster_id')

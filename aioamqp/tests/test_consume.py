@@ -5,6 +5,7 @@ import unittest
 from . import testcase
 from . import testing
 from .. import exceptions
+from ..properties import Properties
 
 
 class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
@@ -17,8 +18,8 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.consume_future = asyncio.Future()
 
     @asyncio.coroutine
-    def callback(self, consumer_tag, deliver_tag, message):
-        self.consume_future.set_result((consumer_tag, deliver_tag, message))
+    def callback(self, body, envelope, properties):
+        self.consume_future.set_result((body, envelope, properties))
 
     @asyncio.coroutine
     def get_callback_result(self):
@@ -79,10 +80,11 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         self.assertTrue(self.consume_future.done())
         # get one
-        consumer_tag, delivery_tag, message = yield from self.get_callback_result()
-        self.assertIsNotNone(consumer_tag)
-        self.assertIsNotNone(delivery_tag)
-        self.assertEqual(b"coucou", message)
+        body, envelope, properties = yield from self.get_callback_result()
+        self.assertIsNotNone(envelope.consumer_tag)
+        self.assertIsNotNone(envelope.delivery_tag)
+        self.assertEqual(b"coucou", body)
+        self.assertIsInstance(properties, Properties)
 
     @testing.coroutine
     def test_big_consume(self):
@@ -111,10 +113,11 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         self.assertTrue(self.consume_future.done())
         # get one
-        consumer_tag, delivery_tag, message = yield from self.get_callback_result()
-        self.assertIsNotNone(consumer_tag)
-        self.assertIsNotNone(delivery_tag)
-        self.assertEqual(b"a"*1000000, message)
+        body, envelope, properties = yield from self.get_callback_result()
+        self.assertIsNotNone(envelope.consumer_tag)
+        self.assertIsNotNone(envelope.delivery_tag)
+        self.assertEqual(b"a"*1000000, body)
+        self.assertIsInstance(properties, Properties)
 
     @testing.coroutine
     def test_consume_multiple_queues(self):
@@ -130,14 +133,14 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         q1_future = asyncio.Future()
 
         @asyncio.coroutine
-        def q1_callback(consumer_tag, deliver_tag, message):
-            q1_future.set_result((consumer_tag, deliver_tag, message))
+        def q1_callback(body, envelope, properties):
+            q1_future.set_result((body, envelope, properties))
 
         q2_future = asyncio.Future()
 
         @asyncio.coroutine
-        def q2_callback(consumer_tag, deliver_tag, message):
-            q2_future.set_result((consumer_tag, deliver_tag, message))
+        def q2_callback(body, envelope, properties):
+            q2_future.set_result((body, envelope, properties))
 
         # start consumers
         result = yield from channel.basic_consume("q1", callback=q1_callback)
@@ -149,18 +152,20 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from channel.publish("coucou1", "e", "q1")
 
         # get it
-        consumer_tag, delivery_tag, payload = yield from q1_future
-        self.assertEqual(ctag_q1, consumer_tag)
-        self.assertIsNotNone(delivery_tag)
-        self.assertEqual(b"coucou1", payload)
+        body1, envelope1, properties1 = yield from q1_future
+        self.assertEqual(ctag_q1, envelope1.consumer_tag)
+        self.assertIsNotNone(envelope1.delivery_tag)
+        self.assertEqual(b"coucou1", body1)
+        self.assertIsInstance(properties1, Properties)
 
         # put message in q2
         yield from channel.publish("coucou2", "e", "q2")
 
         # get it
-        consumer_tag, delivery_tag, payload = yield from q2_future
-        self.assertEqual(ctag_q2, consumer_tag)
-        self.assertEqual(b"coucou2", payload)
+        body2, envelope2, properties2 = yield from q2_future
+        self.assertEqual(ctag_q2, envelope2.consumer_tag)
+        self.assertEqual(b"coucou2", body2)
+        self.assertIsInstance(properties2, Properties)
 
     @testing.coroutine
     def test_duplicate_consumer_tag(self):
@@ -194,7 +199,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         sync_future = asyncio.Future()
         @asyncio.coroutine
-        def callback(consumer_tag, deliver_tag, message):
+        def callback(body, envelope, properties):
             self.assertTrue(sync_future.done())
             pass
 

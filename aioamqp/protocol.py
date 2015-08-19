@@ -46,6 +46,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_frame_max = None
         self.server_channel_max = None
         self.channels_max_id = 0
+        self.channels_ids = list(range(1, amqp_constants.MAX_CHANNELS + 1))
 
     def client_connected(self, reader, writer):
         self.reader = reader
@@ -55,6 +56,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         logger.warning("Connection lost exc=%r", exc)
         self.connection_closed.set()
         self.is_open = False
+        self._close_channels(exception=exc)
         super().connection_lost(exc)
 
     @asyncio.coroutine
@@ -180,19 +182,43 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             return
         yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
 
-    @asyncio.coroutine
-    def _close_channels(self, reply_code, reply_text):
+    def release_channel_id(self, channel_id):
+        """Called from the channel instance, it relase a previously used
+        channel_id
+        """
+        self.channels_ids.append(channel_id)
+
+    def _close_channels(self, reply_code=None, reply_text=None, exception=None):
+        """Cleanly close channels
+
+            Args:
+                reply_code:     int, the amqp error code
+                reply_text:     str, the text associated to the error_code
+                exc:            the exception responsible of this error
+
+        """
+        if exception is None:
+            exception = exceptions.ChannelClosed(reply_code, reply_text)
+
+        if self._on_error_callback:
+            if asyncio.iscoroutinefunction(self._on_error_callback):
+                asyncio.async(self._on_error_callback(exception))
+            else:
+                self._on_error_callback(exceptions.ChannelClosed(exception))
+
         for channel in self.channels.values():
-            yield from channel.connection_closed(reply_code, reply_text)
+            channel.connection_closed(reply_code, reply_text, exception)
 
     @asyncio.coroutine
     def run(self):
         while not self.stop_now.done():
             try:
                 yield from self.dispatch_frame()
-            except exceptions.AmqpClosedConnection:
+            except exceptions.AmqpClosedConnection as exc:
                 logger.info("Close connection")
                 self.stop_now.set_result(None)
+
+                self._close_channels(exception=exc)
             except Exception:
                 logger.exception('error on dispatch')
 
@@ -238,13 +264,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.stop()
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
             reply_text, reply_code, class_id, method_id)
-        yield from self._close_channels(reply_code, reply_text)
+        self._close_channels(reply_code, reply_text)
 
-        if self._on_error_callback:
-            if asyncio.iscoroutinefunction(self._on_error_callback):
-                yield from self._on_error_callback(exceptions.ChannelClosed(reply_code, reply_text))
-            else:
-                self._on_error_callback(exceptions.ChannelClosed(reply_code, reply_text))
 
     @asyncio.coroutine
     def tune(self, frame):
@@ -296,8 +317,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """Factory to create a new channel
 
         """
-        self.channels_max_id += 1
-        channel = self.CHANNEL_FACTORY(self, self.channels_max_id, **kwargs)
-        self.channels[self.channels_max_id] = channel
+        if not len(self.channels_ids):
+            raise exceptions.NoChannelAvailable()
+        channel_id = self.channels_ids.pop(0)
+        channel = self.CHANNEL_FACTORY(self, channel_id, **kwargs)
+        self.channels[channel_id] = channel
         yield from channel.open()
         return channel

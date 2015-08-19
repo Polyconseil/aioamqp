@@ -14,8 +14,8 @@ import sys
 
 
 @asyncio.coroutine
-def callback(consumer_tag, delivery_tag, message):
-    print("consumer {} recved {} ({})".format(consumer_tag, message, delivery_tag))
+def callback(body, envelope, properties):
+    print("consumer {} recved {} ({})".format(envelope.consumer_tag, body, envelope.delivery_tag))
 
 @asyncio.coroutine
 def receive_log():

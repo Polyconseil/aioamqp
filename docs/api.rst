@@ -34,11 +34,39 @@ Starting a connection to AMQP really mean instanciate a new asyncio Protocol sub
         yield from asyncio.sleep(1)
 
         print("close connection")
-        yield from transport.close()
+        yield from protocol.close()
+        transport.close()
 
     asyncio.get_event_loop().run_until_complete(connect())
 
 In this example, we just use the method "start_connection" to begin a communication with the server, which deals with credentials and connection tunning.
+
+
+Handling errors
+---------------
+
+The connect() method has an extra 'on_error' kwarg option. This on_error is a callback or a coroutine function which is called with an exception as the argument::
+
+    import asyncio
+    import aioamqp
+
+    @asyncio.coroutine
+    def error_callback(exception):
+        print(exception)
+
+    @asyncio.coroutine
+    def connect():
+        try:
+            transport, protocol = yield from aioamqp.connect(
+                host='nonexistant.com',
+                on_error=error_callback,
+            )
+        except aioamqp.AmqpClosedConnection:
+            print("closed connections")
+            return
+
+    asyncio.get_event_loop().run_until_complete(connect())
+
 
 
 Publishing messages
@@ -66,8 +94,8 @@ When consuming message, you connect to the same queue you previously created::
     import aioamqp
 
     @asyncio.coroutine
-    def callback(consumer_tag, delivery_tag, message):
-        print(message)
+    def callback(body, envelope, properties):
+        print(body)
 
     channel = yield from protocol.channel()
     yield from channel.basic_consume("my_queue", callback=callback)
@@ -76,6 +104,34 @@ The ``basic_consume`` method tells the server to send us the messages, and will 
 
 The ``consumer_tag`` is the id of your consumer, and the ``delivery_tag`` is the tag used if you want to acknowledge the message.
 
+In the callback:
+
+* the first ``body`` parameter is the message
+* the ``envelope`` is an instance of envelope.Envelope class which encapsulate a group of amqp parameter such as::
+
+    consumer_tag
+    delivery_tag
+    exchange_name
+    routing_key
+    is_redeliver
+
+* the ``properties`` are message properties, an instance of properties.Properties with the following members::
+
+    content_type
+    content_encoding
+    headers
+    delivery_mode
+    priority
+    correlation_id
+    reply_to
+    expiration
+    message_id
+    timestamp
+    type
+    user_id
+    app_id
+    cluster_id
+
 
 Using exchanges
 ---------------
@@ -83,7 +139,7 @@ Using exchanges
 You can bind an exchange to a queue::
 
     channel = yield from protocol.channel()
-    exchange = yield from channel.exchange_declare(exchange_name="my_exchange", type_name='fanout') 
+    exchange = yield from channel.exchange_declare(exchange_name="my_exchange", type_name='fanout')
     yield from channel.queue_declare("my_queue")
     yield from channel.queue_bind("my_queue", "my_exchange")
 

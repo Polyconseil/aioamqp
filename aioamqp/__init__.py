@@ -3,6 +3,7 @@ import sys
 import ssl as ssl_module  # import as to enable argument named ssl in connect
 from urllib.parse import urlparse
 
+from .exceptions import *
 from .protocol import AmqpProtocol
 
 from .version import __version__
@@ -63,6 +64,12 @@ def from_url(
         url, login_method='AMQPLAIN', insist=False, protocol_factory=AmqpProtocol, *,
         verify_ssl=True):
     """ Connect to the AMQP using a single url parameter and return the client.
+
+        For instance:
+
+            amqp://user:password@hostname:port/vhost
+
+        Returns:        a tuple (transport, protocol) of an AmqpProtocol instance
     """
     url = urlparse(url)
 
@@ -80,4 +87,4 @@ def from_url(
         insist=insist,
         protocol_factory=protocol_factory,
         verify_ssl=verify_ssl)
-    return protocol
+    return transport, protocol
