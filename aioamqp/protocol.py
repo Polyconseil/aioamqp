@@ -91,10 +91,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             We send `PROTOCOL_HEADER'
         """
 
-        if ssl:
-            # TODO
-            logger.warning('ssl is not supported yet, falling back to non-secure connection')
-
         if login_method != 'AMQPLAIN':
             # TODO
             logger.warning('only AMQPLAIN login_method is supported, falling back to AMQPLAIN')
