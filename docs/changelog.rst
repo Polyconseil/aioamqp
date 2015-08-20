@@ -5,6 +5,8 @@ Changelog
 Next version (not yet released)
 -------------------------------
 
+ * Add SSL support.
+
 
 Aioamqp 0.4.0
 -------------
