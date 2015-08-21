@@ -11,10 +11,16 @@ import aioamqp
 import random
 
 
+
+@asyncio.coroutine
+def callback(body, envelope, properties):
+    print(body)
+
+
 @asyncio.coroutine
 def receive_log():
     try:
-        protocol = yield from aioamqp.connect('localhost', 5672)
+        transport, protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.AmqpClosedConnection:
         print("closed connections")
         return
@@ -33,11 +39,7 @@ def receive_log():
 
     print(' [*] Waiting for logs. To exit press CTRL+C')
 
-    yield from asyncio.wait_for(channel.basic_consume(queue_name), timeout=10)
-
-    while True:
-        consumer_tag, delivery_tag, message = yield from channel.consume()
-        print("consumer {} recved {} ({})".format(consumer_tag, message, delivery_tag))
+    yield from asyncio.wait_for(channel.basic_consume(queue_name, callback=callback), timeout=10)
 
 
 asyncio.get_event_loop().run_until_complete(receive_log())

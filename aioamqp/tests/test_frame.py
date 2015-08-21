@@ -68,6 +68,24 @@ class EncoderTestCase(unittest.TestCase):
         self.encoder.write_message_properties(properties)
         self.assertNotEqual(0, len(self.encoder.payload.getvalue()))
 
+    def test_write_message_correlation_id_encode(self):
+        properties = {
+            'delivery_mode': 2,
+            'priority': 0,
+            'correlation_id': '122',
+            }
+        self.encoder.write_message_properties(properties)
+        self.assertEqual(self.encoder.payload.getvalue(), b'\x1c\x00\x02\x00\x03122')
+
+    def test_write_message_priority_zero(self):
+        properties = {
+            'delivery_mode': 2,
+            'priority': 0,
+        }
+        self.encoder.write_message_properties(properties)
+        self.assertEqual(self.encoder.payload.getvalue(),
+                         b'\x18\x00\x02\x00')
+
     def test_write_message_properties_raises_on_invalid_property_name(self):
         properties = {
             'invalid': 'coucou',
@@ -87,7 +105,7 @@ class AmqpResponseTestCase(unittest.TestCase):
         sys.stdout = io.StringIO()
         try:
             last_len = len(sys.stdout.getvalue())
-            frame.frame()
+            print(self)
             # assert something has been writen
             self.assertLess(last_len, len(sys.stdout.getvalue()))
         finally:

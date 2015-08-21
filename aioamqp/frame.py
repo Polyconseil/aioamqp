@@ -43,10 +43,13 @@ import io
 import struct
 import socket
 
-from os import SEEK_END
+import os
 
 from . import exceptions
 from . import constants as amqp_constants
+from .properties import Properties
+from itertools import count
+from decimal import Decimal
 
 
 DUMP_FRAMES = False
@@ -68,7 +71,7 @@ class AmqpEncoder:
             table_length = self.payload.tell() - start
             self.payload.seek(start - 4)    # move before the long
             self.write_long(table_length)   # and set the table length
-            self.payload.seek(0, SEEK_END)  # return at the end
+            self.payload.seek(0, os.SEEK_END)  # return at the end
 
     def write_value(self, value):
         if isinstance(value, (bytes, str)):
@@ -80,6 +83,9 @@ class AmqpEncoder:
         elif isinstance(value, dict):
             self.payload.write(b'F')
             self.write_table(value)
+        elif isinstance(value, int):
+            self.payload.write(b'I')
+            self.write_long(value)
         else:
             raise Exception("type({}) unsupported".format(type(value)))
 
@@ -147,15 +153,15 @@ class AmqpEncoder:
             properties_flag_value |= amqp_constants.FLAG_CONTENT_ENCODING
             self.write_shortstr(content_encoding)
         headers = properties.get('headers')
-        if headers:
+        if headers is not None:
             properties_flag_value |= amqp_constants.FLAG_HEADERS
             self.write_table(headers)
         delivery_mode = properties.get('delivery_mode')
-        if delivery_mode:
+        if delivery_mode is not None:
             properties_flag_value |= amqp_constants.FLAG_DELIVERY_MODE
             self.write_octet(delivery_mode)
         priority = properties.get('priority')
-        if priority:
+        if priority is not None:
             properties_flag_value |= amqp_constants.FLAG_PRIORITY
             self.write_octet(priority)
         correlation_id = properties.get('correlation_id')
@@ -175,7 +181,7 @@ class AmqpEncoder:
             properties_flag_value |= amqp_constants.FLAG_MESSAGE_ID
             self.write_shortstr(message_id)
         timestamp = properties.get('timestamp')
-        if timestamp:
+        if timestamp is not None:
             properties_flag_value |= amqp_constants.FLAG_TIMESTAMP
             self.write_long_long(timestamp)
         type_ = properties.get('type')
@@ -197,31 +203,61 @@ class AmqpEncoder:
 
         self.payload.seek(start)                    # move before the flag
         self.write_short(properties_flag_value)     # set the flag
-        self.payload.seek(0, SEEK_END)
+        self.payload.seek(0, os.SEEK_END)
+
 
 class AmqpDecoder:
     def __init__(self, reader):
         self.reader = reader
 
+    def read_bit(self):
+        return bool(self.read_octet())
+
     def read_octet(self):
         data = self.reader.read(1)
         return ord(data)
+
+    def read_signed_octet(self):
+        data = self.reader.read(1)
+        return struct.unpack('!b', data)[0]
 
     def read_short(self):
         data = self.reader.read(2)
         return struct.unpack('!H', data)[0]
 
+    def read_signed_short(self):
+        data = self.reader.read(2)
+        return struct.unpack('!h', data)[0]
+
     def read_long(self):
         data = self.reader.read(4)
         return struct.unpack('!I', data)[0]
+
+    def read_signed_long(self):
+        data = self.reader.read(4)
+        return struct.unpack('!i', data)[0]
 
     def read_long_long(self):
         data = self.reader.read(8)
         return struct.unpack('!Q', data)[0]
 
+    def read_signed_long_long(self):
+        data = self.reader.read(8)
+        return struct.unpack('!q', data)[0]
+
     def read_float(self):
+        # XXX: This used to read & unpack '!d', which is a double, not a shorter float
         data = self.reader.read(4)
+        return struct.unpack('!f', data)[0]
+
+    def read_double(self):
+        data = self.reader.read(8)
         return struct.unpack('!d', data)[0]
+
+    def read_decimal(self):
+        decimals = self.read_octet()
+        value = self.read_signed_long()
+        return Decimal(value) * (Decimal(10) ** -decimals)
 
     def read_shortstr(self):
         data = self.reader.read(1)
@@ -233,6 +269,10 @@ class AmqpDecoder:
         string_len = self.read_long()
         data = self.reader.read(string_len)
         return data.decode()
+
+    def read_timestamp(self):
+        # TODO: decode into datetime?
+        return self.read_long_long()
 
     def read_table(self):
         """Reads an AMQP table"""
@@ -252,14 +292,53 @@ class AmqpDecoder:
             table_data:     a pair of b'<type><value>'
         """
         value_type = chr(table_data.read_octet())
-        if value_type == 'F':
-            return table_data.read_table()
+        if value_type == 't':
+            return table_data.read_bit()
+        elif value_type == 'b':
+            return table_data.read_octet()
+        elif value_type == 'B':
+            return table_data.read_signed_octet()
+        elif value_type == 'U':
+            return table_data.read_signed_short()
+        elif value_type == 'u':
+            return table_data.read_short()
+        elif value_type == 'I':
+            return table_data.read_signed_long()
+        elif value_type == 'i':
+            return table_data.read_long()
+        elif value_type == 'L':
+            return table_data.read_unsigned_long_long()
+        elif value_type == 'l':
+            return table_data.read_long_long()
+        elif value_type == 'f':
+            return table_data.read_float()
+        elif value_type == 'd':
+            return table_data.read_float()
+        elif value_type == 'D':
+            return table_data.read_decimal()
+        elif value_type == 's':
+            return table_data.read_shortstr()
         elif value_type == 'S':
             return table_data.read_longstr()
-        elif value_type == 't':
-            return bool(table_data.read_octet())
-            #return True
-        print("value_type {} unknown".format(value_type))
+        elif value_type == 'A':
+            return table_data.read_field_array()
+        elif value_type == 'T':
+            return table_data.read_timestamp()
+        elif value_type == 'F':
+            return table_data.read_table()
+        elif value_type == 'V':
+            return None
+        else:
+            raise ValueError('Unknown value_type {}'.format(value_type))
+
+    def read_field_array(self):
+        array_len = self.read_long()
+        array_data = AmqpDecoder(io.BytesIO(self.reader.read(array_len)))
+        field_array = []
+        while array_data.reader.tell() < array_len:
+            item = self.read_table_subitem(array_data)
+            field_array.append(item)
+        return field_array
 
 
 class AmqpRequest:
@@ -332,8 +411,12 @@ class AmqpResponse:
         self.weight = None
         self.body_size = None
         self.property_flags = None
+        self.properties = None
         self.arguments = {}
         self.frame_length = 0
+
+        self.payload_decoder = None
+        self.header_decoder = None
 
     @asyncio.coroutine
     def read_frame(self):
@@ -344,49 +427,60 @@ class AmqpResponse:
             raise exceptions.AmqpClosedConnection() from ex
 
         frame_header = io.BytesIO(data)
-        decoder = AmqpDecoder(frame_header)
-        self.frame_type = decoder.read_octet()
-        self.channel = decoder.read_short()
-        self.frame_length = decoder.read_long()
+        self.header_decoder = AmqpDecoder(frame_header)
+        self.frame_type = self.header_decoder.read_octet()
+        self.channel = self.header_decoder.read_short()
+        self.frame_length = self.header_decoder.read_long()
         payload_data = yield from self.reader.readexactly(self.frame_length)
 
         if self.frame_type == amqp_constants.TYPE_METHOD:
             self.payload = io.BytesIO(payload_data)
-            decoder = AmqpDecoder(self.payload)
-            self.class_id = decoder.read_short()
-            self.method_id = decoder.read_short()
-            if self.class_id == amqp_constants.CLASS_QUEUE:
-                if self.method_id == amqp_constants.QUEUE_DECLARE_OK:
-                    self.arguments = {
-                        'queue': decoder.read_shortstr(),
-                        'message_count': decoder.read_long(),
-                        'consumer_count': decoder.read_long(),
-                    }
-            elif self.class_id == amqp_constants.CLASS_CHANNEL:
-                if self.method_id == amqp_constants.CHANNEL_CLOSE:
-                    self.arguments = {
-                        'reply_code': decoder.read_short(),
-                        'reply_text': decoder.read_shortstr(),
-                        'class_id': decoder.read_short(),
-                        'method_id': decoder.read_short(),
-                    }
-            elif self.class_id == amqp_constants.CLASS_BASIC:
-                if self.method_id == amqp_constants.BASIC_CONSUME_OK:
-                    self.arguments = {
-                        'consumer_tag': decoder.read_shortstr(),
-                    }
-                elif self.method_id == amqp_constants.BASIC_CANCEL:
-                    self.arguments = {
-                        'consumer_tag': decoder.read_shortstr(),
-                    }
+            self.payload_decoder = AmqpDecoder(self.payload)
+            self.class_id = self.payload_decoder.read_short()
+            self.method_id = self.payload_decoder.read_short()
 
         elif self.frame_type == amqp_constants.TYPE_HEADER:
             self.payload = io.BytesIO(payload_data)
-            decoder = AmqpDecoder(self.payload)
-            self.class_id = decoder.read_short()
-            self.weight = decoder.read_short()
-            self.body_size = decoder.read_long_long()
-            self.property_flags = decoder.read_short()
+            self.payload_decoder = AmqpDecoder(self.payload)
+            self.class_id = self.payload_decoder.read_short()
+            self.weight = self.payload_decoder.read_short()
+            self.body_size = self.payload_decoder.read_long_long()
+            self.property_flags = 0
+            for flagword_index in count(0):
+                partial_flags = self.payload_decoder.read_short()
+                self.property_flags |= partial_flags << (flagword_index * 16)
+                if partial_flags & 1 == 0:
+                    break
+            decoded_properties = {}
+            if self.property_flags & amqp_constants.FLAG_CONTENT_TYPE:
+                decoded_properties['content_type'] = self.payload_decoder.read_shortstr()
+            if self.property_flags & amqp_constants.FLAG_CONTENT_ENCODING:
+                decoded_properties['content_encoding'] = self.payload_decoder.read_shortstr()
+            if self.property_flags & amqp_constants.FLAG_HEADERS:
+                decoded_properties['headers'] = self.payload_decoder.read_table()
+            if self.property_flags & amqp_constants.FLAG_DELIVERY_MODE:
+                decoded_properties['delivery_mode'] = self.payload_decoder.read_octet()
+            if self.property_flags & amqp_constants.FLAG_PRIORITY:
+                decoded_properties['priority'] = self.payload_decoder.read_octet()
+            if self.property_flags & amqp_constants.FLAG_CORRELATION_ID:
+                decoded_properties['correlation_id'] = self.payload_decoder.read_shortstr()
+            if self.property_flags & amqp_constants.FLAG_REPLY_TO:
+                decoded_properties['reply_to'] = self.payload_decoder.read_shortstr()
+            if self.property_flags & amqp_constants.FLAG_EXPIRATION:
+                decoded_properties['expiration'] = self.payload_decoder.read_shortstr()
+            if self.property_flags & amqp_constants.FLAG_MESSAGE_ID:
+                decoded_properties['message_id'] = self.payload_decoder.read_shortstr()
+            if self.property_flags & amqp_constants.FLAG_TIMESTAMP:
+                decoded_properties['timestamp'] = self.payload_decoder.read_long_long()
+            if self.property_flags & amqp_constants.FLAG_TYPE:
+                decoded_properties['type'] = self.payload_decoder.read_shortstr()
+            if self.property_flags & amqp_constants.FLAG_USER_ID:
+                decoded_properties['user_id'] = self.payload_decoder.read_shortstr()
+            if self.property_flags & amqp_constants.FLAG_APP_ID:
+                decoded_properties['app_id'] = self.payload_decoder.read_shortstr()
+            if self.property_flags & amqp_constants.FLAG_CLUSTER_ID:
+                decoded_properties['cluster_id'] = self.payload_decoder.read_shortstr()
+            self.properties = Properties(**decoded_properties)
 
         elif self.frame_type == amqp_constants.TYPE_BODY:
             self.payload = payload_data
@@ -399,10 +493,7 @@ class AmqpResponse:
         self.frame_end = yield from self.reader.readexactly(1)
         assert self.frame_end == amqp_constants.FRAME_END
 
-    def frame(self):
-        if not DUMP_FRAMES:
-            return
-
+    def __str__(self):
         frame_data = {
             'type': self.frame_type,
             'channel': self.channel,
@@ -410,22 +501,26 @@ class AmqpResponse:
             'frame_end': self.frame_end,
             'payload': self.frame_payload,
         }
-        print("""
+        output = """
 0        1           3            7                        size+7        size+8
 +--------+-----------+------------+    +---------------+     +--------------+
 |{type!r:^8}|{channel!r:^11}|{size!r:^12}|    |{payload!r:^15}|     |{frame_end!r:^14}|
 +--------+-----------+------------+    +---------------+     +--------------+
    type    channel       size                payload            frame-end
-""".format(**frame_data))
+""".format(**frame_data)
 
         if self.frame_type == amqp_constants.TYPE_METHOD:
             method_data = {
                 'class_id': self.class_id,
                 'method_id': self.method_id,
             }
-            print("""
+            type_output = """
 0          2           4
 +----------+-----------+-------------- - -
 |{class_id:^10}|{method_id:^11}| arguments...
 +----------+-----------+-------------- - -
-  class-id   method-id       ...""".format(**method_data))
+  class-id   method-id       ...""".format(**method_data)
+
+            output += os.linesep + type_output
+
+        return output

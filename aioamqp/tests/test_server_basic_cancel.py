@@ -1,3 +1,9 @@
+"""
+    Server received requests handling tests
+
+"""
+
+import asyncio
 import unittest
 
 from . import testcase
@@ -11,20 +17,26 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_consumer_is_cancelled(self):
-        yield from self.queue_declare("q", exclusive=True, no_wait=False)
+        queue_name = 'queue_name'
+        yield from self.channel.queue_declare(queue_name)
 
-        # start consume
-        yield from self.channel.basic_consume("q")
+        @asyncio.coroutine
+        def callback(body, envelope, properties):
+            pass
 
+        channel2 = yield from self.amqp.channel()
+        yield from channel2.queue_declare(queue_name)
         # delete queue (so the server send a cancel)
-        yield from self.channel.queue_delete("q")
+        yield from self.channel.queue_delete(queue_name)
 
         # now try to consume and get an exception
-        with self.assertRaises(exceptions.ConsumerCancelled):
-            yield from self.channel.consume()
-
         # get an exception on all following calls
-        with self.assertRaises(exceptions.ConsumerCancelled):
-            yield from self.channel.consume()
-        with self.assertRaises(exceptions.ConsumerCancelled):
-            yield from self.channel.consume()
+        # the Queue won't exists anymore
+        with self.assertRaises(exceptions.ChannelClosed) as cm:
+            yield from channel2.basic_consume(callback=callback)
+
+        self.assertEqual(cm.exception.code, 404)
+
+        with self.assertRaises(exceptions.ChannelClosed):
+            yield from self.channel.basic_consume(callback=callback)
+

@@ -7,6 +7,7 @@ from asyncio import subprocess
 
 from . import testing
 from .. import connect as aioamqp_connect
+from .. import exceptions
 from ..channel import Channel
 from ..protocol import AmqpProtocol
 
@@ -41,7 +42,11 @@ class ProxyChannel(Channel):
     queue_declare = use_full_name(Channel.queue_declare, ['queue_name'])
     queue_delete = use_full_name(Channel.queue_delete, ['queue_name'])
     queue_bind = use_full_name(Channel.queue_bind, ['queue_name', 'exchange_name'])
+    queue_unbind = use_full_name(Channel.queue_unbind, ['queue_name', 'exchange_name'])
+    queue_purge = use_full_name(Channel.queue_purge, ['queue_name'])
+
     exchange_bind = use_full_name(Channel.exchange_bind, ['exchange_source', 'exchange_destination'])
+    exchange_unbind = use_full_name(Channel.exchange_unbind, ['exchange_source', 'exchange_destination'])
     publish = use_full_name(Channel.publish, ['exchange_name'])
     basic_get = use_full_name(Channel.basic_get, ['queue_name'])
     basic_consume = use_full_name(Channel.basic_consume, ['queue_name'])
@@ -83,23 +88,27 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
     @classmethod
     def setUpClass(cls):
         super(RabbitTestCase, cls).setUpClass()
-        cls.rabbitctl_exe = get_rabbitmqctl_exe() 
+        cls.rabbitctl_exe = get_rabbitmqctl_exe()
 
     def setUp(self):
         super().setUp()
-        self.vhost = '/'
+        environ_vhost = os.environ.get('AMQP_VHOST')
+        if environ_vhost:
+            self.vhost = "/{}".format(environ_vhost)
+        else:
+            self.vhost = '/aioamqptest'
         self.host = 'localhost'
         self.port = 5672
         self.queues = {}
         self.exchanges = {}
         self.channels = []
         self.amqps = []
+        self.transports = []
 
         @asyncio.coroutine
         def go():
-            amqp = yield from self.create_amqp()
-            self.amqps.append(amqp)
-            channel = yield from self.create_channel()
+            transport, protocol = yield from self.create_amqp()
+            channel = yield from self.create_channel(amqp=protocol)
             self.channels.append(channel)
         self.loop.run_until_complete(go())
 
@@ -118,8 +127,9 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
                 del channel
             for amqp in self.amqps:
                 logger.debug('Delete amqp %s', amqp)
-                yield from amqp.close(no_wait=True)
+                yield from amqp.close()
                 del amqp
+                self.transports.pop(0)
         self.loop.run_until_complete(go())
         super().tearDown()
 
@@ -128,8 +138,19 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         return self.amqps[0]
 
     @property
+    def transport(self):
+        return self.transports[0]
+
+    @property
     def channel(self):
         return self.channels[0]
+
+    def server_version(self, amqp=None):
+        if amqp is None:
+            amqp = self.amqp
+
+        server_version = tuple(int(x) for x in amqp.server_properties['version'].split('.'))
+        return server_version
 
     @asyncio.coroutine
     def rabbitctl(self, *args):
@@ -163,7 +184,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             args += ['-p', vhost]
         rep = yield from self.rabbitctl(*args)
         lines = rep.strip().split('\n')
-        lines = lines[1:-1]
+        lines = lines[1:]
         lines = [line.split('\t') for line in lines]
         datadict = {}
         for datainfo in lines:
@@ -188,9 +209,41 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         return datadict
 
     @asyncio.coroutine
+    def check_exchange_exists(self, exchange_name):
+        """Check if the exchange exist"""
+        try:
+            yield from self.exchange_declare(exchange_name, passive=True)
+        except exceptions.ChannelClosed:
+            return False
+
+        return True
+
+    @asyncio.coroutine
+    def assertExchangeExists(self, exchange_name):
+        if not self.check_exchange_exists(exchange_name):
+            self.fail("Exchange {} does not exists".format(exchange_name))
+
+    @asyncio.coroutine
+    def check_queue_exists(self, queue_name):
+        """Check if the queue exist"""
+        try:
+            yield from self.queue_declare(queue_name, passive=True)
+        except exceptions.ChannelClosed:
+            return False
+
+        return True
+
+    @asyncio.coroutine
+    def assertQueueExists(self, queue_name):
+        if not self.check_queue_exists(queue_name):
+            self.fail("Queue {} does not exists".format(queue_name))
+
+    @asyncio.coroutine
     def list_queues(self, vhost=None, fully_qualified_name=False):
+        if vhost is None:
+            vhost = self.vhost
         info = ['name', 'durable', 'auto_delete',
-            'arguments', 'policy', 'pid', 'owner_pid', 'exclusive_consumer_pid',
+            'arguments',  'pid', 'owner_pid', 'exclusive_consumer_pid',
             'exclusive_consumer_tag', 'messages_ready', 'messages_unacknowledged', 'messages',
             'consumers', 'memory', 'slave_pids', 'synchronised_slave_pids']
         return (yield from self.rabbitctl_list('list_queues', info, vhost=vhost,
@@ -198,6 +251,8 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
     @asyncio.coroutine
     def list_exchanges(self, vhost=None, fully_qualified_name=False):
+        if vhost is None:
+            vhost = self.vhost
         info = ['name', 'type', 'durable', 'auto_delete', 'internal', 'arguments', 'policy']
         return (yield from self.rabbitctl_list('list_exchanges', info, vhost=vhost,
             fully_qualified_name=fully_qualified_name))
@@ -256,6 +311,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         full_queue_name = self.full_name(queue_name)
         try:
             rep = yield from channel.queue_declare(full_queue_name, *args, **kw)
+
         finally:
             self.queues[queue_name] = (queue_name, channel)
         return rep
@@ -287,7 +343,8 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         def protocol_factory(*args, **kw):
             return ProxyAmqpProtocol(self, *args, **kw)
         vhost = vhost or self.vhost
-        amqp = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
+        transport, protocol = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
             protocol_factory=protocol_factory)
-        self.amqps.append(amqp)
-        return amqp
+        self.amqps.append(protocol)
+        self.transports.append(transport)
+        return transport, protocol
