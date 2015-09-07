@@ -62,7 +62,7 @@ def connect(host='localhost', port=None, login='guest', password='guest',
 @asyncio.coroutine
 def from_url(
         url, login_method='AMQPLAIN', insist=False, protocol_factory=AmqpProtocol, *,
-        verify_ssl=True):
+        verify_ssl=True, **kwargs):
     """ Connect to the AMQP using a single url parameter and return the client.
 
         For instance:
@@ -86,5 +86,6 @@ def from_url(
         login_method=login_method,
         insist=insist,
         protocol_factory=protocol_factory,
-        verify_ssl=verify_ssl)
+        verify_ssl=verify_ssl,
+        **kwargs)
     return transport, protocol
