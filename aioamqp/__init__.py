@@ -31,7 +31,9 @@ def connect(host='localhost', port=None, login='guest', password='guest',
         Returns:        a tuple (transport, protocol) of an AmqpProtocol instance
     """
     if kwargs:
-        protocol_factory = lambda: protocol_factory(**kwargs)
+        factory = lambda: protocol_factory(**kwargs)
+    else:
+        factory = protocol_factory
 
     create_connection_kwargs = {}
 
@@ -51,7 +53,8 @@ def connect(host='localhost', port=None, login='guest', password='guest',
             port = 5672
 
     transport, protocol = yield from asyncio.get_event_loop().create_connection(
-        protocol_factory, host, port, **create_connection_kwargs)
+        factory, host, port, **create_connection_kwargs
+    )
 
     yield from protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl,
         login_method=login_method, insist=insist)
