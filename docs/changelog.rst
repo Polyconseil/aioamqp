@@ -6,6 +6,7 @@ Next version (not yet released)
 -------------------------------
 
  * Add SSL support.
+ * Support connection metadata customization, closes #40.
 
 
 Aioamqp 0.4.0

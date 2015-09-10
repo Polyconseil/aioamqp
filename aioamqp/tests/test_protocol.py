@@ -30,6 +30,15 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
         transport, protocol = self.loop.run_until_complete(amqp_connect())
         self.assertTrue(protocol.is_open)
 
+    def test_connect_products_info(self):
+        transport, protocol = self.loop.run_until_complete(amqp_connect(
+            product='test_product',
+            product_version='0.1.0',
+        ))
+
+        self.assertEqual(protocol.product, 'test_product')
+        self.assertEqual(protocol.product_version, '0.1.0')
+
     def test_connection_unexistant_vhost(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
             self.loop.run_until_complete(amqp_connect(virtualhost='/unexistant'))
