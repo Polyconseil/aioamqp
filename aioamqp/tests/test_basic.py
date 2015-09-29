@@ -47,7 +47,7 @@ class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def test_basic_cancel(self):
 
         @asyncio.coroutine
-        def callback(body, envelope, properties):
+        def callback(channel, body, envelope, properties):
             pass
 
         queue_name = 'queue_name'
@@ -124,7 +124,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(body, envelope, properties):
+        def qcallback(channel, body, envelope, properties):
             qfuture.set_result(envelope)
 
         yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
@@ -146,7 +146,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(body, envelope, properties):
+        def qcallback(channel, body, envelope, properties):
             qfuture.set_result(envelope)
 
         yield from self.channel.basic_consume(qcallback, queue_name=queue_name)

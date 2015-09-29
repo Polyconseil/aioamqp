@@ -27,7 +27,8 @@ def exchange_routing():
     yield from channel.publish("Message ", '', queue_name, properties=message_properties)
     print(" [x] Sent %r" % (message,))
 
-    yield from transport.close()
+    yield from protocol.close()
+    transport.close()
 
 
 asyncio.get_event_loop().run_until_complete(exchange_routing())

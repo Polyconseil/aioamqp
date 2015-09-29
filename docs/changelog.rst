@@ -14,6 +14,7 @@ Next version (not yet released)
  * Removes the checks for coroutine callbacks, closes #55.
  * Connection tuning are now configurable.
  * Add a heartbeat method to know if the connection has fail, closes #3.
+ * Change the callback signature. It now takes the channel as first parameter, closes: #47.
 
 
 Aioamqp 0.4.0
