@@ -19,7 +19,7 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.publish("coucou", "e", routing_key='')
 
         # retrieve queue info from rabbitmqctl
-        queues = yield from self.list_queues()
+        queues = self.list_queues()
         self.assertIn("q", queues)
         self.assertEqual(1, queues["q"]['messages'])
 
@@ -34,7 +34,7 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.publish("a"*1000000, "e", routing_key='')
 
         # retrieve queue info from rabbitmqctl
-        queues = yield from self.list_queues()
+        queues = self.list_queues()
         self.assertIn("q", queues)
         self.assertEqual(1, queues["q"]['messages'])
 
@@ -50,7 +50,6 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # publish
         yield from self.channel.publish("coucou", "e", routing_key='')
 
-        # retrieve queue info from rabbitmqctl
-        queues = yield from self.list_queues()
+        queues = self.list_queues()
         self.assertIn("q", queues)
         self.assertEqual(1, queues["q"]['messages'])
