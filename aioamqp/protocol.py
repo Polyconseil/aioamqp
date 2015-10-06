@@ -192,7 +192,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @property
     def channels_ids_count(self):
-        return self.channels_ids_ceil - len(self.channel_ids_free)
+        return self.channels_ids_ceil - len(self.channels_ids_free)
 
     def _close_channels(self, reply_code=None, reply_text=None, exception=None):
         """Cleanly close channels
