@@ -8,20 +8,14 @@ services:
     - rabbitmq
 
 env:
-    - PYTHONASYNCIODEBUG=1 RABBITMQCTL_CMD="sudo rabbitmqctl"
+    - PYTHONASYNCIODEBUG=1
 
 install:
     - pip install -r requirements_dev.txt
     - pip install --editable .
     - pip freeze
 
-before_script:
-    - sudo rabbitmqctl status
-    - sudo rabbitmqctl delete_vhost "/aioamqptest" || true
-    - sudo rabbitmqctl add_vhost "/aioamqptest"
-    - sudo rabbitmqctl set_permissions -p /aioamqptest guest ".*" ".*" ".*"
-
-script: nosetests --verbosity=2 aioamqp
+script: make test
 
 notifications:
     email: true

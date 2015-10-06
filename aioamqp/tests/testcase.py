@@ -1,9 +1,15 @@
+"""Aioamqp tests utilities
+
+Provides the test case to simplify testing
+"""
+
+import asyncio
 import inspect
 import logging
 import os
+import time
 
-import asyncio
-from asyncio import subprocess
+import pyrabbit.api
 
 from . import testing
 from .. import connect as aioamqp_connect
@@ -65,45 +71,37 @@ class ProxyAmqpProtocol(AmqpProtocol):
     CHANNEL_FACTORY = channel_factory
 
 
-def get_rabbitmqctl_exe():
-    cmd = os.environ.get('RABBITMQCTL_CMD', None)
-    if cmd:
-        return cmd
-    paths = [
-        os.path.join(os.path.expanduser('~'), 'sbin/rabbitmqctl'),
-        '/usr/local/sbin/rabbitmqctl',
-        '/usr/sbin/rabbitmqctl',
-    ]
-    for path in paths:
-        if os.path.exists(path):
-            return path
-    return 'rabbitmqctl'
-
-
 class RabbitTestCase(testing.AsyncioTestCaseMixin):
     """TestCase with a rabbit running in background"""
 
     RABBIT_TIMEOUT = 1.0
-
-    @classmethod
-    def setUpClass(cls):
-        super(RabbitTestCase, cls).setUpClass()
-        cls.rabbitctl_exe = get_rabbitmqctl_exe()
+    VHOST = '/test-aioamqp'
 
     def setUp(self):
         super().setUp()
-        environ_vhost = os.environ.get('AMQP_VHOST')
-        if environ_vhost:
-            self.vhost = "/{}".format(environ_vhost)
-        else:
-            self.vhost = '/aioamqptest'
-        self.host = 'localhost'
-        self.port = 5672
-        self.queues = {}
-        self.exchanges = {}
-        self.channels = []
+        self.host = os.environ.get('AMQP_HOST', 'localhost')
+        self.port = os.environ.get('AMQP_PORT', 5672)
+        self.vhost = os.environ.get('AMQP_VHOST', self.VHOST)
+        self.http_client = pyrabbit.api.Client('localhost:15672', 'guest', 'guest')
+
         self.amqps = []
+        self.channels = []
+        self.exchanges = {}
+        self.queues = {}
         self.transports = []
+
+        self.reset_vhost()
+
+    def reset_vhost(self):
+        try:
+            self.http_client.delete_vhost(self.vhost)
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+        self.http_client.create_vhost(self.vhost)
+        self.http_client.set_vhost_permissions(
+            vname=self.vhost, username='guest', config='.*', rd='.*', wr='.*',
+        )
 
         @asyncio.coroutine
         def go():
@@ -151,31 +149,6 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
         server_version = tuple(int(x) for x in amqp.server_properties['version'].split('.'))
         return server_version
-
-    @asyncio.coroutine
-    def rabbitctl(self, *args):
-        proc = yield from asyncio.create_subprocess_shell(
-            self.rabbitctl_exe + " " + " ".join(args),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-        try:
-            stdout, stderr = yield from proc.communicate()
-        except:
-            proc.kill()
-            yield from proc.wait()
-            raise
-        if stdout is None:
-            stdout = ''
-        else:
-            stdout = stdout.decode('utf8')
-        if stderr is None:
-            stderr = ''
-        else:
-            stderr = stderr.decode('utf8')
-        exitcode = yield from proc.wait()
-        if exitcode != 0 or stderr:
-            raise ValueError(exitcode, stdout, stderr)
-        return stdout
 
     @asyncio.coroutine
     def rabbitctl_list(self, command, info, vhost=None, fully_qualified_name=False):
@@ -238,24 +211,23 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         if not self.check_queue_exists(queue_name):
             self.fail("Queue {} does not exists".format(queue_name))
 
-    @asyncio.coroutine
     def list_queues(self, vhost=None, fully_qualified_name=False):
-        if vhost is None:
-            vhost = self.vhost
-        info = ['name', 'durable', 'auto_delete',
-            'arguments',  'pid', 'owner_pid', 'exclusive_consumer_pid',
-            'exclusive_consumer_tag', 'messages_ready', 'messages_unacknowledged', 'messages',
-            'consumers', 'memory', 'slave_pids', 'synchronised_slave_pids']
-        return (yield from self.rabbitctl_list('list_queues', info, vhost=vhost,
-            fully_qualified_name=fully_qualified_name))
+        # wait for the http client to get the correct state of the queue
+        time.sleep(3)
+        queues_list = self.http_client.get_queues(vhost=vhost or self.vhost)
+        queues = {}
+        for queue_info in queues_list:
+            queue_name = queue_info['name']
+            if fully_qualified_name is False:
+                queue_name = self.local_name(queue_info['name'])
+                queue_info['name'] = queue_name
 
-    @asyncio.coroutine
-    def list_exchanges(self, vhost=None, fully_qualified_name=False):
-        if vhost is None:
-            vhost = self.vhost
-        info = ['name', 'type', 'durable', 'auto_delete', 'internal', 'arguments', 'policy']
-        return (yield from self.rabbitctl_list('list_exchanges', info, vhost=vhost,
-            fully_qualified_name=fully_qualified_name))
+            queues[queue_name] = queue_info
+        return queues
+
+    def list_exchanges(self, vhost=None, name=None):
+        """Return the list of the exchanges"""
+        return self.http_client.get_exchanges(vhost, name)
 
     @asyncio.coroutine
     def safe_queue_delete(self, queue_name, channel=None):
@@ -348,3 +320,4 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         self.amqps.append(protocol)
         self.transports.append(transport)
         return transport, protocol
+

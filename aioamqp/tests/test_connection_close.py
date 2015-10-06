@@ -6,8 +6,6 @@ from . import testing
 
 class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
-    _multiprocess_can_split_ = True
-
     @testing.coroutine
     def test_close(self):
         amqp = self.amqp

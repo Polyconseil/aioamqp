@@ -9,6 +9,7 @@ from . import testcase
 from . import testing
 from .. import exceptions
 
+IMPLEMENT_CHANNEL_FLOW = os.environ.get('IMPLEMENT_CHANNEL_FLOW', False)
 
 class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
@@ -49,7 +50,7 @@ class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertTrue(result['active'])
 
     @testing.coroutine
-    @unittest.skipIf(os.environ.get('TRAVIS'), "Inactive flow not implemented on travis")
+    @unittest.skipIf(IMPLEMENT_CHANNEL_FLOW is False, "active=false is not implemented in RabbitMQ")
     def test_channel_inactive_flow(self):
         channel = yield from self.amqp.channel()
         result = yield from channel.flow(active=False)
@@ -64,7 +65,7 @@ class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         result = yield from channel.flow(active=True)
 
     @testing.coroutine
-    @unittest.skipIf(os.environ.get('TRAVIS'), "Inactive flow not implemented on travis")
+    @unittest.skipIf(IMPLEMENT_CHANNEL_FLOW is False, "active=false is not implemented in RabbitMQ")
     def test_channel_active_inactive_flow(self):
         channel = yield from self.amqp.channel()
         result = yield from channel.flow(active=True)

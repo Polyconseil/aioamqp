@@ -38,6 +38,16 @@ class EncoderTestCase(unittest.TestCase):
             (b'F\x00\x00\x00\x18\x03barS\x00\x00\x00\x03baz\x03fooS\x00\x00\x00\x03bar',
              b'F\x00\x00\x00\x18\x03fooS\x00\x00\x00\x03bar\x03barS\x00\x00\x00\x03baz'))
 
+    def test_write_message_correlation_id_encode(self):
+        properties = {
+            'delivery_mode': 2,
+            'priority': 0,
+            'correlation_id': '122',
+        }
+        self.encoder.write_message_properties(properties)
+        self.assertEqual(self.encoder.payload.getvalue(),
+                         b'\x14\x00\x02\x03122')
+
     def test_write_message_properties_dont_crash(self):
         properties = {
             'content_type': 'plain/text',

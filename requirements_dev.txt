@@ -3,3 +3,4 @@
 nose
 coverage
 pylint==1.1.0
+pyrabbit
