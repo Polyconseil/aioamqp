@@ -47,8 +47,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.channels = {}
         self.server_frame_max = None
         self.server_channel_max = None
-        self.channels_max_id = 0
-        self.channels_ids = list(range(1, amqp_constants.MAX_CHANNELS + 1))
+        self.channels_ids_ceil = 0
+        self.channels_ids_free = set()
 
     def client_connected(self, reader, writer):
         self.reader = reader
@@ -188,7 +188,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """Called from the channel instance, it relase a previously used
         channel_id
         """
-        self.channels_ids.append(channel_id)
+        self.channels_ids_free.add(channel_id)
+
+    @property
+    def channels_ids_count(self):
+        return self.channels_ids_ceil - len(self.channels_ids_free)
 
     def _close_channels(self, reply_code=None, reply_text=None, exception=None):
         """Cleanly close channels
@@ -319,9 +323,15 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """Factory to create a new channel
 
         """
-        if not len(self.channels_ids):
-            raise exceptions.NoChannelAvailable()
-        channel_id = self.channels_ids.pop(0)
+        try:
+            channel_id = self.channels_ids_free.pop()
+        except KeyError:
+            assert self.server_channel_max is not None, 'connection channel-max tuning not performed'
+            # channel-max = 0 means no limit
+            if self.server_channel_max and self.channels_ids_ceil > self.server_channel_max:
+                raise exceptions.NoChannelAvailable()
+            self.channels_ids_ceil += 1
+            channel_id = self.channels_ids_ceil
         channel = self.CHANNEL_FACTORY(self, channel_id, **kwargs)
         self.channels[channel_id] = channel
         yield from channel.open()
