@@ -139,7 +139,7 @@ class Channel:
         self.close_event.clear()
         fut = self._get_waiter('open')
         fut.set_result(True)
-        logger.debug("Channel openned")
+        logger.debug("Channel is open")
 
     @asyncio.coroutine
     def close(self, reply_code=0, reply_text="Normal Shutdown", no_wait=False, timeout=None):

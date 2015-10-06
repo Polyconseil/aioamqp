@@ -28,6 +28,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         loop = kwargs.get('loop') or asyncio.get_event_loop()
         super().__init__(asyncio.StreamReader(loop=loop), self.client_connected, loop=loop)
         self._on_error_callback = kwargs.get('on_error')
+        self.product = kwargs.get('product', version.__packagename__)
+        self.product_version = kwargs.get('product_version', version.__version__)
 
         self.connecting = asyncio.Future()
         self.connection_closed = asyncio.Event()
@@ -105,9 +107,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 'consumer_cancel_notify': True,
                 'connection.blocked': False,
             },
-            'product_version': version.__version__,
-            'product': version.__packagename__,
             'copyright': 'BSD',
+            'product': self.product,
+            'product_version': self.product_version,
         }
         auth = {
             'LOGIN': login,
