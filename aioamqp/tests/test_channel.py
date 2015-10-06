@@ -78,11 +78,10 @@ class ChannelIdTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_channel_id_release_close(self):
-        channels_count = self.amqp.channels_ids_count
+        channels_count_start = self.amqp.channels_ids_count
         channel = yield from self.amqp.channel()
-
-        self.assertEqual(self.amqp.channels_ids_count, channels_count - 1)
+        self.assertEqual(self.amqp.channels_ids_count, channels_count_start + 1)
         result = yield from channel.close()
-        self.assertEqual(self.amqp.channels_ids_count, channels_count)
         self.assertEqual(result, True)
         self.assertFalse(channel.is_open)
+        self.assertEqual(self.amqp.channels_ids_count, channels_count_start)
