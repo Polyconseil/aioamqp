@@ -152,37 +152,6 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         return server_version
 
     @asyncio.coroutine
-    def rabbitctl_list(self, command, info, vhost=None, fully_qualified_name=False):
-        args = [command] + info
-        if vhost is not None:
-            args += ['-p', vhost]
-        rep = yield from self.rabbitctl(*args)
-        lines = rep.strip().split('\n')
-        lines = lines[1:]
-        lines = [line.split('\t') for line in lines]
-        datadict = {}
-        for datainfo in lines:
-            data = {}
-            for info_name, info_value in zip(info, datainfo):
-                if info_value == 'true':
-                    info_value = True
-                elif info_value == 'false':
-                    info_value = False
-                else:
-                    try:
-                        info_value = int(info_value)
-                    except ValueError:
-                        try:
-                            info_value = float(info_value)
-                        except ValueError:
-                            pass
-                data[info_name] = info_value
-            if not fully_qualified_name:
-                data['name'] = self.local_name(data['name'])
-            datadict[data['name']] = data
-        return datadict
-
-    @asyncio.coroutine
     def check_exchange_exists(self, exchange_name):
         """Check if the exchange exist"""
         try:
