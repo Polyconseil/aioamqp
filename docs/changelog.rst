@@ -8,6 +8,7 @@ Next version (not yet released)
  * Add SSL support.
  * Support connection metadata customization, closes #40.
  * Remove the use of rabbitmqctl in tests.
+ * Reduce the memory usage for channel recycling, close #43.
 
 
 Aioamqp 0.4.0
