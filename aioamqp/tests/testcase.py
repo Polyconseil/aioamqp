@@ -127,7 +127,8 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
                 logger.debug('Delete amqp %s', amqp)
                 yield from amqp.close()
                 del amqp
-                self.transports.pop(0)
+            for transport in self.transports:
+                self.transport.close()
         self.loop.run_until_complete(go())
         super().tearDown()
 
