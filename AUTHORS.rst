@@ -7,4 +7,5 @@ AUTHORS are (and/or have been)::
     * Guillaume Gauvrit
     * Morgan Delahaye-Prat
     * Mathias Fröjdman
+    * Dmitry Maslov
 
