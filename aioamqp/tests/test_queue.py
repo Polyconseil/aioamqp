@@ -93,7 +93,6 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # declared queue we have to use self.full_name function
         self.assertEqual(self.full_name(queue_name), result['queue'])
 
-        # retrieve queue info from rabbitmqctl
         queues = self.list_queues()
         queue = queues[queue_name]
 
