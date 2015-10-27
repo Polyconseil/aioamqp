@@ -18,7 +18,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.consume_future = asyncio.Future(loop=self.loop)
 
     @asyncio.coroutine
-    def callback(self, body, envelope, properties):
+    def callback(self, channel, body, envelope, properties):
         self.consume_future.set_result((body, envelope, properties))
 
     @asyncio.coroutine
@@ -133,13 +133,13 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         q1_future = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def q1_callback(body, envelope, properties):
+        def q1_callback(channel, body, envelope, properties):
             q1_future.set_result((body, envelope, properties))
 
         q2_future = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def q2_callback(body, envelope, properties):
+        def q2_callback(channel, body, envelope, properties):
             q2_future.set_result((body, envelope, properties))
 
         # start consumers
@@ -198,7 +198,7 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         sync_future = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def callback(body, envelope, properties):
+        def callback(channel, body, envelope, properties):
             self.assertTrue(sync_future.done())
             pass
 

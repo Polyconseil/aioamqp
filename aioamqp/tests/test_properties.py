@@ -24,7 +24,7 @@ class ReplyTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_bind(
             server_queue_name, exchange_name, routing_key=routing_key)
         @asyncio.coroutine
-        def server_callback(body, envelope, properties):
+        def server_callback(channel, body, envelope, properties):
             logger.debug('Server received message')
             server_future.set_result((body, envelope, properties))
             publish_properties = {'correlation_id': properties.correlation_id}
@@ -48,7 +48,7 @@ class ReplyTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from client_channel.queue_bind(
             client_queue_name, exchange_name, routing_key=client_routing_key)
         @asyncio.coroutine
-        def client_callback(body, envelope, properties):
+        def client_callback(channel, body, envelope, properties):
             logger.debug('Client received message')
             client_future.set_result((body, envelope, properties))
         yield from client_channel.basic_consume(client_callback, queue_name=client_queue_name)
