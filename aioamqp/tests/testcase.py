@@ -183,7 +183,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
     def list_queues(self, vhost=None, fully_qualified_name=False):
         # wait for the http client to get the correct state of the queue
-        time.sleep(3)
+        time.sleep(int(os.environ.get('AMQP_REFRESH_TIME', 3)))
         queues_list = self.http_client.get_queues(vhost=vhost or self.vhost)
         queues = {}
         for queue_info in queues_list:
