@@ -25,15 +25,15 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     CHANNEL_FACTORY = amqp_channel.Channel
 
     def __init__(self, *args, **kwargs):
-        loop = kwargs.get('loop') or asyncio.get_event_loop()
-        super().__init__(asyncio.StreamReader(loop=loop), self.client_connected, loop=loop)
+        self._loop = kwargs.get('loop') or asyncio.get_event_loop()
+        super().__init__(asyncio.StreamReader(loop=self._loop), self.client_connected, loop=self._loop)
         self._on_error_callback = kwargs.get('on_error')
         self.product = kwargs.get('product', version.__packagename__)
         self.product_version = kwargs.get('product_version', version.__version__)
 
-        self.connecting = asyncio.Future()
-        self.connection_closed = asyncio.Event()
-        self.stop_now = asyncio.Future()
+        self.connecting = asyncio.Future(loop=self._loop)
+        self.connection_closed = asyncio.Event(loop=self._loop)
+        self.stop_now = asyncio.Future(loop=self._loop)
         self.is_open = False
         self.version_major = None
         self.version_minor = None
@@ -79,7 +79,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def wait_closed(self, timeout=None):
-        yield from asyncio.wait_for(self.connection_closed.wait(), timeout=timeout)
+        yield from asyncio.wait_for(self.connection_closed.wait(), timeout=timeout, loop=self._loop)
 
     @asyncio.coroutine
     def close_ok(self, frame):
@@ -137,7 +137,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from self.dispatch_frame()
 
         # for now, we read server's responses asynchronously
-        self.worker = asyncio.async(self.run())
+        self.worker = asyncio.async(self.run(), loop=self._loop)
 
     def stop(self):
         self.is_open = False
@@ -208,7 +208,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         if self._on_error_callback:
             if asyncio.iscoroutinefunction(self._on_error_callback):
-                asyncio.async(self._on_error_callback(exception))
+                asyncio.async(self._on_error_callback(exception), loop=self._loop)
             else:
                 self._on_error_callback(exceptions.ChannelClosed(exception))
 

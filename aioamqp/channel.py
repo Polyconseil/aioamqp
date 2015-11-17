@@ -20,13 +20,14 @@ logger = logging.getLogger(__name__)
 class Channel:
 
     def __init__(self, protocol, channel_id, on_error=None):
+        self._loop = protocol._loop
         self.protocol = protocol
         self.channel_id = channel_id
         self.consumer_queues = {}
         self.consumer_callbacks = {}
         self._on_error_callback = on_error
         self.response_future = None
-        self.close_event = asyncio.Event()
+        self.close_event = asyncio.Event(loop=self._loop)
         self.cancelled_consumers = set()
         self.last_consumer_tag = None
         self.publisher_confirms = False
@@ -39,7 +40,7 @@ class Channel:
         if rpc_name in self._futures:
             raise exceptions.SynchronizationError("Waiter already exists")
 
-        fut = asyncio.Future()
+        fut = asyncio.Future(loop=self._loop)
         self._futures[rpc_name] = fut
         return fut
 
@@ -641,7 +642,7 @@ class Channel:
         }
         future = self._get_waiter('basic_consume')
         future.set_result(results)
-        self._ctag_events[ctag] = asyncio.Event()
+        self._ctag_events[ctag] = asyncio.Event(loop=self._loop)
 
     @asyncio.coroutine
     def basic_deliver(self, frame):

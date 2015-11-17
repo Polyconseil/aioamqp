@@ -13,7 +13,7 @@ from .version import __packagename__
 @asyncio.coroutine
 def connect(host='localhost', port=None, login='guest', password='guest',
             virtualhost='/', ssl=False, login_method='AMQPLAIN', insist=False,
-            protocol_factory=AmqpProtocol, *, verify_ssl=True, **kwargs):
+            protocol_factory=AmqpProtocol, *, verify_ssl=True, loop=None, **kwargs):
     """Convenient method to connect to an AMQP broker
 
         @host:          the host to connect to
@@ -30,10 +30,9 @@ def connect(host='localhost', port=None, login='guest', password='guest',
 
         Returns:        a tuple (transport, protocol) of an AmqpProtocol instance
     """
-    if kwargs:
-        factory = lambda: protocol_factory(**kwargs)
-    else:
-        factory = protocol_factory
+    if loop is None:
+        loop = asyncio.get_event_loop()
+    factory = lambda: protocol_factory(loop=loop, **kwargs)
 
     create_connection_kwargs = {}
 
@@ -52,7 +51,7 @@ def connect(host='localhost', port=None, login='guest', password='guest',
         else:
             port = 5672
 
-    transport, protocol = yield from asyncio.get_event_loop().create_connection(
+    transport, protocol = yield from loop.create_connection(
         factory, host, port, **create_connection_kwargs
     )
 
