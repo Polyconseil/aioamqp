@@ -43,7 +43,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.reader = None
         self.writer = None
         self.worker = None
-        self.hearbeat = None
+        self.heartbeat = None
         self.channels = {}
         self.server_frame_max = None
         self.server_channel_max = None
@@ -125,7 +125,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         tune_ok = {
             'channel_max': self.server_channel_max,
             'frame_max': self.server_frame_max,
-            'heartbeat': self.hearbeat,
+            'heartbeat': self.heartbeat,
         }
         # "tune" the connexion with max channel, max frame, heartbeat
         yield from self.tune_ok(**tune_ok)
@@ -169,7 +169,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             #print("frame.channel {} class_id {}".format(frame.channel, frame.class_id))
 
         if frame.frame_type == amqp_constants.TYPE_HEARTBEAT:
-            yield from self.reply_to_hearbeat(frame)
+            yield from self.reply_to_heartbeat(frame)
             return
 
         if frame.channel is not 0:
@@ -229,7 +229,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 logger.exception('error on dispatch')
 
     @asyncio.coroutine
-    def reply_to_hearbeat(self, frame):
+    def reply_to_heartbeat(self, frame):
         logger.debug("replyin' to heartbeat")
         frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_HEARTBEAT, 0)
         request = amqp_frame.AmqpEncoder()
@@ -278,7 +278,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         decoder = amqp_frame.AmqpDecoder(frame.payload)
         self.server_channel_max = decoder.read_short()
         self.server_frame_max = decoder.read_long()
-        self.hearbeat = decoder.read_short()
+        self.heartbeat = decoder.read_short()
 
     @asyncio.coroutine
     def tune_ok(self, channel_max, frame_max, heartbeat):
