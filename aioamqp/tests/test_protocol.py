@@ -47,8 +47,13 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
         with self.assertRaises(exceptions.AmqpClosedConnection):
             self.loop.run_until_complete(amqp_connect(login='wrong', password='wrong'))
 
+    @testing.coroutine
     def test_connection_from_url(self):
         with mock.patch('aioamqp.connect') as connect:
+            @asyncio.coroutine
+            def func(*x,**y):
+                return 1,2
+            connect.side_effect = func
             yield from amqp_from_url('amqp://tom:pass@example.com:7777/myvhost')
             connect.assert_called_once_with(
                 insist=False,
@@ -59,7 +64,8 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
                 host='example.com',
                 protocol_factory=protocol.AmqpProtocol,
                 virtualhost='myvhost',
-                port=7777
+                port=7777,
+                verify_ssl=True,
             )
 
     @testing.coroutine
