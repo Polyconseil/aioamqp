@@ -60,7 +60,7 @@ class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         result = yield from self.channel.publish("payload", exchange_name, routing_key='')
 
-        yield from asyncio.sleep(5)
+        yield from asyncio.sleep(5, loop=self.loop)
 
         result = yield from self.channel.queue_declare(queue_name, passive=True)
         self.assertEqual(result['message_count'], 1)
@@ -121,7 +121,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_bind(queue_name, exchange_name, routing_key=routing_key)
         yield from self.channel.publish("payload", exchange_name, queue_name)
 
-        qfuture = asyncio.Future()
+        qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
         def qcallback(body, envelope, properties):
@@ -143,7 +143,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_bind(queue_name, exchange_name, routing_key=routing_key)
         yield from self.channel.publish("payload", exchange_name, queue_name)
 
-        qfuture = asyncio.Future()
+        qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
         def qcallback(body, envelope, properties):

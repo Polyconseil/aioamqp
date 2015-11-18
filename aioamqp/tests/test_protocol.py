@@ -27,13 +27,14 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
         super().tearDown()
 
     def test_connect(self):
-        transport, protocol = self.loop.run_until_complete(amqp_connect())
+        transport, protocol = self.loop.run_until_complete(amqp_connect(loop=self.loop))
         self.assertTrue(protocol.is_open)
 
     def test_connect_products_info(self):
         transport, protocol = self.loop.run_until_complete(amqp_connect(
             product='test_product',
             product_version='0.1.0',
+            loop=self.loop,
         ))
 
         self.assertEqual(protocol.product, 'test_product')
@@ -41,11 +42,11 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
 
     def test_connection_unexistant_vhost(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
-            self.loop.run_until_complete(amqp_connect(virtualhost='/unexistant'))
+            self.loop.run_until_complete(amqp_connect(virtualhost='/unexistant', loop=self.loop))
 
     def test_connection_wrong_login_password(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
-            self.loop.run_until_complete(amqp_connect(login='wrong', password='wrong'))
+            self.loop.run_until_complete(amqp_connect(login='wrong', password='wrong', loop=self.loop))
 
     @testing.coroutine
     def test_connection_from_url(self):
@@ -54,7 +55,7 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
             def func(*x,**y):
                 return 1,2
             connect.side_effect = func
-            yield from amqp_from_url('amqp://tom:pass@example.com:7777/myvhost')
+            yield from amqp_from_url('amqp://tom:pass@example.com:7777/myvhost', loop=self.loop)
             connect.assert_called_once_with(
                 insist=False,
                 password='pass',
@@ -66,6 +67,7 @@ class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
                 virtualhost='myvhost',
                 port=7777,
                 verify_ssl=True,
+                loop=self.loop,
             )
 
     @testing.coroutine
