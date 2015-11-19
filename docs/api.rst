@@ -41,6 +41,8 @@ Starting a connection to AMQP really mean instanciate a new asyncio Protocol sub
 
 In this example, we just use the method "start_connection" to begin a communication with the server, which deals with credentials and connection tunning.
 
+If you're not using the default event loop (e.g. because you're using
+aioamqp from a different thread), call aioamqp.connect(loop=your_loop).
 
 Handling errors
 ---------------

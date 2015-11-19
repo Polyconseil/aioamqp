@@ -25,6 +25,7 @@ def connect(host='localhost', port=None, login='guest', password='guest',
         @verify_ssl:    Verify server's SSL certificate (True by default)
         @login_method:  AMQP auth method
         @insist:        Insist on connecting to a server
+        @loop:          optionally set the event loop to use.
 
         @kwargs:        Arguments to be given to the protocol_factory instance
 
