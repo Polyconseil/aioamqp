@@ -8,4 +8,5 @@ AUTHORS are (and/or have been)::
     * Morgan Delahaye-Prat
     * Mathias Fröjdman
     * Dmitry Maslov
+    * Matthias Urlichs
 
