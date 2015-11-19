@@ -25,7 +25,9 @@ def connect(host='localhost', port=None, login='guest', password='guest',
         @verify_ssl:    Verify server's SSL certificate (True by default)
         @login_method:  AMQP auth method
         @insist:        Insist on connecting to a server
-        @loop:          optionally set the event loop to use.
+        @protocol_factory:
+                        Factory to use, if you need to subclass AmqpProtocol
+        @loop:          Set the event loop to use
 
         @kwargs:        Arguments to be given to the protocol_factory instance
 
@@ -71,6 +73,14 @@ def from_url(
         For instance:
 
             amqp://user:password@hostname:port/vhost
+
+        @insist:        Insist on connecting to a server
+        @protocol_factory:
+                        Factory to use, if you need to subclass AmqpProtocol
+        @verify_ssl:    Verify server's SSL certificate (True by default)
+        @loop:          optionally set the event loop to use.
+
+        @kwargs:        Arguments to be given to the protocol_factory instance
 
         Returns:        a tuple (transport, protocol) of an AmqpProtocol instance
     """
