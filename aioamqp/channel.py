@@ -684,7 +684,7 @@ class Channel:
             yield from event.wait()
             del self._ctag_events[consumer_tag]
 
-        asyncio.async(callback(self, body, envelope, properties))
+        yield from callback(self, body, envelope, properties)
 
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
