@@ -32,7 +32,7 @@ class ReplyTestCase(testcase.RabbitTestCase, unittest.TestCase):
             yield from self.channel.publish(
                 b'reply message', exchange_name, properties.reply_to, publish_properties)
             logger.debug('Server replied')
-        yield from self.channel.basic_consume(server_queue_name, callback=server_callback)
+        yield from self.channel.basic_consume(server_callback, queue_name=server_queue_name)
         logger.debug('Server consuming messages')
 
     @asyncio.coroutine
@@ -51,7 +51,7 @@ class ReplyTestCase(testcase.RabbitTestCase, unittest.TestCase):
         def client_callback(body, envelope, properties):
             logger.debug('Client received message')
             client_future.set_result((body, envelope, properties))
-        yield from client_channel.basic_consume(client_queue_name, callback=client_callback)
+        yield from client_channel.basic_consume(client_callback, queue_name=client_queue_name)
         logger.debug('Client consuming messages')
 
         yield from client_channel.publish(

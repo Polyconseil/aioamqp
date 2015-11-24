@@ -46,7 +46,7 @@ def receive_log():
 
     print(' [*] Waiting for logs. To exit press CTRL+C')
 
-    yield from asyncio.wait_for(channel.basic_consume(queue_name, callback=callback), timeout=10)
+    yield from asyncio.wait_for(channel.basic_consume(callback, queue_name=queue_name), timeout=10)
     yield from asyncio.Event().wait()
 
 loop = asyncio.get_event_loop()

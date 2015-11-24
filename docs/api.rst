@@ -100,7 +100,7 @@ When consuming message, you connect to the same queue you previously created::
         print(body)
 
     channel = yield from protocol.channel()
-    yield from channel.basic_consume("my_queue", callback=callback)
+    yield from channel.basic_consume(callback, queue_name="my_queue")
 
 The ``basic_consume`` method tells the server to send us the messages, and will call ``callback`` with amqp response arguments.
 

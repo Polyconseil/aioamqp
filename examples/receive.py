@@ -20,7 +20,7 @@ def receive():
 
     yield from asyncio.wait_for(channel.queue(queue_name, durable=False, auto_delete=True), timeout=10)
 
-    yield from asyncio.wait_for(channel.basic_consume(queue_name, callback=callback), timeout=10)
+    yield from asyncio.wait_for(channel.basic_consume(callback, queue_name=queue_name), timeout=10)
 
 
 asyncio.get_event_loop().run_until_complete(receive())

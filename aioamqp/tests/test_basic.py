@@ -55,7 +55,7 @@ class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_declare(queue_name)
         yield from self.channel.exchange_declare(exchange_name, type_name='direct')
         yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
-        result = yield from self.channel.basic_consume(queue_name, callback=callback)
+        result = yield from self.channel.basic_consume(callback, queue_name=queue_name)
         result = yield from self.channel.basic_cancel(result['consumer_tag'])
 
         result = yield from self.channel.publish("payload", exchange_name, routing_key='')
@@ -127,7 +127,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         def qcallback(body, envelope, properties):
             qfuture.set_result(envelope)
 
-        yield from self.channel.basic_consume(queue_name, callback=qcallback)
+        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
         envelope = yield from qfuture
 
         yield from qfuture
@@ -149,7 +149,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         def qcallback(body, envelope, properties):
             qfuture.set_result(envelope)
 
-        yield from self.channel.basic_consume(queue_name, callback=qcallback)
+        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
         envelope = yield from qfuture
 
         yield from self.channel.basic_reject(envelope.delivery_tag)

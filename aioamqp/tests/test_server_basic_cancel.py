@@ -33,10 +33,10 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # get an exception on all following calls
         # the Queue won't exists anymore
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            yield from channel2.basic_consume(callback=callback)
+            yield from channel2.basic_consume(callback)
 
         self.assertEqual(cm.exception.code, 404)
 
         with self.assertRaises(exceptions.ChannelClosed):
-            yield from self.channel.basic_consume(callback=callback)
+            yield from self.channel.basic_consume(callback)
 
