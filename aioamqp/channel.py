@@ -594,16 +594,30 @@ class Channel:
         pass
 
     @asyncio.coroutine
-    def basic_consume(self, queue_name='', consumer_tag='', no_local=False, no_ack=False, exclusive=False,
-                      no_wait=False, callback=None, arguments=None, on_cancel=None, timeout=None):
+    def basic_consume(self, callback, queue_name='', consumer_tag='', no_local=False, no_ack=False,
+                      exclusive=False, no_wait=False, arguments=None, timeout=None):
+        """Starts the consumption of message into a queue.
+        the callback will be called each time we're receiving a message.
+
+            Args:
+                callback:       coroutine, the called callback
+                queue_name:     str, the queue to receive message from
+                consumer_tag:   str, optional consumer tag
+                no_local:       bool, if set the server will not send messages
+                                to the connection that published them.
+                no_ack:         bool, if set the server does not expect
+                                acknowledgements for messages
+                exclusive:      bool, request exclusive consumer access,
+                                meaning only this consumer can access the queue
+                no_wait:        bool, if set, the server will not respond to the method
+                arguments:      dict, AMQP arguments to be passed to the server
+                timeout:        int, wait for the server to respond after `timeout`
+        """
         # If a consumer tag was not passed, create one
         consumer_tag = consumer_tag or 'ctag%i.%s' % (self.channel_id, uuid.uuid4().hex)
 
         if arguments is None:
             arguments = {}
-
-        if callback is None or not asyncio.iscoroutinefunction(callback):
-            raise exceptions.ConfigurationError("basic_consume requires a coroutine callback")
 
         frame = amqp_frame.AmqpRequest(
             self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
