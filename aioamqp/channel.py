@@ -60,6 +60,8 @@ class Channel:
 
     def connection_closed(self, server_code=None, server_reason=None, exception=None):
         for future in self._futures.values():
+            if future.done():
+                continue
             if exception is None:
                 kwargs = {}
                 if server_code is not None:
