@@ -17,7 +17,29 @@ There are two principal objects when using aioamqp:
 Starting a connection
 ---------------------
 
-Starting a connection to AMQP really mean instanciate a new asyncio Protocol subclass::
+Starting a connection to AMQP really mean instanciate a new asyncio Protocol subclass.
+
+.. py:function:: connect(host, port, login, password, virtualhost, ssl, login_method, insist, protocol_factory, verify_ssl, loop, kwargs) -> Transport, AmqpProtocol
+
+   Convenient method to connect to an AMQP broker
+
+   :param str host:          the host to connect to
+   :param int port:          broker port
+   :param str login:         login
+   :param str password:      password
+   :param str virtualhost:   AMQP virtualhost to use for this connection
+   :param bool ssl:           Create an SSL connection instead of a plain unencrypted one
+   :param bool verify_ssl:    Verify server's SSL certificate (True by default)
+   :param str login_method:  AMQP auth method
+   :param bool insist:        Insist on connecting to a server
+   :param AmqpProtocol protocol_factory:
+                   Factory to use, if you need to subclass AmqpProtocol
+   :param EventLopp loop:          Set the event loop to use
+
+   :param dict kwargs:        Arguments to be given to the protocol_factory instance
+
+
+.. code::
 
     import asyncio
     import aioamqp
@@ -43,6 +65,26 @@ In this example, we just use the method "start_connection" to begin a communicat
 
 If you're not using the default event loop (e.g. because you're using
 aioamqp from a different thread), call aioamqp.connect(loop=your_loop).
+
+
+The `AmqpProtocol` uses the `kwargs` arguments to configure the connection to the AMQP Broker:
+
+.. py:method:: AmqpProtocol.__init__(self, *args, **kwargs):
+
+   The protocol to communicate with AMQP
+
+   :param int channel_max: specifies highest channel number that the server permits.
+                      Usable channel numbers are in the range 1..channel-max.
+                      Zero indicates no specified limit.
+   :param int frame_max: the largest frame size that the server proposes for the connection,
+                    including frame header and end-byte. The client can negotiate a lower value.
+                    Zero means that the server does not impose any specific limit
+                    but may reject very large frames if it cannot allocate resources for them.
+   :param int heartbeat: the delay, in seconds, of the connection heartbeat that the server wants.
+                    Zero means the server does not want a heartbeat.
+   :param Asyncio.EventLoop loop: specify the eventloop to use.
+   :param str product:  configure the client name product (like a UserAgent).
+                product_version: str, configure the client product version.
 
 Handling errors
 ---------------

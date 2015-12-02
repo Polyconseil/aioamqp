@@ -20,11 +20,28 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     See http://docs.python.org/3.4/library/asyncio-protocol.html#protocols for more information
     on asyncio's protocol API.
+
     """
 
     CHANNEL_FACTORY = amqp_channel.Channel
 
     def __init__(self, *args, **kwargs):
+        """Defines our new protocol instance
+
+        Args:
+            channel_max: int, specifies highest channel number that the server permits.
+                              Usable channel numbers are in the range 1..channel-max.
+                              Zero indicates no specified limit.
+            frame_max: int, the largest frame size that the server proposes for the connection,
+                            including frame header and end-byte. The client can negotiate a lower value.
+                            Zero means that the server does not impose any specific limit
+                            but may reject very large frames if it cannot allocate resources for them.
+            heartbeat: int, the delay, in seconds, of the connection heartbeat that the server wants.
+                            Zero means the server does not want a heartbeat.
+            loop: Asyncio.Eventloop: specify the eventloop to use.
+            product: str, configure the client name product (like a UserAgent).
+            product_version: str, configure the client product version.
+        """
         self._loop = kwargs.get('loop') or asyncio.get_event_loop()
         super().__init__(asyncio.StreamReader(loop=self._loop), self.client_connected, loop=self._loop)
         self._on_error_callback = kwargs.get('on_error')
