@@ -52,6 +52,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.writer = None
         self.worker = None
         self.server_heartbeat = None
+        self._heartbeat_waiter = asyncio.Event(loop=self._loop)
         self.channels = {}
         self.server_frame_max = None
         self.server_channel_max = None
@@ -133,7 +134,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         tune_ok = {
             'channel_max': self.connection_tunning.get('channel_max', self.server_channel_max),
             'frame_max': self.connection_tunning.get('frame_max', self.server_frame_max),
-            'heartbeat': self.connection_tunning.get('heartbeat', 100),
+            'heartbeat': self.connection_tunning.get('heartbeat', self.server_heartbeat),
         }
         # "tune" the connexion with max channel, max frame, heartbeat
         yield from self.tune_ok(**tune_ok)
@@ -179,10 +180,13 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         }
         if not frame:
             frame = yield from self.get_frame()
-            #print("frame.channel {} class_id {}".format(frame.channel, frame.class_id))
+
+        # we received a frame. It can be a heartbeat or another frame.
+        # it means we still have some traffic from the server
+        self._heartbeat_waiter.set()
 
         if frame.frame_type == amqp_constants.TYPE_HEARTBEAT:
-            yield from self.reply_to_heartbeat(frame)
+            yield from self.send_heartbeat()
             return
 
         if frame.channel is not 0:
@@ -242,8 +246,28 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 logger.exception('error on dispatch')
 
     @asyncio.coroutine
-    def reply_to_heartbeat(self, frame):
-        logger.debug("replyin' to heartbeat")
+    def heartbeat(self):
+        """User method to force a heartbeat to the server
+        usefull to check if the connexion is closed
+
+        Raises:
+            asyncio.TimeoutError
+
+        """
+        self._heartbeat_waiter.clear()
+        yield from self.send_heartbeat()
+        yield from asyncio.wait_for(
+            self._heartbeat_waiter.wait(),
+            timeout=self.server_heartbeat * 2,
+        )
+
+
+    @asyncio.coroutine
+    def send_heartbeat(self):
+        """Sends an heartbeat message.
+        It can be an ack for the server or the client willing to check for the
+        connexion timeout
+        """
         frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_HEARTBEAT, 0)
         request = amqp_frame.AmqpEncoder()
         frame.write_frame(request)
