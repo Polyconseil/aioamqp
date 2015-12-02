@@ -13,6 +13,7 @@ Next version (not yet released)
  * Add the usage of a previously created eventloop, closes #56.
  * Removes the checks for coroutine callbacks, closes #55.
  * Connection tuning are now configurable.
+ * Add a heartbeat method to know if the connection has fail, closes #3.
 
 
 Aioamqp 0.4.0
