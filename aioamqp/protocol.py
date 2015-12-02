@@ -31,6 +31,14 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.product = kwargs.get('product', version.__packagename__)
         self.product_version = kwargs.get('product_version', version.__version__)
 
+        self.connection_tunning = {}
+        if 'channel_max' in kwargs:
+            self.connection_tunning['channel_max'] = kwargs.get('channel_max')
+        if 'frame_max' in kwargs:
+            self.connection_tunning['frame_max'] = kwargs.get('frame_max')
+        if 'heartbeat' in kwargs:
+            self.connection_tunning['heartbeat'] = kwargs.get('heartbeat')
+
         self.connecting = asyncio.Future(loop=self._loop)
         self.connection_closed = asyncio.Event(loop=self._loop)
         self.stop_now = asyncio.Future(loop=self._loop)
@@ -43,7 +51,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.reader = None
         self.writer = None
         self.worker = None
-        self.heartbeat = None
+        self.server_heartbeat = None
         self.channels = {}
         self.server_frame_max = None
         self.server_channel_max = None
@@ -123,12 +131,17 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from self.dispatch_frame()
 
         tune_ok = {
-            'channel_max': self.server_channel_max,
-            'frame_max': self.server_frame_max,
-            'heartbeat': self.heartbeat,
+            'channel_max': self.connection_tunning.get('channel_max', self.server_channel_max),
+            'frame_max': self.connection_tunning.get('frame_max', self.server_frame_max),
+            'heartbeat': self.connection_tunning.get('heartbeat', 100),
         }
         # "tune" the connexion with max channel, max frame, heartbeat
         yield from self.tune_ok(**tune_ok)
+
+        # update connection tunning values
+        self.server_frame_max = tune_ok['frame_max']
+        self.server_channel_max = tune_ok['channel_max']
+        self.server_heartbeat = tune_ok['heartbeat']
 
         # open a virtualhost
         yield from self.open(virtualhost, capabilities='', insist=insist)
@@ -278,7 +291,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         decoder = amqp_frame.AmqpDecoder(frame.payload)
         self.server_channel_max = decoder.read_short()
         self.server_frame_max = decoder.read_long()
-        self.heartbeat = decoder.read_short()
+        self.server_heartbeat = decoder.read_short()
 
     @asyncio.coroutine
     def tune_ok(self, channel_max, frame_max, heartbeat):
@@ -288,7 +301,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder = amqp_frame.AmqpEncoder()
         encoder.write_short(channel_max)
         encoder.write_long(frame_max)
-        encoder.write_short(heartbeat or 0)
+        encoder.write_short(heartbeat)
 
         frame.write_frame(encoder)
 

@@ -12,6 +12,7 @@ Next version (not yet released)
  * Reduce the memory usage for channel recycling, closes #43.
  * Add the usage of a previously created eventloop, closes #56.
  * Removes the checks for coroutine callbacks, closes #55.
+ * Connection tuning are now configurable.
 
 
 Aioamqp 0.4.0
