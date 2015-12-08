@@ -5,6 +5,9 @@ Changelog
 Next version (not yet released)
 -------------------------------
 
+Aioamqp 0.5.0
+-------------
+
  * Add possibility to pass extra keyword arguments to protocol_factory when from_url is used to create a connection.
  * Add SSL support.
  * Support connection metadata customization, closes #40.
