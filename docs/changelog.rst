@@ -5,6 +5,11 @@ Changelog
 Next version (not yet released)
 -------------------------------
 
+Aioamqp 0.5.1
+-------------
+
+ * Fixes packaging issues when uploading to pypi.
+
 Aioamqp 0.5.0
 -------------
 
