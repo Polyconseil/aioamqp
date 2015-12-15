@@ -185,5 +185,5 @@ You can bind an exchange to a queue::
     channel = yield from protocol.channel()
     exchange = yield from channel.exchange_declare(exchange_name="my_exchange", type_name='fanout')
     yield from channel.queue_declare("my_queue")
-    yield from channel.queue_bind("my_queue", "my_exchange")
+    yield from channel.queue_bind("my_queue", "my_exchange", "my_routing_key")
 
