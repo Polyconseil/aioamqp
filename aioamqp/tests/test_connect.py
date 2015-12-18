@@ -14,6 +14,7 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
         transport, proto = yield from connect(vhost=self.vhost, loop=self.loop)
         self.assertTrue(proto.is_open)
         self.assertIsNotNone(proto.server_properties)
+        yield from proto.close()
 
     @testing.coroutine
     def test_connect_tuning(self):
@@ -41,4 +42,4 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertEqual(proto.server_frame_max, frame_max)
         self.assertEqual(proto.server_heartbeat, heartbeat)
 
-
+        yield from proto.close()

@@ -7,46 +7,40 @@ import unittest
 from unittest import mock
 
 from . import testing
+from . import testcase
 from .. import exceptions
 from .. import connect as amqp_connect
 from .. import from_url as amqp_from_url
 from .. import protocol
 
 
-class ProtocolTestCase(unittest.TestCase, testing.AsyncioTestCaseMixin):
+class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
-    _multiprocess_can_split_ = True
 
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
-        super().setUp()
-
-    def tearDown(self):
-        self.loop.close()
-        super().tearDown()
-
+    @testing.coroutine
     def test_connect(self):
-        transport, protocol = self.loop.run_until_complete(amqp_connect(loop=self.loop))
+        transport, protocol = yield from amqp_connect(loop=self.loop)
         self.assertTrue(protocol.is_open)
-        self.loop.run_until_complete(protocol.close())
+        yield from protocol.close()
 
+    @testing.coroutine
     def test_connect_products_info(self):
         client_properties = {
             'program': 'aioamqp-tests',
             'program_version': '0.1.1',
         }
-        transport, protocol = self.loop.run_until_complete(amqp_connect(
+        transport, protocol = yield from amqp_connect(
             client_properties=client_properties,
             loop=self.loop,
-        ))
+        )
 
         self.assertEqual(protocol.client_properties, client_properties)
-        self.loop.run_until_complete(protocol.close())
+        yield from protocol.close()
 
+    @testing.coroutine
     def test_connection_unexistant_vhost(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
-            self.loop.run_until_complete(amqp_connect(virtualhost='/unexistant', loop=self.loop))
+            yield from amqp_connect(virtualhost='/unexistant', loop=self.loop)
 
     def test_connection_wrong_login_password(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):

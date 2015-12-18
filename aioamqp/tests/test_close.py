@@ -8,8 +8,6 @@ from .. import exceptions
 
 class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
-    _multiprocess_can_split_ = True
-
     def setUp(self):
         super().setUp()
         self.consume_future = asyncio.Future(loop=self.loop)
