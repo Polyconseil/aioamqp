@@ -39,15 +39,13 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             heartbeat: int, the delay, in seconds, of the connection heartbeat that the server wants.
                             Zero means the server does not want a heartbeat.
             loop: Asyncio.Eventloop: specify the eventloop to use.
-            product: str, configure the client name product (like a UserAgent).
-            product_version: str, configure the client product version.
+            client_properties: dict, client-props to tune the client identification
         """
         self._loop = kwargs.get('loop') or asyncio.get_event_loop()
         super().__init__(asyncio.StreamReader(loop=self._loop), self.client_connected, loop=self._loop)
         self._on_error_callback = kwargs.get('on_error')
-        self.product = kwargs.get('product', version.__packagename__)
-        self.product_version = kwargs.get('product_version', version.__version__)
 
+        self.client_properties = kwargs.get('client_properties', {})
         self.connection_tunning = {}
         if 'channel_max' in kwargs:
             self.connection_tunning['channel_max'] = kwargs.get('channel_max')
@@ -134,9 +132,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 'connection.blocked': False,
             },
             'copyright': 'BSD',
-            'product': self.product,
-            'product_version': self.product_version,
+            'product': version.__package__,
+            'product_version': version.__version__,
         }
+        client_properties.update(self.client_properties)
         auth = {
             'LOGIN': login,
             'PASSWORD': password,
