@@ -28,15 +28,14 @@ Starting a connection to AMQP really mean instanciate a new asyncio Protocol sub
    :param str login:         login
    :param str password:      password
    :param str virtualhost:   AMQP virtualhost to use for this connection
-   :param bool ssl:           Create an SSL connection instead of a plain unencrypted one
-   :param bool verify_ssl:    Verify server's SSL certificate (True by default)
+   :param bool ssl:          create an SSL connection instead of a plain unencrypted one
+   :param bool verify_ssl:   verify server's SSL certificate (True by default)
    :param str login_method:  AMQP auth method
-   :param bool insist:        Insist on connecting to a server
-   :param AmqpProtocol protocol_factory:
-                   Factory to use, if you need to subclass AmqpProtocol
-   :param EventLopp loop:          Set the event loop to use
+   :param bool insist:       insist on connecting to a server
+   :param AmqpProtocol protocol_factory: factory to use, if you need to subclass AmqpProtocol
+   :param EventLopp loop:    set the event loop to use
 
-   :param dict kwargs:        Arguments to be given to the protocol_factory instance
+   :param dict kwargs:       arguments to be given to the protocol_factory instance
 
 
 .. code::
@@ -83,8 +82,7 @@ The `AmqpProtocol` uses the `kwargs` arguments to configure the connection to th
    :param int heartbeat: the delay, in seconds, of the connection heartbeat that the server wants.
                     Zero means the server does not want a heartbeat.
    :param Asyncio.EventLoop loop: specify the eventloop to use.
-   :param str product:  configure the client name product (like a UserAgent).
-                product_version: str, configure the client product version.
+   :param dict client_properties: configure the client to connect to the AMQP server.
 
 Handling errors
 ---------------
@@ -92,6 +90,7 @@ Handling errors
 The connect() method has an extra 'on_error' kwarg option. This on_error is a callback or a coroutine function which is called with an exception as the argument::
 
     import asyncio
+    import socket
     import aioamqp
 
     @asyncio.coroutine
@@ -104,6 +103,11 @@ The connect() method has an extra 'on_error' kwarg option. This on_error is a ca
             transport, protocol = yield from aioamqp.connect(
                 host='nonexistant.com',
                 on_error=error_callback,
+                client_properties={
+                    'program_name': "test",
+                    'hostname' : socket.gethostname(),
+                },
+
             )
         except aioamqp.AmqpClosedConnection:
             print("closed connections")
