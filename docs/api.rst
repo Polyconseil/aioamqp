@@ -177,13 +177,148 @@ In the callback:
     cluster_id
 
 
-Using exchanges
----------------
 
-You can bind an exchange to a queue::
+Queues
+------
 
-    channel = yield from protocol.channel()
-    exchange = yield from channel.exchange_declare(exchange_name="my_exchange", type_name='fanout')
-    yield from channel.queue_declare("my_queue")
-    yield from channel.queue_bind("my_queue", "my_exchange")
+Queues are managed from the `Channel` object.
+
+.. py:method:: Channel.queue_declare(queue_name, passive, durable, exclusive, auto_delete, no_wait, arguments, timeout) -> dict
+
+   Coroutine, creates or checks a queue on the broker
+
+   :param str queue_name: the queue to receive message from
+   :param bool passive: if set, the server will reply with `Declare-Ok` if the queue already exists with the same name, and raise an error if not. Checks for the same parameter as well.
+   :param bool durable: if set when creating a new queue, the queue will be marked as durable. Durable queues remain active when a server restarts.
+   :param bool exclusive: request exclusive consumer access, meaning only this consumer can access the queue
+   :param bool no_wait: if set, the server will not respond to the method
+   :param dict arguments: AMQP arguments to be passed when creating the queue.
+   :param int timeout: wait for the server to respond after `timeout`
+
+
+Here is an example to create a randomly named queue with special arguments `x-max-priority`:
+
+ .. code-block:: python
+
+        result = yield from channel.queue_declare(
+            queue_name='', durable=True, arguments={'x-max-priority': 4}
+        )
+
+
+.. py:method:: Channel.queue_delete(queue_name, if_unused, if_empty, no_wait, timeout)
+
+   Coroutine, delete a queue on the broker
+
+   :param str queue_name: the queue to receive message from
+   :param bool if_unused: the queue is deleted if it has no consumers. Raise if not.
+   :param bool if_empty: the queue is deleted if it has no messages. Raise if not.
+   :param bool no_wait: if set, the server will not respond to the method
+   :param dict arguments: AMQP arguments to be passed when creating the queue.
+   :param int timeout: wait for the server to respond after `timeout`
+
+
+.. py:method:: Channel.queue_bind(queue_name, exchange_name, routing_key, no_wait, arguments, timeout)
+
+   Coroutine, bind a `queue` to an `exchange`
+
+   :param str queue_name: the queue to receive message from.
+   :param str exchange_name: the exchange to bind the queue to.
+   :param str routing_key: the routing_key to route message.
+   :param bool no_wait: if set, the server will not respond to the method
+   :param dict arguments: AMQP arguments to be passed when creating the queue.
+   :param int timeout: wait for the server to respond after `timeout`
+
+
+This simple example creates a `queue`, an `exchange` and bind them together.
+
+ .. code-block:: python
+
+        channel = yield from protocol.channel()
+        yield from channel.queue_declare(queue_name='queue')
+        yield from channel.exchange_declare(queue_name='exchange')
+
+        yield from channel.queue_bind('queue', 'exchange', routing_key='')
+
+
+.. py:method:: Channel.queue_unbind(queue_name, exchange_name, routing_key, arguments, timeout)
+
+    Coroutine, unbind a queue and an exchange.
+
+    :param str queue_name: the queue to receive message from.
+    :param str exchange_name: the exchange to bind the queue to.
+    :PARAM STR ROUTING_KEY: THE ROUTING_KEY TO ROUTE MESSAGE.
+    :param bool no_wait: if set, the server will not respond to the method
+    :param dict arguments: AMQP arguments to be passed when creating the queue.
+    :param int timeout: wait for the server to respond after `timeout`
+
+
+.. py:method:: Channel.queue_purge(queue_name, no_wait, timeout)
+
+    Coroutine, purge a queue
+
+    :param str queue_name: the queue to receive message from.
+
+
+
+Exchanges
+=========
+
+Exchanges are used to correctly route message to queue: a `publisher` publishes a message into an exchanges, which routes the message to the corresponding queue.
+
+
+.. py:method:: Channel.exchange_declare(exchange_name, type_name, passive, durable, auto_delete, no_wait, arguments, timeout) -> dict
+
+   Coroutine, creates or checks an exchange on the broker
+
+   :param str exchange_name: the exchange to receive message from
+   :param str type_name: the exchange type (fanout, direct, topics ...)
+   :param bool passive: if set, the server will reply with `Declare-Ok` if the exchange already exists with the same name, and raise an error if not. Checks for the same parameter as well.
+   :param bool durable: if set when creating a new exchange, the exchange will be marked as durable. Durable exchanges remain active when a server restarts.
+   :param bool auto_delete: if set, the exchange is deleted when all queues have finished using it.
+   :param bool no_wait: if set, the server will not respond to the method
+   :param dict arguments: AMQP arguments to be passed when creating the exchange.
+   :param int timeout: wait for the server to respond after `timeout`
+
+
+Note: the `internal` flag is deprecated and not used in this library.
+
+ .. code-block:: python
+
+        channel = yield from protocol.channel()
+        yield from channel.exchange_declare(exchange_name='exchange', auto_delete=True)
+
+
+.. py:method:: Channel.exchange_delete(exchange_name, if_unused, no_wait, timeout)
+
+   Coroutine, delete a exchange on the broker
+
+   :param str exchange_name: the exchange to receive message from
+   :param bool if_unused: the exchange is deleted if it has no consumers. Raise if not.
+   :param bool no_wait: if set, the server will not respond to the method
+   :param dict arguments: AMQP arguments to be passed when creating the exchange.
+   :param int timeout: wait for the server to respond after `timeout`
+
+
+.. py:method:: Channel.exchange_bind(exchange_destination, exchange_source, routing_key, no_wait, arguments, timeout)
+
+   Coroutine, binds two exchanges together
+
+   :param str exchange_destination: specifies the name of the destination exchange to bind
+   :param str exchange_source: specified the name of the source exchange to bind.
+   :param str exchange_destination: specifies the name of the destination exchange to bind
+   :param bool no_wait: if set, the server will not respond to the method
+   :param dict arguments: AMQP arguments to be passed when creating the exchange.
+   :param int timeout: wait for the server to respond after `timeout`
+
+
+.. py:method:: Channel.exchange_unbind(exchange_destination, exchange_source, routing_key, no_wait, arguments, timeout)
+
+    Coroutine, unbind an exchange from an exchange.
+
+   :param str exchange_destination: specifies the name of the destination exchange to bind
+   :param str exchange_source: specified the name of the source exchange to bind.
+   :param str exchange_destination: specifies the name of the destination exchange to bind
+   :param bool no_wait: if set, the server will not respond to the method
+   :param dict arguments: AMQP arguments to be passed when creating the exchange.
+   :param int timeout: wait for the server to respond after `timeout`
 

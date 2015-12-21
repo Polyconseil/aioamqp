@@ -347,6 +347,22 @@ class Channel:
     @asyncio.coroutine
     def queue_declare(self, queue_name, passive=False, durable=False,
                       exclusive=False, auto_delete=False, no_wait=False, arguments=None, timeout=None):
+        """Create or check a queue on the broker
+           Args:
+               queue_name:     str, the queue to receive message from
+               passive:        bool, if set, the server will reply with
+               Declare-Ok if the queue already exists with the same name, and
+               raise an error if not. Checks for the same parameter as well.
+               durable:        bool: If set when creating a new queue, the queue
+               will be marked as durable. Durable queues remain active when a
+               server restarts.
+               exclusive:      bool, request exclusive consumer access,
+                               meaning only this consumer can access the queue
+               no_wait:        bool, if set, the server will not respond to the method
+               arguments:      dict, AMQP arguments to be passed when creating
+               the queue.
+               timeout:        int, wait for the server to respond after `timeout`
+        """
         if arguments is None:
             arguments = {}
 
@@ -384,6 +400,14 @@ class Channel:
 
     @asyncio.coroutine
     def queue_delete(self, queue_name, if_unused=False, if_empty=False, no_wait=False, timeout=None):
+        """Delete a queue in RabbitMQ
+            Args:
+               queue_name:     str, the queue to receive message from
+               if_unused:      bool, the queue is deleted if it has no consumers. Raise if not.
+               if_empty:       bool, the queue is deleted if it has no messages. Raise if not.
+               no_wait:        bool, if set, the server will not respond to the method
+               timeout:        int, wait for the server to respond after `timeout`
+        """
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_DELETE)
