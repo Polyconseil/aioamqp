@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-    Rabbitmq.com pub/sub example
+    RabbitMQ.com pub/sub example
 
     https://www.rabbitmq.com/tutorials/tutorial-three-python.html
 
@@ -24,12 +24,14 @@ def exchange_routing():
     exchange_name = 'logs'
     message = ' '.join(sys.argv[1:]) or "info: Hello World!"
 
-    yield from channel.exchange(exchange_name, 'fanout')
+    yield from channel.exchange_declare(exchange_name=exchange_name, type_name='fanout')
 
-    yield from channel.publish(message, exchange_name=exchange_name, routing_key='')
+    yield from channel.basic_publish(message, exchange_name=exchange_name, routing_key='')
     print(" [x] Sent %r" % (message,))
 
-    yield from transport.close()
+    yield from protocol.close()
+    transport.close()
 
 
 asyncio.get_event_loop().run_until_complete(exchange_routing())
+

@@ -14,8 +14,8 @@ import sys
 
 
 @asyncio.coroutine
-def callback(body, envelope, properties):
-    print("consumer {} recved {} ({})".format(envelope.consumer_tag, body, envelope.delivery_tag))
+def callback(channel, body, envelope, properties):
+    print("consumer {} received {} ({})".format(envelope.consumer_tag, body, envelope.delivery_tag))
 
 
 @asyncio.coroutine
@@ -28,12 +28,11 @@ def receive_log():
 
     channel = yield from protocol.channel()
     exchange_name = 'topic_logs'
-    # TODO let rabbitmq choose the queue name
-    queue_name = 'queue-%s' % random.randint(0, 10000)
 
     yield from channel.exchange(exchange_name, 'topic')
 
-    yield from asyncio.wait_for(channel.queue(queue_name, durable=False, auto_delete=True), timeout=10)
+    result = yield from channel.queue(queue_name='', durable=False, auto_delete=True)
+    queue_name = result['queue']
 
     binding_keys = sys.argv[1:]
     if not binding_keys:
@@ -41,14 +40,16 @@ def receive_log():
         sys.exit(1)
 
     for binding_key in binding_keys:
-        yield from asyncio.wait_for(channel.queue_bind(exchange_name='topic_logs',
-                                                       queue_name=queue_name,
-                                                       routing_key=binding_key), timeout=10)
+        yield from channel.queue_bind(
+            exchange_name='topic_logs',
+            queue_name=queue_name,
+            routing_key=binding_key
+        )
 
     print(' [*] Waiting for logs. To exit press CTRL+C')
 
-    yield from asyncio.wait_for(channel.basic_consume(callback,
-        queue_name=queue_name), timeout=10)
+    yield from channel.basic_consume(callback, queue_name=queue_name)
 
-
-asyncio.get_event_loop().run_until_complete(receive_log())
+event_loop = asyncio.get_event_loop()
+event_loop.run_until_complete(receive_log())
+event_loop.run_forever()

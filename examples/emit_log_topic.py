@@ -12,7 +12,7 @@ import sys
 
 
 @asyncio.coroutine
-def exchange_routing():
+def exchange_routing_topic():
     try:
         transport, protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.AmqpClosedConnection:
@@ -26,11 +26,11 @@ def exchange_routing():
 
     yield from channel.exchange(exchange_name, 'topic')
 
-    yield from channel.publish(
-        message, exchange_name=exchange_name, routing_key=routing_key)
-    print(" [x] Sent %r" % (message,))
+    yield from channel.publish(message, exchange_name=exchange_name, routing_key=routing_key)
+    print(" [x] Sent %r" % message)
 
-    yield from transport.close()
+    yield from protocol.close()
+    transport.close()
 
 
-asyncio.get_event_loop().run_until_complete(exchange_routing())
+asyncio.get_event_loop().run_until_complete(exchange_routing_topic())

@@ -7,7 +7,7 @@ import sys
 
 
 @asyncio.coroutine
-def exchange_routing():
+def new_task():
     try:
         transport, protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.AmqpClosedConnection:
@@ -16,19 +16,25 @@ def exchange_routing():
 
 
     channel = yield from protocol.channel()
-    queue_name = "task_queue"
+
+    yield from channel.queue('task_queue', durable=True)
+
     message = ' '.join(sys.argv[1:]) or "Hello World!"
-    message_properties = {
-        'delivery_mode': 2
-    }
 
-    yield from asyncio.wait_for(channel.queue(queue_name, durable=True), timeout=10)
-
-    yield from channel.publish("Message ", '', queue_name, properties=message_properties)
-    print(" [x] Sent %r" % (message,))
+    yield from channel.basic_publish(
+        payload=message,
+        exchange_name='',
+        routing_key='task_queue',
+        properties={
+            'delivery_mode': 2,
+        },
+    )
+    print(" [x] Sent %r" % message,)
 
     yield from protocol.close()
     transport.close()
 
 
-asyncio.get_event_loop().run_until_complete(exchange_routing())
+asyncio.get_event_loop().run_until_complete(new_task())
+
+

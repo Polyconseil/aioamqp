@@ -13,8 +13,8 @@ import random
 
 
 @asyncio.coroutine
-def callback(body, envelope, properties):
-    print(body)
+def callback(channel, body, envelope, properties):
+    print(" [x] %r" % body)
 
 
 @asyncio.coroutine
@@ -28,19 +28,19 @@ def receive_log():
 
     channel = yield from protocol.channel()
     exchange_name = 'logs'
-    # TODO let rabbitmq choose the queue name
-    queue_name = 'queue-%s' % random.randint(0, 10000)
 
-    yield from channel.exchange(exchange_name, 'fanout')
+    yield from channel.exchange(exchange_name=exchange_name, type_name='fanout')
 
-    yield from asyncio.wait_for(channel.queue(queue_name, durable=False, auto_delete=True), timeout=10)
+    # let RabbitMQ generate a random queue name
+    result = yield from channel.queue(queue_name='', exclusive=True)
 
-    yield from asyncio.wait_for(channel.queue_bind(exchange_name=exchange_name, queue_name=queue_name, routing_key=''), timeout=10)
+    queue_name = result['queue']
+    yield from channel.queue_bind(exchange_name=exchange_name, queue_name=queue_name, routing_key='')
 
     print(' [*] Waiting for logs. To exit press CTRL+C')
 
-    yield from asyncio.wait_for(channel.basic_consume(callback,
-        queue_name=queue_name), timeout=10)
+    yield from channel.basic_consume(callback, queue_name=queue_name, no_ack=True)
 
-
-asyncio.get_event_loop().run_until_complete(receive_log())
+event_loop = asyncio.get_event_loop()
+event_loop.run_until_complete(receive_log())
+event_loop.run_forever()
