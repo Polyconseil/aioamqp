@@ -1,7 +1,7 @@
 Introduction
 ============
 
-This is the documentation for the aioamqp module.
+Aioamqp library is a pure-Python implementation of the AMQP 0.9.1 protocol using `asyncio`.
 
 
 Prerequisites
@@ -13,7 +13,8 @@ If your are using Python 3.3 you'll have to install asyncio from pypi, but async
 Installation
 ------------
 
-You can install the most recent aioamqp release from pypi using pip or easy_install::
+You can install the most recent aioamqp release from pypi using pip or easy_install:
+
+ .. code-block:: shell
 
     pip install aioamqp
-    easy_install aioamqp
