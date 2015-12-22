@@ -265,7 +265,7 @@ This simple example creates a `queue`, an `exchange` and bind them together.
 
 
 Exchanges
-=========
+---------
 
 Exchanges are used to correctly route message to queue: a `publisher` publishes a message into an exchanges, which routes the message to the corresponding queue.
 
