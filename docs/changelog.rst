@@ -2,8 +2,8 @@ Changelog
 =========
 
 
-Next version (not yet released)
--------------------------------
+Aioamqp 0.6.0
+-------------
 
  * The `client_properties` is now fully configurable.
  * Add more documentation.
