@@ -345,16 +345,17 @@ class Channel:
 #
 
     @asyncio.coroutine
-    def queue_declare(self, queue_name, passive=False, durable=False,
+    def queue_declare(self, queue_name=None, passive=False, durable=False,
                       exclusive=False, auto_delete=False, no_wait=False, arguments=None, timeout=None):
         """Create or check a queue on the broker
            Args:
-               queue_name:     str, the queue to receive message from
+               queue_name:     str, the queue to receive message from.
+                               The server generate a queue_name if not specified.
                passive:        bool, if set, the server will reply with
-               Declare-Ok if the queue already exists with the same name, and
-               raise an error if not. Checks for the same parameter as well.
+                               Declare-Ok if the queue already exists with the same name, and
+                               raise an error if not. Checks for the same parameter as well.
                durable:        bool: If set when creating a new queue, the queue
-               will be marked as durable. Durable queues remain active when a
+                               will be marked as durable. Durable queues remain active when a
                server restarts.
                exclusive:      bool, request exclusive consumer access,
                                meaning only this consumer can access the queue
@@ -366,6 +367,8 @@ class Channel:
         if arguments is None:
             arguments = {}
 
+        if not queue_name:
+            queue_name = ''
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_DECLARE)

@@ -28,6 +28,11 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         return result
 
     @testing.coroutine
+    def test_queue_declare_no_name(self):
+        result = yield from self.channel.queue_declare()
+        self.assertIsNotNone(result['queue'])
+
+    @testing.coroutine
     def test_queue_declare(self):
         queue_name = 'queue_name'
         result = yield from self.channel.queue_declare('queue_name')
