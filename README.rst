@@ -6,6 +6,10 @@ aioamqp
 .. image:: https://travis-ci.org/Polyconseil/aioamqp.svg?branch=master
     :target: https://travis-ci.org/Polyconseil/aioamqp
 
+.. image:: https://readthedocs.org/projects/aioamqp/badge/?version=latest
+    :alt: Documentation Status
+    :scale: 100%
+    :target: https://aioamqp.readthedocs.org/en/latest/?badge=latest
 
 ``aioamqp`` library is a pure-Python implementation of the `AMQP 0.9.1 protocol`_.
 
