@@ -7,6 +7,7 @@ Next version (not yet released)
 
  * The `client_properties` is now fully configurable.
  * Add more documentation.
+ * Simplify the channel API: `queue_name` arg is no more required to declare a queue. `basic_qos` arguments are now optional.
 
 Aioamqp 0.5.1
 -------------
