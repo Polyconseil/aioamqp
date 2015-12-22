@@ -14,6 +14,11 @@ from .. import exceptions
 class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
+    def test_basic_qos_default_args(self):
+        result = yield from self.channel.basic_qos()
+        self.assertTrue(result)
+
+    @testing.coroutine
     def test_basic_qos(self):
         result = yield from self.channel.basic_qos(
             prefetch_size=0,

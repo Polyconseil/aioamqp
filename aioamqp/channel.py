@@ -576,7 +576,23 @@ class Channel:
         yield from self.protocol.writer.drain()
 
     @asyncio.coroutine
-    def basic_qos(self, prefetch_size, prefetch_count, connection_global, timeout=None):
+    def basic_qos(self, prefetch_size=0, prefetch_count=0, connection_global=None, timeout=None):
+        """Specifies quality of service.
+
+        Args:
+            prefetch_size:      int, request that messages be sent in advance so
+                                that when the client finishes processing a message, the
+                                following message is already held locally
+            prefetch_count:     int: Specifies a prefetch window in terms of
+                                whole messages. This field may be used in combination with the
+                                prefetch-size field; a message will only be sent in advance if
+                                both prefetch windows (and those at the channel and connection
+                                level) allow it
+            connection_global:  bool: global=false means that the QoS
+                                settings should apply per-consumer channel; and global=true to mean
+                                that the QoS settings should apply per-channel.
+            timeout:            int, wait for the server to respond after `timeout`
+        """
         frame = amqp_frame.AmqpRequest(
             self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
