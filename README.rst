@@ -20,11 +20,15 @@ Bug reports, patches and suggestions welcome! Just open an issue_ or send a `pul
 tests
 -----
 
+To run the tests, you'll need to install the Python test dependencies::
+
+    pip install -r requirements_dev.txt
+
 Tests require an instance of RabbitMQ. You can start a new instance using docker::
 
-     docker run -v -d --log-driver=syslog -e RABBITMQ_NODENAME=my-rabbit --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+     docker run -d --log-driver=syslog -e RABBITMQ_NODENAME=my-rabbit --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 
-A simple `make test` would run nose.
+Then you can run the tests with ``make test`` (requires ``nose``).
 
 
 .. _AMQP 0.9.1 protocol: https://www.rabbitmq.com/amqp-0-9-1-quickref.html
