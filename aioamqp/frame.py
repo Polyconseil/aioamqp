@@ -283,8 +283,27 @@ class AmqpDecoder:
             var_name = table_data.read_shortstr()
             var_value = self.read_table_subitem(table_data)
             table[var_name] = var_value
-
         return table
+
+    _table_subitem_reader_map = {
+        't': 'read_bit',
+        'b': 'read_octet',
+        'B': 'read_signed_octet',
+        'U': 'read_signed_short',
+        'u': 'read_short',
+        'I': 'read_signed_long',
+        'i': 'read_long',
+        'L': 'read_unsigned_long_long',
+        'l': 'read_long_long',
+        'f': 'read_float',
+        'd': 'read_float',
+        'D': 'read_decimal',
+        's': 'read_shortstr',
+        'S': 'read_longstr',
+        'A': 'read_field_array',
+        'T': 'read_timestamp',
+        'F': 'read_table',
+    }
 
     def read_table_subitem(self, table_data):
         """Read `table_data` bytes, guess the type of the value, and cast it.
@@ -292,44 +311,13 @@ class AmqpDecoder:
             table_data:     a pair of b'<type><value>'
         """
         value_type = chr(table_data.read_octet())
-        if value_type == 't':
-            return table_data.read_bit()
-        elif value_type == 'b':
-            return table_data.read_octet()
-        elif value_type == 'B':
-            return table_data.read_signed_octet()
-        elif value_type == 'U':
-            return table_data.read_signed_short()
-        elif value_type == 'u':
-            return table_data.read_short()
-        elif value_type == 'I':
-            return table_data.read_signed_long()
-        elif value_type == 'i':
-            return table_data.read_long()
-        elif value_type == 'L':
-            return table_data.read_unsigned_long_long()
-        elif value_type == 'l':
-            return table_data.read_long_long()
-        elif value_type == 'f':
-            return table_data.read_float()
-        elif value_type == 'd':
-            return table_data.read_float()
-        elif value_type == 'D':
-            return table_data.read_decimal()
-        elif value_type == 's':
-            return table_data.read_shortstr()
-        elif value_type == 'S':
-            return table_data.read_longstr()
-        elif value_type == 'A':
-            return table_data.read_field_array()
-        elif value_type == 'T':
-            return table_data.read_timestamp()
-        elif value_type == 'F':
-            return table_data.read_table()
-        elif value_type == 'V':
+        if value_type == 'V':
             return None
         else:
-            raise ValueError('Unknown value_type {}'.format(value_type))
+            reader_name = self._table_subitem_reader_map.get(value_type)
+            if not reader_name:
+                raise ValueError('Unknown value_type {}'.format(value_type))
+            return getattr(table_data, reader_name)()
 
     def read_field_array(self):
         array_len = self.read_long()
