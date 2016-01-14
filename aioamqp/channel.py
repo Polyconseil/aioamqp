@@ -167,7 +167,17 @@ class Channel:
         self._close_channel()
 
     @asyncio.coroutine
+    def _send_channel_close_ok(self):
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE_OK)
+        request = amqp_frame.AmqpEncoder()
+        yield from self._write_frame(frame, request, no_wait=False)
+
+    @asyncio.coroutine
     def server_channel_close(self, frame):
+        yield from self._send_channel_close_ok()
         results = {
             'reply_code': frame.payload_decoder.read_short(),
             'reply_text': frame.payload_decoder.read_shortstr(),

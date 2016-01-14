@@ -29,6 +29,16 @@ class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertFalse(channel.is_open)
 
     @testing.coroutine
+    def test_server_initiated_close(self):
+        channel = yield from self.amqp.channel()
+        try:
+            yield from channel.basic_get(queue_name='non-existant')
+        except exceptions.ChannelClosed as e:
+            self.assertEqual(e.code, 404)
+        self.assertFalse(channel.is_open)
+        channel = yield from self.amqp.channel()
+
+    @testing.coroutine
     def test_alreadyclosed_channel(self):
         channel = yield from self.amqp.channel()
         result = yield from channel.close()
