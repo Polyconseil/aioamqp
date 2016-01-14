@@ -222,6 +222,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         channel_id
         """
         self.channels_ids_free.add(channel_id)
+        self.channels.pop(channel_id)
 
     @property
     def channels_ids_count(self):
