@@ -612,10 +612,16 @@ class Channel:
         future.set_result(True)
         logger.debug("Qos ok")
 
-
     @asyncio.coroutine
-    def basic_client_nack(self, *args, **kwargs):
-        pass
+    def basic_client_nack(self, delivery_tag, multiple=False, timeout=None, requeue=True):
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_NACK)
+        request = amqp_frame.AmqpEncoder()
+        request.write_long_long(delivery_tag)
+        request.write_bits(multiple, requeue)
+        yield from self._write_frame(frame, request, no_wait=False, timeout=timeout)
 
     @asyncio.coroutine
     def basic_server_nack(self, frame, delivery_tag=None):
