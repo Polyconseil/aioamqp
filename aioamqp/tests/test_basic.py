@@ -116,15 +116,24 @@ class BasicGetTestCase(testcase.RabbitTestCase, unittest.TestCase):
 class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
+    @asyncio.coroutine
+    def publish(self, queue_name, exchange_name, routing_key, payload):
+        yield from self.channel.queue_declare(queue_name, exclusive=False, no_wait=False)
+        yield from self.channel.exchange_declare(exchange_name, type_name='fanout')
+        yield from self.channel.queue_bind(queue_name, exchange_name, routing_key=routing_key)
+        yield from self.channel.publish(payload, exchange_name, queue_name)
+
+
+
     @testing.coroutine
     def test_ack_message(self):
         queue_name = 'queue_name'
         exchange_name = 'exchange_name'
         routing_key = ''
-        yield from self.channel.queue_declare(queue_name, exclusive=False, no_wait=False)
-        yield from self.channel.exchange_declare(exchange_name, type_name='fanout')
-        yield from self.channel.queue_bind(queue_name, exchange_name, routing_key=routing_key)
-        yield from self.channel.publish("payload", exchange_name, queue_name)
+
+        yield from self.publish(
+            queue_name, exchange_name, routing_key, "payload"
+        )
 
         qfuture = asyncio.Future(loop=self.loop)
 
@@ -139,14 +148,76 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.basic_client_ack(envelope.delivery_tag)
 
     @testing.coroutine
+    def test_basic_nack(self):
+        queue_name = 'queue_name'
+        exchange_name = 'exchange_name'
+        routing_key = ''
+
+        yield from self.publish(
+            queue_name, exchange_name, routing_key, "payload"
+        )
+
+        qfuture = asyncio.Future(loop=self.loop)
+
+        @asyncio.coroutine
+        def qcallback(channel, body, envelope, properties):
+            yield from self.channel.basic_client_nack(
+                envelope.delivery_tag, multiple=True, requeue=False
+            )
+            qfuture.set_result(True)
+
+        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
+        yield from qfuture
+
+    @testing.coroutine
+    def test_basic_nack(self):
+        queue_name = 'queue_name'
+        exchange_name = 'exchange_name'
+        routing_key = ''
+
+        yield from self.publish(
+            queue_name, exchange_name, routing_key, "payload"
+        )
+
+        qfuture = asyncio.Future(loop=self.loop)
+
+        @asyncio.coroutine
+        def qcallback(channel, body, envelope, properties):
+            yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=False)
+            qfuture.set_result(True)
+
+        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
+        yield from qfuture
+
+    @testing.coroutine
+    def test_basic_nack_requeue(self):
+        queue_name = 'queue_name'
+        exchange_name = 'exchange_name'
+        routing_key = ''
+
+        yield from self.publish(
+            queue_name, exchange_name, routing_key, "payload"
+        )
+
+        qfuture = asyncio.Future(loop=self.loop)
+
+        @asyncio.coroutine
+        def qcallback(channel, body, envelope, properties):
+            yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=True)
+            qfuture.set_result(True)
+
+        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
+        yield from qfuture
+
+
+    @testing.coroutine
     def test_basic_reject(self):
         queue_name = 'queue_name'
         exchange_name = 'exchange_name'
         routing_key = ''
-        yield from self.channel.queue_declare(queue_name, exclusive=False, no_wait=False)
-        yield from self.channel.exchange_declare(exchange_name, type_name='fanout')
-        yield from self.channel.queue_bind(queue_name, exchange_name, routing_key=routing_key)
-        yield from self.channel.publish("payload", exchange_name, queue_name)
+        yield from self.publish(
+            queue_name, exchange_name, routing_key, "payload"
+        )
 
         qfuture = asyncio.Future(loop=self.loop)
 
