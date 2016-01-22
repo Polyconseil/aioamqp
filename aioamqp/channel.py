@@ -101,6 +101,7 @@ class Channel:
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CANCEL): self.server_basic_cancel,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_ACK): self.basic_server_ack,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_NACK): self.basic_server_nack,
+            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RECOVER_OK): self.basic_recover_ok,
 
             (amqp_constants.CLASS_CONFIRM, amqp_constants.CONFIRM_SELECT_OK): self.confirm_select_ok,
         }
@@ -623,18 +624,6 @@ class Channel:
         fut.set_exception(exceptions.PublishFailed(delivery_tag))
 
     @asyncio.coroutine
-    def basic_recover_async(self):
-        pass
-
-    @asyncio.coroutine
-    def basic_recover(self, *args, **kwargs):
-        pass
-
-    @asyncio.coroutine
-    def basic_recover_ok(self, frame):
-        pass
-
-    @asyncio.coroutine
     def basic_consume(self, callback, queue_name='', consumer_tag='', no_local=False, no_ack=False,
                       exclusive=False, no_wait=False, arguments=None, timeout=None):
         """Starts the consumption of message into a queue.
@@ -849,6 +838,39 @@ class Channel:
         request.write_long_long(delivery_tag)
         request.write_bits(requeue)
         yield from self._write_frame(frame, request, no_wait=False, timeout=timeout)
+
+    @asyncio.coroutine
+    def basic_recover_async(self, requeue=True, timeout=None):
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RECOVER_ASYNC)
+        request = amqp_frame.AmqpEncoder()
+        request.write_bits(requeue)
+        yield from self._write_frame(frame, request, no_wait=False, timeout=timeout)
+
+    @asyncio.coroutine
+    def basic_recover(self, requeue=True, timeout=None):
+        frame = amqp_frame.AmqpRequest(
+            self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
+        frame.declare_method(
+            amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RECOVER)
+        request = amqp_frame.AmqpEncoder()
+        request.write_bits(requeue)
+        future = self._set_waiter('basic_recover')
+
+        try:
+            yield from self._write_frame(frame, request, no_wait=False, timeout=timeout)
+        except Exception as exc:
+            future.set_exception(exc)
+        return (yield from future)
+
+    @asyncio.coroutine
+    def basic_recover_ok(self, frame):
+        future = self._get_waiter('basic_recover')
+        future.set_result(True)
+        logger.debug("Cancel ok")
+
 
 #
 ## convenient aliases
