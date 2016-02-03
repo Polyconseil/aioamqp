@@ -15,8 +15,8 @@ Creating a new connection:
 
     @asyncio.coroutine
     def connect():
-        transport, protocol = yield from aioamqp.connnect()
-        channel = protocol.channel()
+        transport, protocol = yield from aioamqp.connect()
+        channel = yield from protocol.channel()
 
     asyncio.get_event_loop().run_until_complete(connect())
 
