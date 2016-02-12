@@ -5,6 +5,7 @@ Next version
 ------------
 
  * Add `basic_client_nack` and `recover` method (PR #72).
+ * Sends `server-close-ok` in response to a `server-close`.
 
 
 Aioamqp 0.6.0
