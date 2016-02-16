@@ -547,6 +547,8 @@ class Channel:
         assert len(payload) != 0, "Payload cannot be empty"
         if not self.is_open:
             raise exceptions.ChannelClosed()
+        if isinstance(payload, str):
+            payload = payload.encode()
 
         method_frame = amqp_frame.AmqpRequest(
             self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
@@ -578,10 +580,7 @@ class Channel:
                 self.protocol.writer, amqp_constants.TYPE_BODY, self.channel_id)
             content_frame.declare_class(amqp_constants.CLASS_BASIC)
             encoder = amqp_frame.AmqpEncoder()
-            if isinstance(chunk, str):
-                encoder.payload.write(chunk.encode())
-            else:
-                encoder.payload.write(chunk)
+            encoder.payload.write(chunk)
             content_frame.write_frame(encoder)
 
         yield from self.protocol.writer.drain()
@@ -893,6 +892,8 @@ class Channel:
         assert len(payload) != 0, "Payload cannot be empty"
         if not self.is_open:
             raise exceptions.ChannelClosed()
+        if isinstance(payload, str):
+            payload = payload.encode()
 
         if self.publisher_confirms:
             delivery_tag = next(self.delivery_tag_iter)
@@ -928,10 +929,7 @@ class Channel:
                 self.protocol.writer, amqp_constants.TYPE_BODY, self.channel_id)
             content_frame.declare_class(amqp_constants.CLASS_BASIC)
             encoder = amqp_frame.AmqpEncoder()
-            if isinstance(chunk, str):
-                encoder.payload.write(chunk.encode())
-            else:
-                encoder.payload.write(chunk)
+            encoder.payload.write(chunk)
             content_frame.write_frame(encoder)
 
         yield from self.protocol.writer.drain()
