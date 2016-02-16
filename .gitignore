@@ -55,3 +55,4 @@ docs/_build/
 
 # editor stuffs
 *.swp
+.idea
