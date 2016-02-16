@@ -206,9 +206,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             return
 
         if frame.channel is not 0:
-            try:
-                yield from self.channels[frame.channel].dispatch_frame(frame)
-            except KeyError:
+            channel = self.channels.get(frame.channel)
+            if channel is not None:
+                yield from channel.dispatch_frame(frame)
+            else:
                 logger.info("Unknown channel %s", frame.channel)
             return
 
