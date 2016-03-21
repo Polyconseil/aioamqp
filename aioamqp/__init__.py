@@ -1,4 +1,5 @@
 import asyncio
+import socket
 import sys
 import ssl as ssl_module  # import as to enable argument named ssl in connect
 from urllib.parse import urlparse
@@ -57,6 +58,14 @@ def connect(host='localhost', port=None, login='guest', password='guest',
     transport, protocol = yield from loop.create_connection(
         factory, host, port, **create_connection_kwargs
     )
+
+    # these 2 flags *may* show up in sock.type. They are only available on linux
+    # see https://bugs.python.org/issue21327
+    nonblock = getattr(socket, 'SOCK_NONBLOCK', 0)
+    cloexec = getattr(socket, 'SOCK_CLOEXEC', 0)
+    sock = transport.get_extra_info('socket')
+    if sock is not None and (sock.type & ~nonblock & ~cloexec) == socket.SOCK_STREAM:
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
     yield from protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl,
         login_method=login_method, insist=insist)

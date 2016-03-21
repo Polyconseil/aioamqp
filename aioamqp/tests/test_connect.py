@@ -1,6 +1,7 @@
 """Aioamqp tests"""
 
 import unittest
+import socket
 
 from . import testing, testcase
 
@@ -42,4 +43,12 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertEqual(proto.server_frame_max, frame_max)
         self.assertEqual(proto.server_heartbeat, heartbeat)
 
+        yield from proto.close()
+
+    @testing.coroutine
+    def test_socket_nodelay(self):
+        transport, proto = yield from connect(vhost=self.vhost, loop=self.loop)
+        sock = transport.get_extra_info('socket')
+        opt_val = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
+        self.assertEqual(opt_val, 1)
         yield from proto.close()
