@@ -48,8 +48,10 @@ class AsyncioTestCaseMixin:
     __timeout__ = 10
 
     def setUp(self):
+        super().setUp()
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
 
     def tearDown(self):
+        super().tearDown()
         self.loop.close()
