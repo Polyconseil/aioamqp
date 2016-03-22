@@ -165,7 +165,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from self.open(virtualhost, capabilities='', insist=insist)
 
         # wait for open-ok
-        yield from self.dispatch_frame()
+        frame = yield from self.get_frame()
+        yield from self.dispatch_frame(frame)
+        if (frame.frame_type == amqp_constants.TYPE_METHOD and
+                frame.class_id == amqp_constants.CLASS_CONNECTION and
+                frame.method_id == amqp_constants.CONNECTION_CLOSE):
+            raise exceptions.AmqpClosedConnection()
 
         # for now, we read server's responses asynchronously
         self.worker = ensure_future(self.run(), loop=self._loop)
