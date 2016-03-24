@@ -8,6 +8,7 @@ import inspect
 import logging
 import os
 import time
+import contextlib
 
 import pyrabbit.api
 
@@ -60,6 +61,10 @@ class ProxyChannel(Channel):
     def full_name(self, name):
         return self.test_case.full_name(name)
 
+    def _close_channel(self):
+        super()._close_channel()
+        self.test_case.unregister_channel(self)
+
 
 class ProxyAmqpProtocol(AmqpProtocol):
     def __init__(self, test_case, *args, **kw):
@@ -107,7 +112,6 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         def go():
             transport, protocol = yield from self.create_amqp()
             channel = yield from self.create_channel(amqp=protocol)
-            self.channels.append(channel)
         self.loop.run_until_complete(go())
 
     def tearDown(self):
@@ -273,6 +277,15 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
     def register_channel(self, channel):
         self.channels.append(channel)
+
+    def unregister_channel(self, channel):
+        self.channels.remove(channel)
+
+    @contextlib.contextmanager
+    def assertChannelCloses(self, channel):
+        with self.assertRaises(exceptions.ChannelClosed) as cm:
+            yield cm
+        self.assertFalse(channel.is_open)
 
     @asyncio.coroutine
     def create_channel(self, amqp=None):

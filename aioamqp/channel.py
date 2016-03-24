@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 class Channel:
-
     def __init__(self, protocol, channel_id, on_error=None):
         self._loop = protocol._loop
         self.protocol = protocol
@@ -148,6 +147,8 @@ class Channel:
     @asyncio.coroutine
     def close(self, reply_code=0, reply_text="Normal Shutdown", no_wait=False, timeout=None):
         """Close the channel."""
+        if self.close_event.is_set():
+            raise exceptions.ChannelClosed()
         frame = amqp_frame.AmqpRequest(self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE)

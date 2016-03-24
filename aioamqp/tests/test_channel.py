@@ -31,11 +31,9 @@ class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_server_initiated_close(self):
         channel = yield from self.amqp.channel()
-        try:
+        with self.assertChannelCloses(channel) as cm:
             yield from channel.basic_get(queue_name='non-existant')
-        except exceptions.ChannelClosed as e:
-            self.assertEqual(e.code, 404)
-        self.assertFalse(channel.is_open)
+        self.assertEqual(cm.exception.code, 404)
         channel = yield from self.amqp.channel()
 
     @testing.coroutine
@@ -45,7 +43,7 @@ class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertEqual(result, True)
 
         with self.assertRaises(exceptions.ChannelClosed):
-            result = yield from channel.close()
+            yield from channel.close()
 
     @testing.coroutine
     def test_multiple_open(self):
@@ -85,7 +83,6 @@ class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
 class ChannelIdTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
     @testing.coroutine
     def test_channel_id_release_close(self):
         channels_count_start = self.amqp.channels_ids_count
