@@ -193,7 +193,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def dispatch_frame(self, frame=None):
         """Dispatch the received frame to the corresponding handler"""
-
         method_dispatch = {
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE): self.server_close,
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK): self.close_ok,
@@ -226,7 +225,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
 
     def release_channel_id(self, channel_id):
-        """Called from the channel instance, it relase a previously used
+        """Called from the channel instance, it release a previously used
         channel_id
         """
         self.channels_ids_free.add(channel_id)
@@ -243,7 +242,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 reply_code:     int, the amqp error code
                 reply_text:     str, the text associated to the error_code
                 exc:            the exception responsible of this error
-
         """
         if exception is None:
             exception = exceptions.ChannelClosed(reply_code, reply_text)
@@ -283,9 +281,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from self.send_heartbeat()
         yield from asyncio.wait_for(
             self._heartbeat_waiter.wait(),
-            timeout=self.server_heartbeat * 2,
-        )
-
+            timeout=self.server_heartbeat * 2)
 
     @asyncio.coroutine
     def send_heartbeat(self):
@@ -334,7 +330,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
 
-
     @asyncio.coroutine
     def tune(self, frame):
         decoder = amqp_frame.AmqpDecoder(frame.payload)
@@ -368,7 +363,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder.write_shortstr(virtual_host)
         encoder.write_shortstr(capabilities)
         encoder.write_bool(insist)
-
         frame.write_frame(encoder)
 
     @asyncio.coroutine
