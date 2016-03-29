@@ -156,8 +156,6 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
 class QueueDeleteTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
-
     @testing.coroutine
     def test_delete_queue(self):
         queue_name = 'queue_name'
@@ -166,21 +164,13 @@ class QueueDeleteTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertTrue(result)
 
     @testing.coroutine
-    def test_delete_inexistant_queue(self):
+    def test_delete_non_existant_queue(self):
         queue_name = 'queue_name'
-        if self.server_version() < (3, 3, 5):
-            with self.assertRaises(exceptions.ChannelClosed) as cm:
-                result = yield from self.channel.queue_delete(queue_name)
+        result = yield from self.channel.queue_delete(queue_name)
+        self.assertTrue(result)
 
-            self.assertEqual(cm.exception.code, 404)
-
-        else:
-            result = yield from self.channel.queue_delete(queue_name)
-            self.assertTrue(result)
 
 class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
-
     @testing.coroutine
     def test_bind_queue(self):
         queue_name = 'queue_name'
@@ -230,8 +220,6 @@ class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
 class QueuePurgeTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
-
     @testing.coroutine
     def test_purge_queue(self):
         queue_name = 'queue_name'

@@ -87,7 +87,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         super().connection_lost(exc)
 
     @asyncio.coroutine
-    def close(self, no_wait=False, timeout=None):
+    def close(self, timeout=None):
         """Close connection (and all channels)"""
         frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_METHOD, 0)
         frame.declare_method(
@@ -99,12 +99,13 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder.write_short(0)
         encoder.write_short(0)
         frame.write_frame(encoder)
-        if not no_wait:
-            yield from self.wait_closed(timeout=timeout)
+        yield from self.wait_closed(timeout=timeout)
 
     @asyncio.coroutine
     def wait_closed(self, timeout=None):
         yield from asyncio.wait_for(self.connection_closed.wait(), timeout=timeout, loop=self._loop)
+        for channel in tuple(self.channels.values()):
+            channel._close_channel()
 
     @asyncio.coroutine
     def close_ok(self, frame):

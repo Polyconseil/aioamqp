@@ -145,7 +145,7 @@ class Channel:
         logger.debug("Channel is open")
 
     @asyncio.coroutine
-    def close(self, reply_code=0, reply_text="Normal Shutdown", no_wait=False, timeout=None):
+    def close(self, reply_code=0, reply_text="Normal Shutdown", timeout=None):
         """Close the channel."""
         if self.close_event.is_set():
             raise exceptions.ChannelClosed()
@@ -158,9 +158,8 @@ class Channel:
         request.write_short(0)
         request.write_short(0)
         frame.write_frame(request)
-        if not no_wait:
-            future = self._set_waiter('close')
-            return (yield from future)
+        future = self._set_waiter('close')
+        return (yield from future)
 
     @asyncio.coroutine
     def close_ok(self, frame):
