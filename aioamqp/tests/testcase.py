@@ -75,14 +75,14 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
     """TestCase with a rabbit running in background"""
 
     RABBIT_TIMEOUT = 1.0
-    VHOST = '/test-aioamqp'
+    VHOST = 'test-aioamqp'
 
     def setUp(self):
         super().setUp()
         self.host = os.environ.get('AMQP_HOST', 'localhost')
         self.port = os.environ.get('AMQP_PORT', 5672)
         self.vhost = os.environ.get('AMQP_VHOST', self.VHOST)
-        self.http_client = pyrabbit.api.Client('localhost:15672', 'guest', 'guest')
+        self.http_client = pyrabbit.api.Client('localhost:15672/api/', 'guest', 'guest')
 
         self.amqps = []
         self.channels = []
