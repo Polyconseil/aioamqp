@@ -9,4 +9,9 @@ AUTHORS are (and/or have been)::
     * Mathias Fröjdman
     * Dmitry Maslov
     * Matthias Urlichs
-
+    * Rémi Cardona
+    * Marco Mariani
+    * David Honour
+    * Igor `mastak`
+    * Hans Lellelid
+    * `iceboy-sjtu`
