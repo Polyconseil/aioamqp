@@ -19,7 +19,7 @@ class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_connect(self):
-        transport, protocol = yield from amqp_connect(loop=self.loop)
+        transport, protocol = yield from amqp_connect(virtualhost=self.vhost, loop=self.loop)
         self.assertTrue(protocol.is_open)
         yield from protocol.close()
 
@@ -30,6 +30,7 @@ class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
             'program_version': '0.1.1',
         }
         transport, protocol = yield from amqp_connect(
+            virtualhost=self.vhost,
             client_properties=client_properties,
             loop=self.loop,
         )

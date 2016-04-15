@@ -12,7 +12,7 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_connect(self):
-        transport, proto = yield from connect(vhost=self.vhost, loop=self.loop)
+        transport, proto = yield from connect(virtualhost=self.vhost, loop=self.loop)
         self.assertTrue(proto.is_open)
         self.assertIsNotNone(proto.server_properties)
         yield from proto.close()
@@ -24,7 +24,7 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
         channel_max = 10
         heartbeat = 100
         transport, proto = yield from connect(
-            vhost=self.vhost,
+            virtualhost=self.vhost,
             loop=self.loop,
             channel_max=channel_max,
             frame_max=frame_max,
@@ -47,7 +47,7 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_socket_nodelay(self):
-        transport, proto = yield from connect(vhost=self.vhost, loop=self.loop)
+        transport, proto = yield from connect(virtualhost=self.vhost, loop=self.loop)
         sock = transport.get_extra_info('socket')
         opt_val = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
         self.assertEqual(opt_val, 1)
