@@ -8,6 +8,7 @@ import inspect
 import logging
 import os
 import time
+import uuid
 
 import pyrabbit.api
 
@@ -81,7 +82,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         super().setUp()
         self.host = os.environ.get('AMQP_HOST', 'localhost')
         self.port = os.environ.get('AMQP_PORT', 5672)
-        self.vhost = os.environ.get('AMQP_VHOST', self.VHOST)
+        self.vhost = os.environ.get('AMQP_VHOST', self.VHOST + str(uuid.uuid4()))
         self.http_client = pyrabbit.api.Client('localhost:15672/api/', 'guest', 'guest')
 
         self.amqps = []
@@ -130,6 +131,12 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             for transport in self.transports:
                 self.transport.close()
         self.loop.run_until_complete(go())
+
+        try:
+            self.http_client.delete_vhost(self.vhost)
+        except Exception:  # pylint: disable=broad-except
+            pass
+
         super().tearDown()
 
     @property
