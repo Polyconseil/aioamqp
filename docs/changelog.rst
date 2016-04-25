@@ -4,10 +4,16 @@ Changelog
 Next version
 ------------
 
+Aioamqp 0.7.0
+-------------
+
  * Add ``basic_client_nack`` and ``recover`` method (PR #72).
  * Sends ``server-close-ok`` in response to a ``server-close``.
  * Disable Nagle algorithm in ``connect`` (closes #70).
  * Handle ``CONNECTION_CLOSE`` during initial protocol handshake (closes #80).
+ * Supports for python 3.5.
+ * Few code refactors.
+ * Dispatch does not catch ``KeyError`` anymore.
 
 Aioamqp 0.6.0
 -------------
