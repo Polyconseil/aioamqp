@@ -766,7 +766,7 @@ class Channel:
         fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
         logger.debug('Received ack for delivery tag {!r}'.format(delivery_tag))
         if 'basic_server_return' in self._futures:
-            self._futures['basic_server_return'].set_result(None)
+            self._get_waiter('basic_server_return').set_result(None)
         fut.set_result(True)
 
     @asyncio.coroutine
