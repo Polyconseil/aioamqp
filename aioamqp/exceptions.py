@@ -52,9 +52,6 @@ class PublishFailed(AioamqpException):
 
 
 class PublishReturned(AioamqpException):
-    def __init__(self, reply_code, reply_text, exchange, routing_key):
-        super().__init__(reply_code, reply_text, exchange, routing_key)
-
     def __repr__(self):
         return (
             '{}(reply_code={!r}, reply_text={!r}, exchange={!r}, '
