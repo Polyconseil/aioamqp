@@ -71,6 +71,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self._heartbeat_frames_received = 0
         self._heartbeat_frames_sent = 0
         self._heartbeat_waiter = asyncio.Event(loop=self._loop)
+        self._heartbeat_worker = None
         self.channels = {}
         self.server_frame_max = None
         self.server_channel_max = None
@@ -175,7 +176,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             raise exceptions.AmqpClosedConnection()
 
         # start to send heartbeat
-        ensure_future(self._run_heartbeat_timer(), loop=self._loop)
+        self._heartbeat_worker = ensure_future(self._run_heartbeat_timer(), loop=self._loop)
 
         # for now, we read server's responses asynchronously
         self.worker = ensure_future(self.run(), loop=self._loop)
@@ -273,6 +274,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 self._close_channels(exception=exc)
             except Exception:
                 logger.exception('error on dispatch')
+        self._heartbeat_worker.set_result(None)
 
     @asyncio.coroutine
     def heartbeat(self):
