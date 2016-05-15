@@ -274,7 +274,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 self._close_channels(exception=exc)
             except Exception:
                 logger.exception('error on dispatch')
-        self._heartbeat_worker.set_result(None)
+        self._heartbeat_worker.cancel()
 
     @asyncio.coroutine
     def heartbeat(self):
