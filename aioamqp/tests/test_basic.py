@@ -9,6 +9,7 @@ import unittest
 from . import testcase
 from . import testing
 from .. import exceptions
+from .. import properties
 
 
 class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
@@ -99,6 +100,7 @@ class BasicGetTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertIn('delivery_tag', result)
         self.assertEqual(result['exchange_name'].split('.')[-1], exchange_name)
         self.assertEqual(result['message'], b'payload')
+        self.assertIsInstance(result['properties'], properties.Properties)
 
     @testing.coroutine
     def test_basic_get_empty(self):
