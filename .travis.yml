@@ -1,30 +1,26 @@
 language: python
-
 python:
-    - 3.3
-    - 3.4
-    - 3.5
-
+- 3.3
+- 3.4
+- 3.5
 services:
-    - rabbitmq
-
+- rabbitmq
 env:
-    - PYTHONASYNCIODEBUG=1
-    - AMQP_REFRESH_TIME=5
-
+- PYTHONASYNCIODEBUG=1
+- AMQP_REFRESH_TIME=5
 install:
-    - pip install -r requirements_dev.txt
-    - pip install --editable .
-    - pip freeze
-
+- pip install -r requirements_dev.txt
+- pip install --editable .
+- pip freeze
 script: make test
-
 notifications:
-    email: true
-    irc:
-        channels:
-            - "chat.freenode.net#aioamqp"
-        on_success: change
-        on_failure: always
-        use_notice: true
-        skip_join: true
+  email: true
+  irc:
+    channels:
+    - chat.freenode.net#aioamqp
+    on_success: change
+    on_failure: always
+    use_notice: true
+    skip_join: true
+  slack:
+    secure: apz1q5tPlt/F/YMMbP/1n7DhlCgfl6TZPo+IY79lrj8ko51srq043OksWnrwiCPz0e8pXG4QPOBhnP/IkkupeH9qQ/JziN35Cn7tfCsY9Id0i35KDe6gJPZKJd9+w9fF1d+ceYMyyN86JIpyuKCta0DP2FV+wwdAmP5TJv+kh6E=
