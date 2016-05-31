@@ -7,7 +7,6 @@ from .. import exceptions
 
 
 class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
     def setUp(self):
         super().setUp()
         self.consume_future = asyncio.Future(loop=self.loop)
@@ -31,28 +30,18 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertFalse(channel.is_open)
 
     @testing.coroutine
-    def test_multiple_close(self):
-        channel = yield from self.create_channel()
-        yield from channel.close()
-        self.assertFalse(channel.is_open)
-        with self.assertRaises(exceptions.ChannelClosed) as cm:
-            yield from channel.close()
-
-        self.assertEqual(cm.exception.code, 504)
-
-    @testing.coroutine
     def test_cannot_publish_after_close(self):
         channel = self.channel
         yield from channel.close()
         with self.assertRaises(exceptions.ChannelClosed):
-            yield from self.channel.publish("coucou", "my_e", "")
+            yield from channel.publish("coucou", "my_e", "")
 
     @testing.coroutine
     def test_cannot_declare_queue_after_close(self):
         channel = self.channel
         yield from channel.close()
         with self.assertRaises(exceptions.ChannelClosed):
-            yield from self.channel.queue_declare("qq")
+            yield from channel.queue_declare("qq")
 
     @testing.coroutine
     def test_cannot_consume_after_close(self):

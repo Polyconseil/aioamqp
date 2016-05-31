@@ -96,7 +96,7 @@ class AmqpResponseTestCase(unittest.TestCase):
         try:
             last_len = len(sys.stdout.getvalue())
             print(self)
-            # assert something has been writen
+            # assert something has been written
             self.assertLess(last_len, len(sys.stdout.getvalue()))
         finally:
             frame_module.DUMP_FRAMES = False

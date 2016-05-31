@@ -12,7 +12,6 @@ from .. import exceptions
 
 
 class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
     @testing.coroutine
     def test_basic_qos_default_args(self):
         result = yield from self.channel.basic_qos()
@@ -29,7 +28,7 @@ class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_basic_qos_prefetch_size(self):
-        with self.assertRaises(exceptions.ChannelClosed) as cm:
+        with self.assertChannelCloses(self.channel) as cm:
             yield from self.channel.basic_qos(
                 prefetch_size=10,
                 prefetch_count=100,
@@ -47,7 +46,6 @@ class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
 class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
     @testing.coroutine
     def test_basic_cancel(self):
 
@@ -79,8 +77,6 @@ class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
 class BasicGetTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
-
     @testing.coroutine
     def test_basic_get(self):
         queue_name = 'queue_name'
@@ -114,16 +110,12 @@ class BasicGetTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
 class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
-
     @asyncio.coroutine
     def publish(self, queue_name, exchange_name, routing_key, payload):
         yield from self.channel.queue_declare(queue_name, exclusive=False, no_wait=False)
         yield from self.channel.exchange_declare(exchange_name, type_name='fanout')
         yield from self.channel.queue_bind(queue_name, exchange_name, routing_key=routing_key)
         yield from self.channel.publish(payload, exchange_name, queue_name)
-
-
 
     @testing.coroutine
     def test_ack_message(self):

@@ -5,7 +5,6 @@ from . import testing
 
 
 class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
     @testing.coroutine
     def test_close(self):
         amqp = self.amqp

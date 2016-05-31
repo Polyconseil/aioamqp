@@ -87,7 +87,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         super().connection_lost(exc)
 
     @asyncio.coroutine
-    def close(self, no_wait=False, timeout=None):
+    def close(self, timeout=None):
         """Close connection (and all channels)"""
         frame = amqp_frame.AmqpRequest(self.writer, amqp_constants.TYPE_METHOD, 0)
         frame.declare_method(
@@ -99,12 +99,13 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder.write_short(0)
         encoder.write_short(0)
         frame.write_frame(encoder)
-        if not no_wait:
-            yield from self.wait_closed(timeout=timeout)
+        yield from self.wait_closed(timeout=timeout)
 
     @asyncio.coroutine
     def wait_closed(self, timeout=None):
         yield from asyncio.wait_for(self.connection_closed.wait(), timeout=timeout, loop=self._loop)
+        for channel in tuple(self.channels.values()):
+            channel._close_channel()
 
     @asyncio.coroutine
     def close_ok(self, frame):
@@ -192,7 +193,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def dispatch_frame(self, frame=None):
         """Dispatch the received frame to the corresponding handler"""
-
         method_dispatch = {
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE): self.server_close,
             (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK): self.close_ok,
@@ -225,10 +225,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
 
     def release_channel_id(self, channel_id):
-        """Called from the channel instance, it relase a previously used
+        """Called from the channel instance, it release a previously used
         channel_id
         """
         self.channels_ids_free.add(channel_id)
+        self.channels.pop(channel_id)
 
     @property
     def channels_ids_count(self):
@@ -241,7 +242,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 reply_code:     int, the amqp error code
                 reply_text:     str, the text associated to the error_code
                 exc:            the exception responsible of this error
-
         """
         if exception is None:
             exception = exceptions.ChannelClosed(reply_code, reply_text)
@@ -252,7 +252,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             else:
                 self._on_error_callback(exceptions.ChannelClosed(exception))
 
-        for channel in self.channels.values():
+        for channel in tuple(self.channels.values()):
             channel.connection_closed(reply_code, reply_text, exception)
 
     @asyncio.coroutine
@@ -281,9 +281,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from self.send_heartbeat()
         yield from asyncio.wait_for(
             self._heartbeat_waiter.wait(),
-            timeout=self.server_heartbeat * 2,
-        )
-
+            timeout=self.server_heartbeat * 2)
 
     @asyncio.coroutine
     def send_heartbeat(self):
@@ -332,7 +330,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
 
-
     @asyncio.coroutine
     def tune(self, frame):
         decoder = amqp_frame.AmqpDecoder(frame.payload)
@@ -366,7 +363,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder.write_shortstr(virtual_host)
         encoder.write_shortstr(capabilities)
         encoder.write_bool(insist)
-
         frame.write_frame(encoder)
 
     @asyncio.coroutine
