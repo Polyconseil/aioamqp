@@ -49,3 +49,10 @@ class PublishFailed(AioamqpException):
     def __repr__(self):
         return 'Publish failed because a nack was received for delivery_tag {}'.format(
             self.delivery_tag)
+
+
+class PublishReturned(AioamqpException):
+    def __repr__(self):
+        return (
+            '{}(reply_code={!r}, reply_text={!r}, exchange={!r}, '
+            'routing_key={!r})'.format(type(self).__name__, *self.args))

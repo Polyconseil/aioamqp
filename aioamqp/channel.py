@@ -99,6 +99,7 @@ class Channel:
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_GET_EMPTY): self.basic_get_empty,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_DELIVER): self.basic_deliver,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CANCEL): self.server_basic_cancel,
+            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RETURN): self.basic_server_return,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_ACK): self.basic_server_ack,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_NACK): self.basic_server_nack,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RECOVER_OK): self.basic_recover_ok,
@@ -747,6 +748,16 @@ class Channel:
         request.write_bits(multiple, requeue)
         yield from self._write_frame(frame, request, no_wait=False, timeout=timeout)
 
+    @asyncio.coroutine
+    def basic_server_return(self, frame):
+        decoder = amqp_frame.AmqpDecoder(frame.payload)
+        reply_code = decoder.read_short()
+        reply_text = decoder.read_shortstr()
+        exchange = decoder.read_shortstr()
+        routing_key = decoder.read_shortstr()
+        fut = self._get_waiter('basic_server_return')
+        fut.set_exception(exceptions.PublishReturned(
+            reply_code, reply_text, exchange, routing_key))
 
     @asyncio.coroutine
     def basic_server_ack(self, frame):
@@ -754,6 +765,8 @@ class Channel:
         delivery_tag = decoder.read_long_long()
         fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
         logger.debug('Received ack for delivery tag {!r}'.format(delivery_tag))
+        if 'basic_server_return' in self._futures:
+            self._get_waiter('basic_server_return').set_result(None)
         fut.set_result(True)
 
     @asyncio.coroutine
@@ -807,9 +820,12 @@ class Channel:
         if not self.is_open:
             raise exceptions.ChannelClosed()
 
+        futures = []
         if self.publisher_confirms:
             delivery_tag = next(self.delivery_tag_iter)
-            fut = self._set_waiter('basic_server_ack_{}'.format(delivery_tag))
+            futures.append(self._set_waiter('basic_server_ack_{}'.format(delivery_tag)))
+            if mandatory or immediate:
+                futures.append(self._set_waiter('basic_server_return'))
 
         method_frame = amqp_frame.AmqpRequest(
             self.protocol.writer, amqp_constants.TYPE_METHOD, self.channel_id)
@@ -849,7 +865,7 @@ class Channel:
 
         yield from self.protocol.writer.drain()
 
-        if self.publisher_confirms:
+        for fut in reversed(futures):
             yield from fut
 
     @asyncio.coroutine

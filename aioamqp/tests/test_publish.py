@@ -1,11 +1,11 @@
 import unittest
 
+from aioamqp.exceptions import PublishReturned
 from . import testcase
 from . import testing
 
 
 class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
     _multiprocess_can_split_ = True
 
     @testing.coroutine
@@ -51,3 +51,11 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
         queues = self.list_queues()
         self.assertIn("q", queues)
         self.assertEqual(1, queues["q"]['messages'])
+
+    @testing.coroutine
+    def test_mandatory_and_undeliverable(self):
+        yield from self.channel.confirm_select()
+        yield from self.channel.exchange_declare("e", "direct")
+        with self.assertRaises(PublishReturned):
+            yield from self.channel.publish(
+                'content', 'e', routing_key='undeliverable', mandatory=True)
