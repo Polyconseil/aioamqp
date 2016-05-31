@@ -66,10 +66,19 @@ class ProxyAmqpProtocol(AmqpProtocol):
     def __init__(self, test_case, *args, **kw):
         super().__init__(*args, **kw)
         self.test_case = test_case
+        self.dispatch_errors = []
 
     def channel_factory(self, protocol, channel_id):
         return ProxyChannel(self.test_case, protocol, channel_id)
     CHANNEL_FACTORY = channel_factory
+
+    @asyncio.coroutine
+    def dispatch_frame(self, *a, **k):
+        try:
+            return (yield from super().dispatch_frame(*a, **k))
+        except Exception as e:
+            self.dispatch_errors.append(e)
+            raise
 
 
 class RabbitTestCase(testing.AsyncioTestCaseMixin):
