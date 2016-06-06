@@ -48,9 +48,9 @@ You probably want to block the eventloop to simulate a CPU intensive task using 
  .. code-block:: python
 
     @asyncio.coroutine
-    def callback(channel, body, enveloppe, properties):
+    def callback(channel, body, envelope, properties):
         print(" [x] Received %r" % body)
         yield from asyncio.sleep(body.count(b'.'))
         print(" [x] Done")
-        yield from channel.basic_client_ack(delivery_tag=enveloppe.delivery_tag)
+        yield from channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
 
