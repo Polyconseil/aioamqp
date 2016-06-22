@@ -127,8 +127,8 @@ A channel is the main object when you want to send message to an exchange, or to
 
 When you want to produce some content, you declare a queue then publish message into it::
 
-    queue = yield from channel.queue_declare("my_queue")
-    yield from queue.publish("aioamqp hello", '', "my_queue")
+    yield from channel.queue_declare("my_queue")
+    yield from channel.publish("aioamqp hello", '', "my_queue")
 
 Note: we're pushing message to "my_queue" queue, through the default amqp exchange.
 
