@@ -511,7 +511,7 @@ class Channel:
 
         # split the payload
 
-        frame_max = self.protocol.server_frame_max
+        frame_max = self.protocol.server_frame_max or len(payload)
         for chunk in (payload[0+i:frame_max+i] for i in range(0, len(payload), frame_max)):
 
             content_frame = amqp_frame.AmqpRequest(
@@ -834,7 +834,7 @@ class Channel:
 
         # split the payload
 
-        frame_max = self.protocol.server_frame_max
+        frame_max = self.protocol.server_frame_max or len(payload)
         for chunk in (payload[0+i:frame_max+i] for i in range(0, len(payload), frame_max)):
 
             content_frame = amqp_frame.AmqpRequest(
