@@ -570,7 +570,7 @@ class Channel:
             decoder = amqp_frame.AmqpDecoder(frame.payload)
             delivery_tag = decoder.read_long_long()
         fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
-        logger.debug('Received nack for delivery tag {!r}'.format(delivery_tag))
+        logger.debug('Received nack for delivery tag %r', delivery_tag)
         fut.set_exception(exceptions.PublishFailed(delivery_tag))
 
     @asyncio.coroutine
@@ -753,7 +753,7 @@ class Channel:
         decoder = amqp_frame.AmqpDecoder(frame.payload)
         delivery_tag = decoder.read_long_long()
         fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
-        logger.debug('Received ack for delivery tag {!r}'.format(delivery_tag))
+        logger.debug('Received ack for delivery tag %s', delivery_tag)
         fut.set_result(True)
 
     @asyncio.coroutine

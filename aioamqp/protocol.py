@@ -241,7 +241,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             return
 
         if (frame.class_id, frame.method_id) not in method_dispatch:
-            logger.info("frame {} {} is not handled".format(frame.class_id, frame.method_id))
+            logger.info("frame %s %s is not handled", frame.class_id, frame.method_id)
             return
         yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
 
