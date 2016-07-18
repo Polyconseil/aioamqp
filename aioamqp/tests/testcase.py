@@ -202,10 +202,6 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             queues[queue_name] = queue_info
         return queues
 
-    def list_exchanges(self, vhost=None, name=None):
-        """Return the list of the exchanges"""
-        return self.http_client.get_exchanges(vhost, name)
-
     @asyncio.coroutine
     def safe_queue_delete(self, queue_name, channel=None):
         """Delete the queue but does not raise any exception if it fails
