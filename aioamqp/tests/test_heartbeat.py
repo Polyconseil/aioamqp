@@ -5,21 +5,27 @@
 import asyncio
 
 import unittest
+from unittest import mock
 
 from . import testcase
 from . import testing
-from .. import exceptions
 
 
 class HeartbeatTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
-    def test_send_heartbeat(self):
-        yield from self.amqp.send_heartbeat()
+    def test_heartbeat(self):
+        with mock.patch.object(
+                self.amqp, 'send_heartbeat', wraps=self.amqp.send_heartbeat
+                ) as send_heartbeat:
+            # reset both timers to 1) make them 'see' the new heartbeat value
+            # 2) so that the mock is actually called back from the main loop
+            self.amqp.server_heartbeat = 1
+            self.amqp._heartbeat_timer_send_reset()
+            self.amqp._heartbeat_timer_recv_reset()
 
-    @testing.coroutine
-    def test_timeout_heartbeat(self):
-        self.amqp.server_heartbeat = 1
-        with self.assertRaises(asyncio.TimeoutError):
-            yield from self.amqp.heartbeat()
+            yield from asyncio.sleep(1.001)
+            send_heartbeat.assert_called_once_with()
 
+            yield from asyncio.sleep(1.001)
+            self.assertFalse(self.amqp.is_open)

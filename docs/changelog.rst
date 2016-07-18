@@ -4,6 +4,8 @@ Changelog
 Next version
 ------------
 
+ * Complete overhaul of heartbeat (closes #96).
+
 Aioamqp 0.7.0
 -------------
 
