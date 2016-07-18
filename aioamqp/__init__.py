@@ -4,7 +4,7 @@ import sys
 import ssl as ssl_module  # import as to enable argument named ssl in connect
 from urllib.parse import urlparse
 
-from .exceptions import *
+from .exceptions import *  # pylint: disable=wildcard-import
 from .protocol import AmqpProtocol
 
 from .version import __version__

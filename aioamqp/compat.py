@@ -1,6 +1,7 @@
 """
     Compatibility between python or package versions
 """
+# pylint: disable=unused-import
 
 import asyncio
 

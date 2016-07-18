@@ -42,14 +42,13 @@ import asyncio
 import io
 import struct
 import socket
-
 import os
+from itertools import count
+from decimal import Decimal
 
 from . import exceptions
 from . import constants as amqp_constants
 from .properties import Properties
-from itertools import count
-from decimal import Decimal
 
 
 DUMP_FRAMES = False

@@ -5,8 +5,6 @@ import asyncio
 from . import testcase
 from . import testing
 
-from .. import exceptions
-
 
 class ConnectionLostTestCase(testcase.RabbitTestCase, unittest.TestCase):
 

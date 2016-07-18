@@ -3,9 +3,9 @@
 import unittest
 import socket
 
-from . import testing, testcase
-
 from aioamqp import connect
+
+from . import testing, testcase
 
 
 class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
