@@ -16,6 +16,18 @@ from .compat import ensure_future
 logger = logging.getLogger(__name__)
 
 
+class _StreamWriter(asyncio.StreamWriter):
+
+    def write(self, data):
+        return super().write(data)
+
+    def writelines(self, data):
+        return super().writelines(data)
+
+    def write_eof(self):
+        return super().write_eof()
+
+
 class AmqpProtocol(asyncio.StreamReaderProtocol):
     """The AMQP protocol for asyncio.
 
@@ -43,7 +55,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             client_properties: dict, client-props to tune the client identification
         """
         self._loop = kwargs.get('loop') or asyncio.get_event_loop()
-        super().__init__(asyncio.StreamReader(loop=self._loop), self.client_connected, loop=self._loop)
+        super().__init__(asyncio.StreamReader(loop=self._loop), loop=self._loop)
         self._on_error_callback = kwargs.get('on_error')
 
         self.client_properties = kwargs.get('client_properties', {})
@@ -73,8 +85,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.channels_ids_ceil = 0
         self.channels_ids_free = set()
 
-    def client_connected(self, reader, writer):
-        pass
+    def connection_made(self, transport):
+        super().connection_made(transport)
+        self._stream_writer = _StreamWriter(transport, self, self._stream_reader, self._loop)
 
     def connection_lost(self, exc):
         logger.warning("Connection lost exc=%r", exc)
