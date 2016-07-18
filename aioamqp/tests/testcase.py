@@ -297,4 +297,3 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         self.amqps.append(protocol)
         self.transports.append(transport)
         return transport, protocol
-

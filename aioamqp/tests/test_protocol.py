@@ -51,8 +51,8 @@ class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def test_connection_from_url(self):
         with mock.patch('aioamqp.connect') as connect:
             @asyncio.coroutine
-            def func(*x,**y):
-                return 1,2
+            def func(*x, **y):
+                return 1, 2
             connect.side_effect = func
             yield from amqp_from_url('amqp://tom:pass@example.com:7777/myvhost', loop=self.loop)
             connect.assert_called_once_with(

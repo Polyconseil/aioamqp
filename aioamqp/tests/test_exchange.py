@@ -176,4 +176,3 @@ class ExchangeUnbind(testcase.RabbitTestCase, unittest.TestCase):
             # weird result from rabbitmq 3.3.5
             result = yield from self.channel.exchange_unbind(ex_source, ex_destination, routing_key='')
             self.assertTrue(result)
-

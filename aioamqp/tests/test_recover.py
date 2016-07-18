@@ -22,5 +22,3 @@ class RecoverTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def test_basic_recover(self):
         result = yield from self.channel.basic_recover(requeue=True)
         self.assertTrue(result)
-
-

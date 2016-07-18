@@ -39,4 +39,3 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         with self.assertRaises(exceptions.ChannelClosed):
             yield from self.channel.basic_consume(callback)
-

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class ReplyTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @asyncio.coroutine
     def _server(self, server_future, exchange_name, routing_key):
-        """Consume messages and reply to them by publishing messages back to the client using 
+        """Consume messages and reply to them by publishing messages back to the client using
         routing key set to the reply_to property"""
         server_queue_name = 'server_queue'
         yield from self.channel.queue_declare(server_queue_name, exclusive=False, no_wait=False)
