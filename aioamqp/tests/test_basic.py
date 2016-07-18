@@ -170,7 +170,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from qfuture
 
     @testing.coroutine
-    def test_basic_nack(self):
+    def test_basic_nack_norequeue(self):
         queue_name = 'queue_name'
         exchange_name = 'exchange_name'
         routing_key = ''
