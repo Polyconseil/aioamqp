@@ -300,7 +300,8 @@ class Channel:
         logger.debug("Exchange bound")
 
     @asyncio.coroutine
-    def exchange_unbind(self, exchange_destination, exchange_source, routing_key, no_wait=False, arguments=None, timeout=None):
+    def exchange_unbind(self, exchange_destination, exchange_source, routing_key,
+                        no_wait=False, arguments=None, timeout=None):
         if arguments is None:
             arguments = {}
         frame = amqp_frame.AmqpRequest(self.protocol._stream_writer, amqp_constants.TYPE_METHOD, self.channel_id)
