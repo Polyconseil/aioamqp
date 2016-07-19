@@ -8,7 +8,7 @@ class Properties:
     def __init__(
             self, content_type=None, content_encoding=None, headers=None, delivery_mode=None,
             priority=None, correlation_id=None, reply_to=None, expiration=None, message_id=None,
-            timestamp=None, type=None, user_id=None, app_id=None, cluster_id=None):
+            timestamp=None, type=None, user_id=None, app_id=None, cluster_id=None): # pylint: disable=redefined-builtin
         self.content_type = content_type
         self.content_encoding = content_encoding
         self.headers = headers
