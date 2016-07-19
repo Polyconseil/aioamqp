@@ -16,7 +16,7 @@ class RecoverTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_basic_recover_async_no_requeue(self):
-        result = yield from self.channel.basic_recover_async(requeue=True)
+        result = yield from self.channel.basic_recover_async(requeue=False)
 
     @testing.coroutine
     def test_basic_recover(self):
