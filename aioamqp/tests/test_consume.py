@@ -200,7 +200,6 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         @asyncio.coroutine
         def callback(channel, body, envelope, properties):
             self.assertTrue(sync_future.done())
-            pass
 
         result = yield from channel.basic_consume(callback, queue_name="q")
         sync_future.set_result(True)
