@@ -214,7 +214,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             yield from channel.queue_delete(full_queue_name, no_wait=False, timeout=1.0)
         except asyncio.TimeoutError:
             logger.warning('Timeout on queue %s deletion', full_queue_name, exc_info=True)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             logger.error('Unexpected error on queue %s deletion', full_queue_name, exc_info=True)
 
     @asyncio.coroutine
@@ -229,7 +229,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             yield from channel.exchange_delete(full_exchange_name, no_wait=False, timeout=1.0)
         except asyncio.TimeoutError:
             logger.warning('Timeout on exchange %s deletion', full_exchange_name, exc_info=True)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             logger.error('Unexpected error on exchange %s deletion', full_exchange_name, exc_info=True)
 
     def full_name(self, name):
