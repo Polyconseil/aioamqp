@@ -11,7 +11,7 @@ from . import testcase
 from .. import exceptions
 from .. import connect as amqp_connect
 from .. import from_url as amqp_from_url
-from .. import protocol
+from ..protocol import AmqpProtocol
 
 
 class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
@@ -62,7 +62,7 @@ class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
                 ssl=False,
                 login='tom',
                 host='example.com',
-                protocol_factory=protocol.AmqpProtocol,
+                protocol_factory=AmqpProtocol,
                 virtualhost='myvhost',
                 port=7777,
                 verify_ssl=True,
