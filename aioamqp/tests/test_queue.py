@@ -54,7 +54,7 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def test_queue_declare_passive_nonexistant_queue(self):
         queue_name = 'queue_name'
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            result = yield from self.channel.queue_declare(queue_name, passive=True)
+            yield from self.channel.queue_declare(queue_name, passive=True)
 
         self.assertEqual(cm.exception.code, 404)
 
@@ -64,7 +64,7 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_declare(queue_name, exclusive=False, auto_delete=False)
 
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            result = yield from self.channel.queue_declare(queue_name,
+            yield from self.channel.queue_declare(queue_name,
                 passive=False, exclusive=True, auto_delete=True)
 
         self.assertEqual(cm.exception.code, 406)
@@ -135,7 +135,7 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.basic_consume(self.callback, queue_name="q", no_wait=False)
         # create an other amqp connection
 
-        transport, protocol = yield from self.create_amqp()
+        _transport, protocol = yield from self.create_amqp()
         channel = yield from self.create_channel(amqp=protocol)
         # assert that this connection cannot connect to the queue
         with self.assertRaises(exceptions.ChannelClosed):
@@ -149,7 +149,7 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # consume it
         yield from self.channel.basic_consume(self.callback, queue_name='q', no_wait=False)
         # create an other amqp connection
-        transport, protocol = yield from self.create_amqp()
+        _transport, protocol = yield from self.create_amqp()
         channel = yield from self.create_channel(amqp=protocol)
         # assert that this connection can connect to the queue
         yield from channel.basic_consume(self.callback, queue_name='q', no_wait=False)
@@ -200,7 +200,7 @@ class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         yield from self.channel.queue_declare(queue_name)
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            result = yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
+            yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
         self.assertEqual(cm.exception.code, 404)
 
     @testing.coroutine
@@ -212,7 +212,7 @@ class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.exchange_declare(exchange_name, type_name='direct')
 
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            result = yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
+            yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
         self.assertEqual(cm.exception.code, 404)
 
     @testing.coroutine

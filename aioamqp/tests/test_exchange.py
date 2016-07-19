@@ -70,7 +70,7 @@ class ExchangeDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_exchange_declare_passive_does_not_exists(self):
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            result = yield from self.channel.exchange_declare(
+            yield from self.channel.exchange_declare(
                 'non_existant_exchange',
                 type_name='headers',
                 auto_delete=False, durable=False, passive=True)
@@ -79,7 +79,7 @@ class ExchangeDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @asyncio.coroutine
     def test_exchange_declare_unknown_type(self):
         with self.assertRaises(exceptions.ChannelClosed):
-            result = yield from self.channel.exchange_declare(
+            yield from self.channel.exchange_declare(
                 'non_existant_exchange',
                 type_name='unknown_type',
                 auto_delete=False, durable=False, passive=True)
@@ -133,7 +133,7 @@ class ExchangeBind(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_inexistant_exchange_bind(self):
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            result = yield from self.channel.exchange_bind(
+            yield from self.channel.exchange_bind(
                 'exchange_destination', 'exchange_source', routing_key='')
 
         self.assertEqual(cm.exception.code, 404)
@@ -152,7 +152,7 @@ class ExchangeUnbind(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.exchange_bind(
             ex_destination, ex_source, routing_key='')
 
-        result = yield from self.channel.exchange_unbind(
+        yield from self.channel.exchange_unbind(
             ex_destination, ex_source, routing_key='')
 
     @testing.coroutine

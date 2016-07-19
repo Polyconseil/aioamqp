@@ -12,7 +12,7 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_connect(self):
-        transport, proto = yield from connect(virtualhost=self.vhost, loop=self.loop)
+        _transport, proto = yield from connect(virtualhost=self.vhost, loop=self.loop)
         self.assertTrue(proto.is_open)
         self.assertIsNotNone(proto.server_properties)
         yield from proto.close()
@@ -23,7 +23,7 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
         frame_max = 131072
         channel_max = 10
         heartbeat = 100
-        transport, proto = yield from connect(
+        _transport, proto = yield from connect(
             virtualhost=self.vhost,
             loop=self.loop,
             channel_max=channel_max,

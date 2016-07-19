@@ -106,7 +106,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
         @asyncio.coroutine
         def go():
-            transport, protocol = yield from self.create_amqp()
+            _transport, protocol = yield from self.create_amqp()
             channel = yield from self.create_channel(amqp=protocol)
             self.channels.append(channel)
         self.loop.run_until_complete(go())
