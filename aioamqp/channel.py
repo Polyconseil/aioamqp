@@ -19,13 +19,12 @@ logger = logging.getLogger(__name__)
 
 class Channel:
 
-    def __init__(self, protocol, channel_id, on_error=None):
+    def __init__(self, protocol, channel_id):
         self._loop = protocol._loop
         self.protocol = protocol
         self.channel_id = channel_id
         self.consumer_queues = {}
         self.consumer_callbacks = {}
-        self._on_error_callback = on_error
         self.response_future = None
         self.close_event = asyncio.Event(loop=self._loop)
         self.cancelled_consumers = set()
