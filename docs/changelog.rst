@@ -5,6 +5,7 @@ Next version
 ------------
 
  * Complete overhaul of heartbeat (closes #96).
+ * Prevent closing channels multiple times (inspired by PR #88).
 
 Aioamqp 0.7.0
 -------------

@@ -35,10 +35,8 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         channel = yield from self.create_channel()
         yield from channel.close()
         self.assertFalse(channel.is_open)
-        with self.assertRaises(exceptions.ChannelClosed) as cm:
+        with self.assertRaises(exceptions.ChannelClosed):
             yield from channel.close()
-
-        self.assertEqual(cm.exception.code, 504)
 
     @testing.coroutine
     def test_cannot_publish_after_close(self):

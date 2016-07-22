@@ -144,6 +144,8 @@ class Channel:
     @asyncio.coroutine
     def close(self, reply_code=0, reply_text="Normal Shutdown", no_wait=False, timeout=None):
         """Close the channel."""
+        if not self.is_open:
+            raise exceptions.ChannelClosed("channel already closed or closing")
         self.close_event.set()
         frame = amqp_frame.AmqpRequest(self.protocol._stream_writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
