@@ -53,10 +53,6 @@ class Channel:
     def is_open(self):
         return not self.close_event.is_set()
 
-    def _close_channel(self):
-        self.protocol.release_channel_id(self.channel_id)
-        self.close_event.set()
-
     def connection_closed(self, server_code=None, server_reason=None, exception=None):
         for future in self._futures.values():
             if future.done():
@@ -70,7 +66,8 @@ class Channel:
                 exception = exceptions.ChannelClosed(**kwargs)
             future.set_exception(exception)
 
-        self._close_channel()
+        self.protocol.release_channel_id(self.channel_id)
+        self.close_event.set()
 
     @asyncio.coroutine
     def dispatch_frame(self, frame):
@@ -147,6 +144,7 @@ class Channel:
     @asyncio.coroutine
     def close(self, reply_code=0, reply_text="Normal Shutdown", no_wait=False, timeout=None):
         """Close the channel."""
+        self.close_event.set()
         frame = amqp_frame.AmqpRequest(self.protocol._stream_writer, amqp_constants.TYPE_METHOD, self.channel_id)
         frame.declare_method(
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE)
@@ -164,7 +162,7 @@ class Channel:
     def close_ok(self, frame):
         self._get_waiter('close').set_result(True)
         logger.info("Channel closed")
-        self._close_channel()
+        self.protocol.release_channel_id(self.channel_id)
 
     @asyncio.coroutine
     def _send_channel_close_ok(self):
