@@ -130,8 +130,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def close_ok(self, frame):
-        self.stop()
         logger.info("Recv close ok")
+        self._stream_writer.close()
 
     @asyncio.coroutine
     def start_connection(self, host, port, login, password, virtualhost, ssl=False,
@@ -200,11 +200,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         # for now, we read server's responses asynchronously
         self.worker = ensure_future(self.run(), loop=self._loop)
-
-    def stop(self):
-        self.is_open = False
-        self.connection_closed.set()
-        self.stop_now.set_result(None)
 
     @asyncio.coroutine
     def get_frame(self):
@@ -374,10 +369,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         reply_text = response.read_shortstr()
         class_id = response.read_short()
         method_id = response.read_short()
-        self.stop()
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
             reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
+        self._stream_writer.close()
 
 
     @asyncio.coroutine
