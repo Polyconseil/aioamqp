@@ -140,10 +140,6 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         return self.amqps[0]
 
     @property
-    def transport(self):
-        return self.transports[0]
-
-    @property
     def channel(self):
         return self.channels[0]
 
@@ -287,5 +283,4 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         transport, protocol = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
             protocol_factory=protocol_factory, loop=self.loop)
         self.amqps.append(protocol)
-        self.transports.append(transport)
         return transport, protocol
