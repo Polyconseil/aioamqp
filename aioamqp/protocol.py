@@ -101,6 +101,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.connection_closed.set()
         self.is_open = False
         self._close_channels(exception=exc)
+        self._heartbeat_stop()
         super().connection_lost(exc)
 
     def data_received(self, data):
@@ -333,6 +334,13 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self._heartbeat_timer_send = self._loop.call_later(
             self.server_heartbeat,
             self.send_heartbeat)
+
+    def _heartbeat_stop(self):
+        self.server_heartbeat = 0
+        if self._heartbeat_timer_recv is not None:
+            self._heartbeat_timer_recv.cancel()
+        if self._heartbeat_timer_send is not None:
+            self._heartbeat_timer_send.cancel()
 
     # Amqp specific methods
     @asyncio.coroutine
