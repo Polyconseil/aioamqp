@@ -239,7 +239,7 @@ This simple example creates a `queue`, an `exchange` and bind them together.
 
         channel = yield from protocol.channel()
         yield from channel.queue_declare(queue_name='queue')
-        yield from channel.exchange_declare(queue_name='exchange')
+        yield from channel.exchange_declare(exchange_name='exchange')
 
         yield from channel.queue_bind('queue', 'exchange', routing_key='')
 
