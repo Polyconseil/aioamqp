@@ -121,6 +121,8 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
                 logger.debug('Delete exchange %s', self.full_name(exchange_name))
                 yield from self.safe_exchange_delete(exchange_name, channel)
             for amqp in self.amqps:
+                if not amqp.is_open:
+                    continue
                 logger.debug('Delete amqp %s', amqp)
                 yield from amqp.close()
                 del amqp

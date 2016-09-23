@@ -5,6 +5,7 @@ Aioamqp next
 ------------
 
  * Turn off heartbeat timers when the connection is closed (closes #111).
+ * Fix tests with python 3.5.2 (closes #107).
 
 Aioamqp 0.8.0
 -------------
