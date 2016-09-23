@@ -716,6 +716,7 @@ class Channel:
             buffer.write(content_body_frame.payload)
 
         data['message'] = buffer.getvalue()
+        data['properties'] = content_header_frame.properties
         future = self._get_waiter('basic_get')
         future.set_result(data)
 
