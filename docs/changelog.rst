@@ -7,6 +7,8 @@ Aioamqp next
  * Turn off heartbeat timers when the connection is closed (closes #111).
  * Fix tests with python 3.5.2 (closes #107).
  * Properly handle unlimited sized payloads (closes #103).
+ * API fixes in the documentation (closes #102, #110).
+ * Add frame properties to returned value from ``basic_get()``.
 
 Aioamqp 0.8.0
 -------------
