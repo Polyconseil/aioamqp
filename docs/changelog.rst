@@ -8,7 +8,7 @@ Aioamqp next
  * Fix tests with python 3.5.2 (closes #107).
  * Properly handle unlimited sized payloads (closes #103).
  * API fixes in the documentation (closes #102, #110).
- * Add frame properties to returned value from ``basic_get()``.
+ * Add frame properties to returned value from ``basic_get()`` (closes #100).
 
 Aioamqp 0.8.0
 -------------
