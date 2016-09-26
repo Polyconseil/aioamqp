@@ -53,7 +53,7 @@ class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def test_basic_cancel(self):
 
         @asyncio.coroutine
-        def callback(channel, body, envelope, properties):
+        def callback(channel, body, envelope, _properties):
             pass
 
         queue_name = 'queue_name'
@@ -140,7 +140,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(channel, body, envelope, properties):
+        def qcallback(channel, body, envelope, _properties):
             qfuture.set_result(envelope)
 
         yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
@@ -162,7 +162,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(channel, body, envelope, properties):
+        def qcallback(channel, body, envelope, _properties):
             yield from self.channel.basic_client_nack(
                 envelope.delivery_tag, multiple=True, requeue=False
             )
@@ -184,7 +184,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(channel, body, envelope, properties):
+        def qcallback(channel, body, envelope, _properties):
             yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=False)
             qfuture.set_result(True)
 
@@ -204,7 +204,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(channel, body, envelope, properties):
+        def qcallback(channel, body, envelope, _properties):
             yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=True)
             qfuture.set_result(True)
 
@@ -224,7 +224,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(channel, body, envelope, properties):
+        def qcallback(channel, body, envelope, _properties):
             qfuture.set_result(envelope)
 
         yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
