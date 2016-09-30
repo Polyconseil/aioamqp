@@ -336,7 +336,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             self.send_heartbeat)
 
     def _heartbeat_stop(self):
-        self.server_heartbeat = 0
+        self.server_heartbeat = None
         if self._heartbeat_timer_recv is not None:
             self._heartbeat_timer_recv.cancel()
         if self._heartbeat_timer_send is not None:

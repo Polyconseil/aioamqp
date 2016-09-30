@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Aioamqp next
+------------
+
+ * Really turn off heartbeat timers (closes #112).
+
 Aioamqp 0.8.1
 -------------
 
