@@ -20,10 +20,6 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         queue_name = 'queue_name'
         yield from self.channel.queue_declare(queue_name)
 
-        @asyncio.coroutine
-        def callback(body, envelope, properties):
-            pass
-
         channel2 = yield from self.amqp.channel()
         yield from channel2.queue_declare(queue_name)
         # delete queue (so the server send a cancel)
@@ -33,9 +29,9 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # get an exception on all following calls
         # the Queue won't exists anymore
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            yield from channel2.basic_consume(callback)
+            yield from channel2.basic_consume()
 
         self.assertEqual(cm.exception.code, 404)
 
         with self.assertRaises(exceptions.ChannelClosed):
-            yield from self.channel.basic_consume(callback)
+            yield from self.channel.basic_consume()

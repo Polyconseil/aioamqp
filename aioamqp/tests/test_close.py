@@ -58,4 +58,4 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_declare("q")
         yield from channel.close()
         with self.assertRaises(exceptions.ChannelClosed):
-            yield from channel.basic_consume(self.callback)
+            consumer = yield from channel.basic_consume()

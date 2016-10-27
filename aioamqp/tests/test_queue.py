@@ -132,14 +132,14 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # create an exclusive queue
         yield from self.channel.queue_declare("q", exclusive=True)
         # consume it
-        yield from self.channel.basic_consume(self.callback, queue_name="q", no_wait=False)
+        consumer = yield from self.channel.basic_consume(queue_name="q", no_wait=False)
         # create an other amqp connection
 
         _transport, protocol = yield from self.create_amqp()
         channel = yield from self.create_channel(amqp=protocol)
         # assert that this connection cannot connect to the queue
         with self.assertRaises(exceptions.ChannelClosed):
-            yield from channel.basic_consume(self.callback, queue_name="q", no_wait=False)
+            consumer = yield from channel.basic_consume(queue_name="q", no_wait=False)
         # amqp and channels are auto deleted by test case
 
     @testing.coroutine
@@ -147,12 +147,12 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # create a non-exclusive queue
         yield from self.channel.queue_declare('q', exclusive=False)
         # consume it
-        yield from self.channel.basic_consume(self.callback, queue_name='q', no_wait=False)
+        consumer = yield from self.channel.basic_consume(queue_name='q', no_wait=False)
         # create an other amqp connection
         _transport, protocol = yield from self.create_amqp()
         channel = yield from self.create_channel(amqp=protocol)
         # assert that this connection can connect to the queue
-        yield from channel.basic_consume(self.callback, queue_name='q', no_wait=False)
+        consumer = yield from channel.basic_consume(queue_name='q', no_wait=False)
 
 
 class QueueDeleteTestCase(testcase.RabbitTestCase, unittest.TestCase):

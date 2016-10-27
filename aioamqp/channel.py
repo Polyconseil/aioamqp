@@ -8,6 +8,8 @@ import uuid
 import io
 from itertools import count
 
+from aioamqp.consumer import Consumer
+
 from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
@@ -24,7 +26,6 @@ class Channel:
         self.protocol = protocol
         self.channel_id = channel_id
         self.consumer_queues = {}
-        self.consumer_callbacks = {}
         self.response_future = None
         self.close_event = asyncio.Event(loop=self._loop)
         self.cancelled_consumers = set()
@@ -67,6 +68,9 @@ class Channel:
             future.set_exception(exception)
 
         self.protocol.release_channel_id(self.channel_id)
+
+        for queue in self.consumer_queues.values():
+            yield from queue.put(None)
         self.close_event.set()
 
     @asyncio.coroutine
@@ -163,6 +167,10 @@ class Channel:
     def close_ok(self, frame):
         self._get_waiter('close').set_result(True)
         logger.info("Channel closed")
+
+        for queue in self.consumer_queues.values():
+            yield from queue.put(None)
+
         self.protocol.release_channel_id(self.channel_id)
 
     @asyncio.coroutine
@@ -573,13 +581,12 @@ class Channel:
         fut.set_exception(exceptions.PublishFailed(delivery_tag))
 
     @asyncio.coroutine
-    def basic_consume(self, callback, queue_name='', consumer_tag='', no_local=False, no_ack=False,
+    def basic_consume(self, queue_name='', consumer_tag='', no_local=False, no_ack=False,
                       exclusive=False, no_wait=False, arguments=None, timeout=None):
         """Starts the consumption of message into a queue.
         the callback will be called each time we're receiving a message.
 
             Args:
-                callback:       coroutine, the called callback
                 queue_name:     str, the queue to receive message from
                 consumer_tag:   str, optional consumer tag
                 no_local:       bool, if set the server will not send messages
@@ -609,16 +616,15 @@ class Channel:
         request.write_bits(no_local, no_ack, exclusive, no_wait)
         request.write_table(arguments)
 
-        self.consumer_callbacks[consumer_tag] = callback
-        self.last_consumer_tag = consumer_tag
+        self.consumer_queues[consumer_tag] = asyncio.Queue()
+
+        consumer = Consumer(self.consumer_queues[consumer_tag], consumer_tag)
 
         return_value = yield from self._write_frame_awaiting_response(
             'basic_consume', frame, request, no_wait, timeout=timeout)
-        if no_wait:
-            return_value = {'consumer_tag': consumer_tag}
-        else:
+        if not no_wait:
             self._ctag_events[consumer_tag].set()
-        return return_value
+        return consumer
 
     @asyncio.coroutine
     def basic_consume_ok(self, frame):
@@ -649,20 +655,22 @@ class Channel:
         envelope = Envelope(consumer_tag, delivery_tag, exchange_name, routing_key, is_redeliver)
         properties = content_header_frame.properties
 
-        callback = self.consumer_callbacks[consumer_tag]
+        consumer_queue = self.consumer_queues[consumer_tag]
 
         event = self._ctag_events.get(consumer_tag)
         if event:
             yield from event.wait()
             del self._ctag_events[consumer_tag]
 
-        yield from callback(self, body, envelope, properties)
+        yield from consumer_queue.put((self, body, envelope, properties))
 
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
         """From the server, means the server won't send anymore messages to this consumer."""
         consumer_tag = frame.arguments['consumer_tag']
         self.cancelled_consumers.add(consumer_tag)
+        consumer_queue = self.consumer_queues[consumer_tag]
+        yield from consumer_queue.put(None)
         logger.info("consume cancelled received")
 
     @asyncio.coroutine
@@ -674,6 +682,7 @@ class Channel:
         request = amqp_frame.AmqpEncoder()
         request.write_shortstr(consumer_tag)
         request.write_bits(no_wait)
+
         return (yield from self._write_frame_awaiting_response(
             'basic_cancel', frame, request, no_wait=no_wait, timeout=timeout))
 
@@ -684,6 +693,10 @@ class Channel:
         }
         future = self._get_waiter('basic_cancel')
         future.set_result(results)
+
+        consumer_queue = self.consumer_queues[results["consumer_tag"]]
+        yield from consumer_queue.put(None)
+
         logger.debug("Cancel ok")
 
     @asyncio.coroutine
