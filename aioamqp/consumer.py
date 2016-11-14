@@ -3,30 +3,50 @@ import asyncio
 
 import sys
 
+import logging
+
 PY35 = sys.version_info >= (3, 5)
+logger = logging.getLogger(__name__)
+
+
+class ConsumerStoped(Exception):
+    pass
 
 
 class Consumer:
     def __init__(self, queue: asyncio.Queue, consumer_tag):
-        self.queue = queue
+        self._queue = queue
         self.tag = consumer_tag
         self.message = None
+        self._stoped = False
 
     if PY35:
         async def __aiter__(self):
             return self
 
         async def __anext__(self):
-            return self.fetch_message()
+            if not self._stoped:
+                self.message = await self._queue.get()
+                if isinstance(self.message, StopIteration):
+                    self._stoped = True
+                    raise StopAsyncIteration()
+                else:
+                    return self.message
+            raise StopAsyncIteration()
 
     @asyncio.coroutine
     def fetch_message(self):
-
-        self.message = yield from self.queue.get()
-        if self.message:
-            return self.message
+        if not self._stoped:
+            self.message = yield from self._queue.get()
+            if isinstance(self.message, StopIteration):
+                self._stoped = True
+                return False
+            else:
+                return True
         else:
-            raise StopIteration()
+            return False
 
     def get_message(self):
+        if self._stoped:
+            raise ConsumerStoped()
         return self.message

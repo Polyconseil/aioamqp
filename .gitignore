@@ -6,6 +6,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+virtualenv
 .Python
 env/
 venv/
@@ -34,7 +35,7 @@ pip-delete-this-directory.txt
 .cache
 nosetests.xml
 coverage.xml
-
+cover
 # Translations
 *.mo
 
@@ -55,3 +56,4 @@ docs/_build/
 
 # editor stuffs
 *.swp
+.idea

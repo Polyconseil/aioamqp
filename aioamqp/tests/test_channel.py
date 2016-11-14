@@ -5,14 +5,16 @@
 import os
 import unittest
 
+import asyncio
+
 from . import testcase
 from . import testing
 from .. import exceptions
 
 IMPLEMENT_CHANNEL_FLOW = os.environ.get('IMPLEMENT_CHANNEL_FLOW', False)
 
-class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
+class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
     _multiprocess_can_split_ = True
 
     @testing.coroutine
@@ -83,9 +85,37 @@ class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         result = yield from channel.flow(active=False)
         self.assertFalse(result['active'])
 
+    @testing.coroutine
+    def test_channel_cancel_stops_consumer(self):
+        # declare
+        yield from self.channel.queue_declare("q", exclusive=True, no_wait=False)
+        yield from self.channel.exchange_declare("e", "fanout")
+        yield from self.channel.queue_bind("q", "e", routing_key='')
+
+        # get a different channel
+        channel = yield from self.create_channel()
+
+        # publish
+        yield from channel.publish("coucou", "e", routing_key='', )
+
+        consumer_stoped = asyncio.Future()
+
+        @asyncio.coroutine
+        def consumer_task(consumer):
+            while (yield from consumer.fetch_message()):
+                channel, body, envelope, properties = consumer.get_message()
+
+            consumer_stoped.set_result(True)
+
+        consumer = yield from channel.basic_consume(queue_name="q")
+        asyncio.get_event_loop().create_task(consumer_task(consumer))
+
+        yield from channel.basic_cancel(consumer.tag)
+
+        assert (yield from consumer_stoped)
+
 
 class ChannelIdTestCase(testcase.RabbitTestCase, unittest.TestCase):
-
     @testing.coroutine
     def test_channel_id_release_close(self):
         channels_count_start = self.amqp.channels_ids_count

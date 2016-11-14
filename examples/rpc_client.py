@@ -17,6 +17,7 @@ class FibonacciRpcClient(object):
         self.protocol = None
         self.channel = None
         self.callback_queue = None
+        self.consumer_task = None
         self.waiter = asyncio.Event()
 
     @asyncio.coroutine
@@ -28,18 +29,21 @@ class FibonacciRpcClient(object):
         result = yield from self.channel.queue_declare(queue_name='', exclusive=True)
         self.callback_queue = result['queue']
 
-        yield from self.channel.basic_consume(
+        consumer = yield from self.channel.basic_consume(
             self.on_response,
             no_ack=True,
             queue_name=self.callback_queue,
         )
+        self.consumer_task = asyncio.get_event_loop().create_task(self.on_response(consumer))
 
     @asyncio.coroutine
-    def on_response(self, channel, body, envelope, properties):
-        if self.corr_id == properties.correlation_id:
-            self.response = body
+    def on_response(self, consumer):
+        while (yield from consumer.fetch_message()):
+            channel, body, envelope, properties = consumer.get_message()
+            if self.corr_id == properties.correlation_id:
+                self.response = body
 
-        self.waiter.set()
+            self.waiter.set()
 
     @asyncio.coroutine
     def call(self, n):

@@ -14,11 +14,7 @@ import sys
 
 
 @asyncio.coroutine
-def callback(channel, body, envelope, properties):
-    print("consumer {} recved {} ({})".format(envelope.consumer_tag, body, envelope.delivery_tag))
-
-@asyncio.coroutine
-def receive_log(waiter):
+def receive_log():
     try:
         transport, protocol = yield from aioamqp.connect('localhost', 5672)
     except aioamqp.AmqpClosedConnection:
@@ -48,16 +44,16 @@ def receive_log(waiter):
 
     print(' [*] Waiting for logs. To exit press CTRL+C')
 
-    yield from asyncio.wait_for(channel.basic_consume(callback, queue_name=queue_name), timeout=10)
-    yield from waiter.wait()
+    consumer = yield from channel.basic_consume(queue_name=queue_name)
+
+    while (yield from consumer.fetch_message()):
+        channel, body, envelope, properties = consumer.get_message()
+        print("consumer {} recved {} ({})".format(envelope.consumer_tag, body, envelope.delivery_tag))
 
     yield from protocol.close()
     transport.close()
 
-loop = asyncio.get_event_loop()
 
-try:
-    waiter = asyncio.Event()
-    loop.run_until_complete(receive_log(waiter))
-except KeyboardInterrupt:
-    waiter.set()
+loop = asyncio.get_event_loop()
+loop.run_until_complete(receive_log())
+

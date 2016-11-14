@@ -36,6 +36,10 @@ class Channel:
         self._futures = {}
         self._ctag_events = {}
 
+    def __del__(self):
+        for queue in self.consumer_queues.values():
+            asyncio.ensure_future(queue.put(StopIteration()), loop=self._loop)
+
     def _set_waiter(self, rpc_name):
         if rpc_name in self._futures:
             raise exceptions.SynchronizationError("Waiter already exists")
@@ -70,7 +74,7 @@ class Channel:
         self.protocol.release_channel_id(self.channel_id)
 
         for queue in self.consumer_queues.values():
-            yield from queue.put(None)
+            asyncio.ensure_future(queue.put(StopIteration()), loop=self._loop)
         self.close_event.set()
 
     @asyncio.coroutine
@@ -169,7 +173,7 @@ class Channel:
         logger.info("Channel closed")
 
         for queue in self.consumer_queues.values():
-            yield from queue.put(None)
+            yield from queue.put(StopIteration())
 
         self.protocol.release_channel_id(self.channel_id)
 
@@ -670,7 +674,7 @@ class Channel:
         consumer_tag = frame.arguments['consumer_tag']
         self.cancelled_consumers.add(consumer_tag)
         consumer_queue = self.consumer_queues[consumer_tag]
-        yield from consumer_queue.put(None)
+        yield from consumer_queue.put(StopIteration())
         logger.info("consume cancelled received")
 
     @asyncio.coroutine
@@ -695,7 +699,7 @@ class Channel:
         future.set_result(results)
 
         consumer_queue = self.consumer_queues[results["consumer_tag"]]
-        yield from consumer_queue.put(None)
+        yield from consumer_queue.put(StopIteration())
 
         logger.debug("Cancel ok")
 

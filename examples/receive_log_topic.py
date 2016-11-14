@@ -14,11 +14,6 @@ import sys
 
 
 @asyncio.coroutine
-def callback(channel, body, envelope, properties):
-    print("consumer {} received {} ({})".format(envelope.consumer_tag, body, envelope.delivery_tag))
-
-
-@asyncio.coroutine
 def receive_log():
     try:
         transport, protocol = yield from aioamqp.connect('localhost', 5672)
@@ -48,7 +43,11 @@ def receive_log():
 
     print(' [*] Waiting for logs. To exit press CTRL+C')
 
-    yield from channel.basic_consume(callback, queue_name=queue_name)
+    consumer = yield from channel.basic_consume(queue_name=queue_name)
+
+    while (yield from consumer.fetch_message()):
+        channel, body, envelope, properties = consumer.get_message()
+        print("consumer {} received {} ({})".format(envelope.consumer_tag, body, envelope.delivery_tag))
 
 event_loop = asyncio.get_event_loop()
 event_loop.run_until_complete(receive_log())

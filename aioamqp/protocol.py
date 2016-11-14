@@ -12,12 +12,10 @@ from . import exceptions
 from . import version
 from .compat import ensure_future
 
-
 logger = logging.getLogger(__name__)
 
 
 class _StreamWriter(asyncio.StreamWriter):
-
     def write(self, data):
         ret = super().write(data)
         self._protocol._heartbeat_timer_send_reset()
@@ -135,7 +133,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def start_connection(self, host, port, login, password, virtualhost, ssl=False,
-            login_method='AMQPLAIN', insist=False):
+                         login_method='AMQPLAIN', insist=False):
         """Initiate a connection at the protocol level
             We send `PROTOCOL_HEADER'
         """
@@ -194,8 +192,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         frame = yield from self.get_frame()
         yield from self.dispatch_frame(frame)
         if (frame.frame_type == amqp_constants.TYPE_METHOD and
-                frame.class_id == amqp_constants.CLASS_CONNECTION and
-                frame.method_id == amqp_constants.CONNECTION_CLOSE):
+                    frame.class_id == amqp_constants.CLASS_CONNECTION and
+                    frame.method_id == amqp_constants.CONNECTION_CLOSE):
             raise exceptions.AmqpClosedConnection()
 
         # for now, we read server's responses asynchronously
@@ -376,9 +374,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         method_id = response.read_short()
         self.stop()
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
-            reply_text, reply_code, class_id, method_id)
+                       reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
-
 
     @asyncio.coroutine
     def tune(self, frame):
