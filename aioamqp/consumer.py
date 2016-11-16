@@ -21,12 +21,14 @@ class Consumer:
         self._stoped = False
 
     if PY35:
-        async def __aiter__(self):
+        @asyncio.coroutine
+        def __aiter__(self):
             return self
 
-        async def __anext__(self):
+        @asyncio.coroutine
+        def __anext__(self):
             if not self._stoped:
-                self.message = await self._queue.get()
+                self.message = yield from self._queue.get()
                 if isinstance(self.message, StopIteration):
                     self._stoped = True
                     raise StopAsyncIteration()
