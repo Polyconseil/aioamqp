@@ -34,6 +34,9 @@ test:
 update:
 	pip install -r requirements_dev.txt
 
+pylint:
+	pylint aioamqp
+
 
 ### semi-private targets used by polyconseil's CI (copy-pasted from blease) ###
 
