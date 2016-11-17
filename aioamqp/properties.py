@@ -1,3 +1,4 @@
+# pylint: disable=redefined-builtin
 from .constants import MESSAGE_PROPERTIES
 
 
