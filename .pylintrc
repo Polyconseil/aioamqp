@@ -47,7 +47,8 @@ disable=
     too-many-locals,
     too-many-public-methods,
     too-many-statements,
-    unused-argument
+    unused-argument,
+    wrong-import-order
 
 
 [REPORTS]
