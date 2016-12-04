@@ -285,7 +285,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             except exceptions.AmqpClosedConnection as exc:
                 logger.info("Close connection")
                 self.stop_now.set_result(None)
-
+                self._close_channels(exception=exc)
+            except asyncio.CancelledError as exc:
+                self.stop_now.set_result(None)
                 self._close_channels(exception=exc)
             except Exception:  # pylint: disable=broad-except
                 logger.exception('error on dispatch')
