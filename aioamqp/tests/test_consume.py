@@ -21,6 +21,9 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
     def callback(self, channel, body, envelope, properties):
         self.consume_future.set_result((body, envelope, properties))
 
+    def callback_sync(self, channel, body, envelope, properties):
+        self.consume_future.set_result((body, envelope, properties))
+
     @asyncio.coroutine
     def get_callback_result(self):
         yield from self.consume_future
@@ -75,6 +78,33 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from asyncio.sleep(2, loop=self.loop)
         # start consume
         yield from channel.basic_consume(self.callback, queue_name="q")
+        # required ?
+        yield from asyncio.sleep(2, loop=self.loop)
+
+        self.assertTrue(self.consume_future.done())
+        # get one
+        body, envelope, properties = yield from self.get_callback_result()
+        self.assertIsNotNone(envelope.consumer_tag)
+        self.assertIsNotNone(envelope.delivery_tag)
+        self.assertEqual(b"coucou", body)
+        self.assertIsInstance(properties, Properties)
+
+    @testing.coroutine
+    def test_consume_not_coroutine(self):
+        # declare
+        yield from self.channel.queue_declare("q", exclusive=True, no_wait=False)
+        yield from self.channel.exchange_declare("e", "fanout")
+        yield from self.channel.queue_bind("q", "e", routing_key='')
+
+        # get a different channel
+        channel = yield from self.create_channel()
+
+        # publish
+        yield from channel.publish("coucou", "e", routing_key='',)
+
+        yield from asyncio.sleep(2, loop=self.loop)
+        # start consume
+        yield from channel.basic_consume(self.callback_sync, queue_name="q")
         # required ?
         yield from asyncio.sleep(2, loop=self.loop)
 
