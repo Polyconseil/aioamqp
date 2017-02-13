@@ -6,7 +6,7 @@ The main purpose of this part of the tutorial is to `ack` a message in RabbitMQ 
 new_task
 --------
 
-This publisher creates a queue with the `durable` flag and publish a message with the property `presistent`.
+This publisher creates a queue with the `durable` flag and publish a message with the property `persistent`.
 
  .. code-block:: python
 
