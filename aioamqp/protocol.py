@@ -94,7 +94,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     def connection_made(self, transport):
         super().connection_made(transport)
-        print('connection sucess')
         self._stream_writer = _StreamWriter(transport, self, self._stream_reader, self._loop)
 
     def connection_lost(self, exc):
@@ -106,7 +105,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         super().connection_lost(exc)
 
     def data_received(self, data):
-
         self._heartbeat_timer_recv_reset()
         super().data_received(data)
 
