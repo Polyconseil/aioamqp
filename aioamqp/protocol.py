@@ -146,7 +146,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 'LOGIN': login,
             }
         elif login_method != 'AMQPLAIN':
-            logger.warning('only AMQPLAIN login_method is supported, falling back to AMQPLAIN')
+            raise TypeError('only AMQPLAIN, EXTERNAL login_method supported')
         else:
             auth = {
                 'LOGIN': login,

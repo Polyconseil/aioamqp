@@ -3,6 +3,7 @@ import socket
 import sys
 import ssl as ssl_module  # import as to enable argument named ssl in connect
 from urllib.parse import urlparse
+import os
 
 from .exceptions import *  # pylint: disable=wildcard-import
 from .protocol import AmqpProtocol
@@ -48,6 +49,9 @@ def connect(host='localhost', port=None, login='guest', password='guest',
         if not verify_ssl:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl_module.CERT_NONE
+        for file in ssl_options:
+            if os.path.exists(ssl_options[file]):
+                raise FileNotFoundError(file)
         ssl_context.load_cert_chain(
             ssl_options.get('certfile'),
             keyfile=ssl_options.get('keyfile')
