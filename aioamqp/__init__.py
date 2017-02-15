@@ -14,7 +14,8 @@ from .version import __packagename__
 @asyncio.coroutine
 def connect(host='localhost', port=None, login='guest', password='guest',
             virtualhost='/', ssl=False, login_method='AMQPLAIN', insist=False,
-            protocol_factory=AmqpProtocol, *, verify_ssl=True, loop=None, **kwargs):
+            protocol_factory=AmqpProtocol, *, verify_ssl=True, loop=None,
+            ssl_options={}, **kwargs):
     """Convenient method to connect to an AMQP broker
 
         @host:          the host to connect to
@@ -47,6 +48,11 @@ def connect(host='localhost', port=None, login='guest', password='guest',
         if not verify_ssl:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl_module.CERT_NONE
+        ssl_context.load_cert_chain(
+            ssl_options.get('certfile'),
+            keyfile=ssl_options.get('keyfile')
+        )
+        ssl_context.load_verify_locations(cafile=ssl_options.get('ca_certs'))
         create_connection_kwargs['ssl'] = ssl_context
 
     if port is None:

@@ -94,6 +94,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     def connection_made(self, transport):
         super().connection_made(transport)
+        print('connection sucess')
         self._stream_writer = _StreamWriter(transport, self, self._stream_reader, self._loop)
 
     def connection_lost(self, exc):
@@ -105,6 +106,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         super().connection_lost(exc)
 
     def data_received(self, data):
+
         self._heartbeat_timer_recv_reset()
         super().data_received(data)
 
@@ -139,10 +141,17 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """Initiate a connection at the protocol level
             We send `PROTOCOL_HEADER'
         """
-
-        if login_method != 'AMQPLAIN':
-            # TODO
+        if login_method == 'EXTERNAL':
+            auth = {
+                'LOGIN': login,
+            }
+        elif login_method != 'AMQPLAIN':
             logger.warning('only AMQPLAIN login_method is supported, falling back to AMQPLAIN')
+        else:
+            auth = {
+                'LOGIN': login,
+                'PASSWORD': password,
+            }
 
         self._stream_writer.write(amqp_constants.PROTOCOL_HEADER)
 
@@ -159,13 +168,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             'product_version': version.__version__,
         }
         client_properties.update(self.client_properties)
-        auth = {
-            'LOGIN': login,
-            'PASSWORD': password,
-        }
 
         # waiting reply start with credentions and co
-        yield from self.start_ok(client_properties, 'AMQPLAIN', auth, self.server_locales[0])
+        yield from self.start_ok(client_properties, login_method, auth, self.server_locales[0])
 
         # wait for a "tune" reponse
         yield from self.dispatch_frame()
