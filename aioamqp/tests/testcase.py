@@ -82,8 +82,11 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         super().setUp()
         self.host = os.environ.get('AMQP_HOST', 'localhost')
         self.port = os.environ.get('AMQP_PORT', 5672)
+        self.login = os.environ.get('AMQP_USER', 'guest')
+        self.password = os.environ.get('AMQP_PASS', 'guest')
+        self.mgr_port = os.environ.get('AMQP_MGR_PORT', 15672)
         self.vhost = os.environ.get('AMQP_VHOST', self.VHOST + str(uuid.uuid4()))
-        self.http_client = pyrabbit.api.Client('localhost:15672/api/', 'guest', 'guest')
+        self.http_client = pyrabbit.api.Client('%s:%d/api/' % (self.host,self.mgr_port), self.login,self.password)
 
         self.amqps = []
         self.channels = []
@@ -101,7 +104,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
         self.http_client.create_vhost(self.vhost)
         self.http_client.set_vhost_permissions(
-            vname=self.vhost, username='guest', config='.*', rd='.*', wr='.*',
+            vname=self.vhost, username=self.login, config='.*', rd='.*', wr='.*',
         )
 
         @asyncio.coroutine
@@ -287,7 +290,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             return ProxyAmqpProtocol(self, *args, **kw)
         vhost = vhost or self.vhost
         transport, protocol = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
-            protocol_factory=protocol_factory, loop=self.loop)
+            protocol_factory=protocol_factory, loop=self.loop, login=self.login, password=self.password)
         self.amqps.append(protocol)
         self.transports.append(transport)
         return transport, protocol

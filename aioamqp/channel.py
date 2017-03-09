@@ -661,7 +661,7 @@ class Channel:
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
         """From the server, means the server won't send anymore messages to this consumer."""
-        consumer_tag = frame.arguments['consumer_tag']
+        consumer_tag = frame.arguments.get('consumer_tag',None)
         self.cancelled_consumers.add(consumer_tag)
         logger.info("consume cancelled received")
 

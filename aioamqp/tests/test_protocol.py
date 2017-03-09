@@ -19,7 +19,8 @@ class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_connect(self):
-        _transport, protocol = yield from amqp_connect(virtualhost=self.vhost, loop=self.loop)
+        _transport, protocol = yield from amqp_connect(virtualhost=self.vhost, loop=self.loop,
+            host=self.host,port=self.port, login=self.login,password=self.password)
         self.assertTrue(protocol.is_open)
         yield from protocol.close()
 
@@ -33,6 +34,8 @@ class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
             virtualhost=self.vhost,
             client_properties=client_properties,
             loop=self.loop,
+            host=self.host,port=self.port,
+            login=self.login,password=self.password
         )
 
         self.assertEqual(protocol.client_properties, client_properties)
@@ -41,11 +44,13 @@ class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_connection_unexistant_vhost(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
-            yield from amqp_connect(virtualhost='/unexistant', loop=self.loop)
+            yield from amqp_connect(virtualhost='/unexistant', loop=self.loop,
+                host=self.host,port=self.port, login=self.login,password=self.password)
 
     def test_connection_wrong_login_password(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
-            self.loop.run_until_complete(amqp_connect(login='wrong', password='wrong', loop=self.loop))
+            self.loop.run_until_complete(amqp_connect(login='wrong', password='wrong', loop=self.loop,
+                host=self.host,port=self.port))
 
     @testing.coroutine
     def test_connection_from_url(self):

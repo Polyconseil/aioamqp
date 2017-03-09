@@ -97,7 +97,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self._stream_writer = _StreamWriter(transport, self, self._stream_reader, self._loop)
 
     def connection_lost(self, exc):
-        logger.warning("Connection lost exc=%r", exc)
+        if exc is None:
+            logger.debug("Connection lost")
+        else:
+            logger.warning("Connection lost", exc_info=exc)
         self.connection_closed.set()
         self.is_open = False
         self._close_channels(exception=exc)
@@ -200,6 +203,14 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         # for now, we read server's responses asynchronously
         self.worker = ensure_future(self.run(), loop=self._loop)
+        def done_work(w):
+            try:
+                w.result()
+            except asyncio.CancelledError:
+                pass
+            except Exception as exc:
+                logger.exception("Worker died", exc_info=exc)
+        self.worker.add_done_callback(done_work)
 
     def stop(self):
         self.is_open = False
