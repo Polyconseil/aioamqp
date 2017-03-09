@@ -52,17 +52,13 @@ class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_basic_cancel(self):
 
-        @asyncio.coroutine
-        def callback(channel, body, envelope, _properties):
-            pass
-
         queue_name = 'queue_name'
         exchange_name = 'exchange_name'
         yield from self.channel.queue_declare(queue_name)
         yield from self.channel.exchange_declare(exchange_name, type_name='direct')
         yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
-        result = yield from self.channel.basic_consume(callback, queue_name=queue_name)
-        result = yield from self.channel.basic_cancel(result['consumer_tag'])
+        consumer = yield from self.channel.basic_consume(queue_name=queue_name)
+        result = yield from self.channel.basic_cancel(consumer.tag)
 
         result = yield from self.channel.publish("payload", exchange_name, routing_key='')
 
@@ -139,11 +135,16 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         qfuture = asyncio.Future(loop=self.loop)
 
-        @asyncio.coroutine
-        def qcallback(channel, body, envelope, _properties):
-            qfuture.set_result(envelope)
+        consumer = yield from self.channel.basic_consume(queue_name=queue_name)
 
-        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
+        @asyncio.coroutine
+        def consumer_task(consumer):
+            while (yield from consumer.fetch_message()):
+                channel, body, envelope, _properties = consumer.get_message()
+                qfuture.set_result(envelope)
+
+        asyncio.get_event_loop().create_task(consumer_task(consumer))
+
         envelope = yield from qfuture
 
         yield from qfuture
@@ -162,13 +163,18 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(channel, body, envelope, _properties):
-            yield from self.channel.basic_client_nack(
-                envelope.delivery_tag, multiple=True, requeue=False
-            )
-            qfuture.set_result(True)
+        def consumer_task(consumer):
+            while (yield from consumer.fetch_message()):
+                channel, body, envelope, _properties = consumer.get_message()
 
-        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
+                yield from self.channel.basic_client_nack(
+                    envelope.delivery_tag, multiple=True, requeue=False
+                )
+                qfuture.set_result(True)
+
+        consumer = yield from self.channel.basic_consume(queue_name=queue_name)
+
+        asyncio.get_event_loop().create_task(consumer_task(consumer))
         yield from qfuture
 
     @testing.coroutine
@@ -184,11 +190,14 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(channel, body, envelope, _properties):
-            yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=False)
-            qfuture.set_result(True)
+        def consumer_task(consumer):
+            while (yield from consumer.fetch_message()):
+                channel, body, envelope, _properties = consumer.get_message()
+                yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=False)
+                qfuture.set_result(True)
 
-        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
+        consumer = yield from self.channel.basic_consume(queue_name=queue_name)
+        asyncio.get_event_loop().create_task(consumer_task(consumer))
         yield from qfuture
 
     @testing.coroutine
@@ -204,11 +213,14 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(channel, body, envelope, _properties):
-            yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=True)
-            qfuture.set_result(True)
+        def consumer_task(consumer):
+            while (yield from consumer.fetch_message()):
+                channel, body, envelope, _properties = consumer.get_message()
+                yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=True)
+                qfuture.set_result(True)
 
-        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
+        consumer = yield from self.channel.basic_consume(queue_name=queue_name)
+        asyncio.get_event_loop().create_task(consumer_task(consumer))
         yield from qfuture
 
 
@@ -224,10 +236,13 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         qfuture = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
-        def qcallback(channel, body, envelope, _properties):
-            qfuture.set_result(envelope)
+        def consumer_task(consumer):
+            while (yield from consumer.fetch_message()):
+                channel, body, envelope, _properties = consumer.get_message()
+                qfuture.set_result(envelope)
 
-        yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
+        consumer = yield from self.channel.basic_consume(queue_name=queue_name)
+        asyncio.get_event_loop().create_task(consumer_task(consumer))
         envelope = yield from qfuture
 
         yield from self.channel.basic_reject(envelope.delivery_tag)

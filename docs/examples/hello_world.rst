@@ -63,13 +63,21 @@ We have to ensure the queue is created. Queue declaration is indempotant.
     yield from channel.queue_declare(queue_name='hello')
 
 
-To consume a message, the library calls a callback (which **MUST** be a coroutine):
+To consume a message is used the Consumer object using an async iter if is python 3.5 or while with ``fetch_message`` and ``get_message`` if is python < 3.5:
 
  .. code-block:: python
 
-    @asyncio.coroutine
-    def callback(channel, body, envelope, properties):
+    consumer = yield from channel.basic_consume(queue_name='hello', no_ack=True)
+
+    while (yield from consumer.fetch_message()):
+        channel, body, envelope, properties = consumer.get_message()
         print(body)
 
-    yield from channel.basic_consume(callback, queue_name='hello', no_ack=True)
+For python 3.5 :
 
+.. code-block:: python
+
+    consumer = await channel.basic_consume(queue_name='hello', no_ack=True)
+
+    async for channel, body, envelope, properties in consumer:
+        print(body)

@@ -8,10 +8,11 @@ API
 Basics
 ------
 
-There are two principal objects when using aioamqp:
+There are three principal objects when using aioamqp:
 
  * The protocol object, used to begin a connection to aioamqp,
  * The channel object, used when creating a new channel to effectively use an AMQP channel.
+ * The consumer object, used for consuming messages from a queue.
 
 
 Starting a connection
@@ -141,20 +142,21 @@ When consuming message, you connect to the same queue you previously created::
     import asyncio
     import aioamqp
 
-    @asyncio.coroutine
-    def callback(body, envelope, properties):
-        print(body)
-
     channel = yield from protocol.channel()
-    yield from channel.basic_consume(callback, queue_name="my_queue")
+    consumer = yield from channel.basic_consume(queue_name="my_queue")
 
-The ``basic_consume`` method tells the server to send us the messages, and will call ``callback`` with amqp response arguments.
+     while (yield from consumer.fetch_message()):
+            channel, body, envelope, properties = consumer.get_message()
+            print(body)
 
-The ``consumer_tag`` is the id of your consumer, and the ``delivery_tag`` is the tag used if you want to acknowledge the message.
+The ``basic_consume`` method tells the server to send us the messages, and will add the amqp response arguments to the consumer queue
+from where you can get them and process using an async iterator or a while using the ``fetch_message`` and ``get_message`` methods of the consumer class.
 
-In the callback:
+The ``consumer.tag`` or ``envelope.consumer_tag`` is the id of your consumer, and the ``envelope.delivery_tag`` is the tag used if you want to acknowledge the message.
 
-* the first ``body`` parameter is the message
+In the while:
+
+* the ``body`` returned by ``get_message`` is the message
 * the ``envelope`` is an instance of envelope.Envelope class which encapsulate a group of amqp parameter such as::
 
     consumer_tag

@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Aioamqp 0.9.0
+-------------
+
+ * Changed consumer API from callbacks to coroutines solving the problem of publish inside of a consumer callback
+
 Aioamqp 0.8.2
 -------------
 

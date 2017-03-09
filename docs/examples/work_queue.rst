@@ -41,14 +41,14 @@ Then, the worker configure the `QOS`: it specifies how the worker unqueues messa
     yield from channel.basic_qos(prefetch_count=1, prefetch_size=0, connection_global=False)
 
 
-Finaly we have to create a callback that will `ack` the message to mark it as `processed`.
-Note: the code in the callback calls `asyncio.sleep` to simulate an asyncio compatible task that takes time.
+Finaly we have to create a messages processor that will `ack` the message to mark it as `processed`.
+Note: the code in the while calls `asyncio.sleep` to simulate an asyncio compatible task that takes time.
 You probably want to block the eventloop to simulate a CPU intensive task using `time.sleep`.
 
  .. code-block:: python
 
-    @asyncio.coroutine
-    def callback(channel, body, envelope, properties):
+    while (yield from consumer.fetch_message()):
+        channel, body, envelope, properties = consumer.get_message()
         print(" [x] Received %r" % body)
         yield from asyncio.sleep(body.count(b'.'))
         print(" [x] Done")

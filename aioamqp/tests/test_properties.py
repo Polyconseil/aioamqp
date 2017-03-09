@@ -24,15 +24,19 @@ class ReplyTestCase(testcase.RabbitTestCase, unittest.TestCase):
         yield from self.channel.queue_bind(
             server_queue_name, exchange_name, routing_key=routing_key)
         @asyncio.coroutine
-        def server_callback(channel, body, envelope, properties):
-            logger.debug('Server received message')
-            server_future.set_result((body, envelope, properties))
-            publish_properties = {'correlation_id': properties.correlation_id}
-            logger.debug('Replying to %r', properties.reply_to)
-            yield from self.channel.publish(
-                b'reply message', exchange_name, properties.reply_to, publish_properties)
-            logger.debug('Server replied')
-        yield from self.channel.basic_consume(server_callback, queue_name=server_queue_name)
+        def server_task(consumer):
+            while (yield from consumer.fetch_message()):
+                channel, body, envelope, properties = consumer.get_message()
+                logger.debug('Server received message')
+                server_future.set_result((body, envelope, properties))
+                publish_properties = {'correlation_id': properties.correlation_id}
+                logger.debug('Replying to %r', properties.reply_to)
+                yield from self.channel.publish(
+                    b'reply message', exchange_name, properties.reply_to, publish_properties)
+                logger.debug('Server replied')
+
+        consumer = yield from self.channel.basic_consume(queue_name=server_queue_name)
+        asyncio.get_event_loop().create_task(server_task(consumer))
         logger.debug('Server consuming messages')
 
     @asyncio.coroutine
@@ -47,11 +51,16 @@ class ReplyTestCase(testcase.RabbitTestCase, unittest.TestCase):
             client_queue_name, exclusive=True, no_wait=False)
         yield from client_channel.queue_bind(
             client_queue_name, exchange_name, routing_key=client_routing_key)
+
         @asyncio.coroutine
-        def client_callback(channel, body, envelope, properties):
-            logger.debug('Client received message')
-            client_future.set_result((body, envelope, properties))
-        yield from client_channel.basic_consume(client_callback, queue_name=client_queue_name)
+        def client_task(consumer):
+            while (yield from consumer.fetch_message()):
+                channel, body, envelope, properties = consumer.get_message()
+                logger.debug('Client received message')
+                client_future.set_result((body, envelope, properties))
+
+        consumer = yield from client_channel.basic_consume(queue_name=client_queue_name)
+        asyncio.get_event_loop().create_task(client_task(consumer))
         logger.debug('Client consuming messages')
 
         yield from client_channel.publish(

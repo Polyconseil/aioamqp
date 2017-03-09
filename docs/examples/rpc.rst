@@ -40,12 +40,12 @@ Note: the client use a `waiter` (an asyncio.Event) which will be set when receiv
 Server
 ------
 
-When unqueing a message, the server will publish a response directly in the callback. The `correlation_id` is used to let the client know it's a response from this request.
+When unqueing a message, the server will enqueue a response directly in the consumer loop. The `correlation_id` is used to let the client know it's a response from this request.
 
  .. code-block:: python
 
-    @asyncio.coroutine
-    def on_request(channel, body, envelope, properties):
+    while (yield from consumer.fetch_message()):
+        channel, body, envelope, properties = consumer.get_message()
         n = int(body)
 
         print(" [.] fib(%s)" % n)
