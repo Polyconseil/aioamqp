@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Aioamqp next
+------------
+
+ * Fix server cancel handling (closes #95).
+
 Aioamqp 0.8.2
 -------------
 
