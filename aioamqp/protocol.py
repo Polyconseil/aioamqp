@@ -372,8 +372,15 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
             reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
+        self._close_ok()
         self._stream_writer.close()
 
+    def _close_ok(self):
+        frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_METHOD, 0)
+        frame.declare_method(
+            amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK)
+        request = amqp_frame.AmqpEncoder()
+        frame.write_frame(request)
 
     @asyncio.coroutine
     def tune(self, frame):
