@@ -16,7 +16,7 @@ from . import testing
 from .. import connect as aioamqp_connect
 from .. import exceptions
 from ..channel import Channel
-from ..protocol import AmqpProtocol
+from ..protocol import AmqpProtocol, OPEN
 
 
 logger = logging.getLogger(__name__)
@@ -121,7 +121,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
                 logger.debug('Delete exchange %s', self.full_name(exchange_name))
                 yield from self.safe_exchange_delete(exchange_name, channel)
             for amqp in self.amqps:
-                if not amqp.is_open:
+                if amqp.state != OPEN:
                     continue
                 logger.debug('Delete amqp %s', amqp)
                 yield from amqp.close()

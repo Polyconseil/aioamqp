@@ -4,6 +4,7 @@ import unittest
 import socket
 
 from aioamqp import connect
+from aioamqp.protocol import OPEN
 
 from . import testing, testcase
 
@@ -13,7 +14,7 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_connect(self):
         _transport, proto = yield from connect(virtualhost=self.vhost, loop=self.loop)
-        self.assertTrue(proto.is_open)
+        self.assertEqual(proto.state, OPEN)
         self.assertIsNotNone(proto.server_properties)
         yield from proto.close()
 
@@ -30,7 +31,7 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
             frame_max=frame_max,
             heartbeat=heartbeat,
         )
-        self.assertTrue(proto.is_open)
+        self.assertEqual(proto.state, OPEN)
         self.assertIsNotNone(proto.server_properties)
 
         self.assertDictEqual(proto.connection_tunning, {

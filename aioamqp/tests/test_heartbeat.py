@@ -3,9 +3,10 @@
 """
 
 import asyncio
-
 import unittest
 from unittest import mock
+
+from aioamqp.protocol import CLOSED
 
 from . import testcase
 from . import testing
@@ -28,4 +29,4 @@ class HeartbeatTestCase(testcase.RabbitTestCase, unittest.TestCase):
             send_heartbeat.assert_called_once_with()
 
             yield from asyncio.sleep(1.001)
-            self.assertFalse(self.amqp.is_open)
+            self.assertEqual(self.amqp.state, CLOSED)

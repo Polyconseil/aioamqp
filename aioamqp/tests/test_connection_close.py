@@ -1,5 +1,7 @@
 import unittest
 
+from aioamqp.protocol import OPEN, CLOSED
+
 from . import testcase
 from . import testing
 
@@ -9,12 +11,12 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_close(self):
         amqp = self.amqp
-        self.assertTrue(amqp.is_open)
+        self.assertEqual(amqp.state, OPEN)
         # grab a ref here because py36 sets _stream_reader to None in
         # StreamReaderProtocol.connection_lost()
         transport = amqp._stream_reader._transport
         yield from amqp.close()
-        self.assertFalse(amqp.is_open)
+        self.assertEqual(amqp.state, CLOSED)
         if hasattr(transport, 'is_closing'):
             self.assertTrue(transport.is_closing())
         else:
@@ -32,7 +34,7 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # is thus bogus.
         amqp = self.amqp
         yield from amqp.close()
-        self.assertFalse(amqp.is_open)
+        self.assertEqual(amqp.state, CLOSED)
         if amqp._stream_reader is None:
             # calling close() twice on python 3.5+ raises an AttributeError
             # because _stream_reader is set to None by

@@ -11,7 +11,7 @@ from . import testcase
 from .. import exceptions
 from .. import connect as amqp_connect
 from .. import from_url as amqp_from_url
-from ..protocol import AmqpProtocol
+from ..protocol import AmqpProtocol, OPEN
 
 
 class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
@@ -20,7 +20,7 @@ class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
     @testing.coroutine
     def test_connect(self):
         _transport, protocol = yield from amqp_connect(virtualhost=self.vhost, loop=self.loop)
-        self.assertTrue(protocol.is_open)
+        self.assertEqual(protocol.state, OPEN)
         yield from protocol.close()
 
     @testing.coroutine

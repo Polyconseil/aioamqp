@@ -16,6 +16,9 @@ from .compat import ensure_future
 logger = logging.getLogger(__name__)
 
 
+CONNECTING, OPEN, CLOSING, CLOSED = range(4)
+
+
 class _StreamWriter(asyncio.StreamWriter):
 
     def write(self, data):
@@ -76,7 +79,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.connecting = asyncio.Future(loop=self._loop)
         self.connection_closed = asyncio.Event(loop=self._loop)
         self.stop_now = asyncio.Future(loop=self._loop)
-        self.is_open = False
+        self.state = CONNECTING
         self.version_major = None
         self.version_minor = None
         self.server_properties = None
@@ -99,7 +102,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     def connection_lost(self, exc):
         logger.warning("Connection lost exc=%r", exc)
         self.connection_closed.set()
-        self.is_open = False
+        self.state = CLOSED
         self._close_channels(exception=exc)
         self._heartbeat_stop()
         super().connection_lost(exc)
@@ -420,7 +423,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def open_ok(self, frame):
-        self.is_open = True
+        self.state = OPEN
         logger.info("Recv open ok")
 
     #
