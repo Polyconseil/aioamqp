@@ -121,6 +121,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder.write_short(0)
         encoder.write_short(0)
         frame.write_frame(encoder)
+        self._stop_heartbeat()
         if not no_wait:
             yield from self.wait_closed(timeout=timeout)
 
@@ -374,11 +375,21 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         reply_text = response.read_shortstr()
         class_id = response.read_short()
         method_id = response.read_short()
+        self._stop_heartbeat()
         self.stop()
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
             reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
 
+    def _stop_heartbeat(self):
+        # prevent new timers from being created by overlapping traffic
+        self.server_heartbeat = 0
+        if self._heartbeat_timer_recv is not None:
+            self._heartbeat_timer_recv.cancel()
+            self._heartbeat_timer_recv = None
+        if self._heartbeat_timer_send is not None:
+            self._heartbeat_timer_send.cancel()
+            self._heartbeat_timer_send = None
 
     @asyncio.coroutine
     def tune(self, frame):
