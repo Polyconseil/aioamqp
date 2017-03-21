@@ -67,18 +67,9 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # publish
         yield from channel.publish("coucou", "e", routing_key='',)
 
-        # assert there is a message to consume
-        queues = self.list_queues()
-        self.assertIn("q", queues)
-        self.assertEqual(1, queues["q"]['messages'])
-
-        yield from asyncio.sleep(2, loop=self.loop)
         # start consume
         yield from channel.basic_consume(self.callback, queue_name="q")
-        # required ?
-        yield from asyncio.sleep(2, loop=self.loop)
 
-        self.assertTrue(self.consume_future.done())
         # get one
         body, envelope, properties = yield from self.get_callback_result()
         self.assertIsNotNone(envelope.consumer_tag)
@@ -100,18 +91,9 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # publish
         yield from channel.publish("a"*1000000, "e", routing_key='',)
 
-        # assert there is a message to consume
-        queues = self.list_queues()
-
-        self.assertIn("q", queues)
-        self.assertEqual(1, queues["q"]['messages'])
-
         # start consume
         yield from channel.basic_consume(self.callback, queue_name="q")
 
-        yield from asyncio.sleep(1, loop=self.loop)
-
-        self.assertTrue(self.consume_future.done())
         # get one
         body, envelope, properties = yield from self.get_callback_result()
         self.assertIsNotNone(envelope.consumer_tag)
@@ -191,10 +173,6 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # publish
         yield from channel.publish("coucou", "e", routing_key='',)
 
-        # assert there is a message to consume
-        queues = self.list_queues()
-        self.assertIn("q", queues)
-        self.assertEqual(1, queues["q"]['messages'])
         sync_future = asyncio.Future(loop=self.loop)
 
         @asyncio.coroutine
