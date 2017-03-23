@@ -108,6 +108,7 @@ class Channel:
 
     @asyncio.coroutine
     def _write_frame(self, frame, request, no_wait, timeout=None, no_check_open=False):
+        yield from self.protocol.ensure_open()
         if not self.is_open and not no_check_open:
             raise exceptions.ChannelClosed()
         frame.write_frame(request)

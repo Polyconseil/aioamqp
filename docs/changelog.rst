@@ -6,6 +6,7 @@ Aioamqp next
 
  * Fix server cancel handling (closes #95).
  * Send "close ok" method on server-initiated close.
+ * Validate internal state before trying to send messages.
 
 Aioamqp 0.8.2
 -------------

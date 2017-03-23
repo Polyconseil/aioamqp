@@ -1,6 +1,7 @@
 import unittest
 
 from aioamqp.protocol import OPEN, CLOSED
+from aioamqp.exceptions import AmqpClosedConnection
 
 from . import testcase
 from . import testing
@@ -28,16 +29,8 @@ class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_multiple_close(self):
-        # TODO: there really should be some sort of state inside the protocol
-        # and calling close() twice should either do nothing or raise some sort
-        # of state exception instead of an AttributeError on py36.  This test
-        # is thus bogus.
         amqp = self.amqp
         yield from amqp.close()
         self.assertEqual(amqp.state, CLOSED)
-        if amqp._stream_reader is None:
-            # calling close() twice on python 3.5+ raises an AttributeError
-            # because _stream_reader is set to None by
-            # StreamReaderProtocol.connection_lost()
-            return
-        yield from amqp.close()
+        with self.assertRaises(AmqpClosedConnection):
+            yield from amqp.close()

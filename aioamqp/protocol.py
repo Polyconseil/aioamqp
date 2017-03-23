@@ -112,8 +112,30 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         super().data_received(data)
 
     @asyncio.coroutine
+    def ensure_open(self):
+        # Raise a suitable exception if the connection isn't open.
+        # Handle cases from the most common to the least common.
+
+        if self.state == OPEN:
+            return
+
+        if self.state == CLOSED:
+            raise exceptions.AmqpClosedConnection()
+
+        # If the closing handshake is in progress, let it complete.
+        if self.state == CLOSING:
+            yield from self.wait_closed()
+            raise exceptions.AmqpClosedConnection()
+
+        # Control may only reach this point in buggy third-party subclasses.
+        assert self.state == CONNECTING
+        raise exceptions.AioamqpException("connection isn't established yet.")
+
+    @asyncio.coroutine
     def close(self, no_wait=False, timeout=None):
         """Close connection (and all channels)"""
+        yield from self.ensure_open()
+        self.state = CLOSING
         frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_METHOD, 0)
         frame.declare_method(
             amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE)
@@ -367,6 +389,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def server_close(self, frame):
         """The server is closing the connection"""
+        self.state = CLOSING
         response = amqp_frame.AmqpDecoder(frame.payload)
         reply_code = response.read_short()
         reply_text = response.read_shortstr()
@@ -435,6 +458,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """Factory to create a new channel
 
         """
+        yield from self.ensure_open()
         try:
             channel_id = self.channels_ids_free.pop()
         except KeyError:
