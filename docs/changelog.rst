@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Aioamqp next
-------------
+Aioamqp 0.9.0
+-------------
 
  * Fix server cancel handling (closes #95).
  * Send "close ok" method on server-initiated close.
