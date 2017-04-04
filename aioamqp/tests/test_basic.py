@@ -202,11 +202,17 @@ class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
         )
 
         qfuture = asyncio.Future(loop=self.loop)
+        called = False
 
         @asyncio.coroutine
         def qcallback(channel, body, envelope, _properties):
-            yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=True)
-            qfuture.set_result(True)
+            nonlocal called
+            if not called:
+                called = True
+                yield from self.channel.basic_client_nack(envelope.delivery_tag, requeue=True)
+            else:
+                yield from self.channel.basic_client_ack(envelope.delivery_tag)
+                qfuture.set_result(True)
 
         yield from self.channel.basic_consume(qcallback, queue_name=queue_name)
         yield from qfuture
