@@ -349,10 +349,8 @@ class AmqpRequest:
         self.class_id = class_id
         self.method_id = method_id
 
-    def write_frame(self, encoder=None):
-        payload = None
-        if encoder is not None:
-            payload = encoder.payload
+    def write_frame(self, encoder):
+        payload = encoder.payload
         content_header = ''
         transmission = io.BytesIO()
         if self.frame_type == amqp_constants.TYPE_METHOD:
@@ -372,8 +370,7 @@ class AmqpRequest:
         transmission.write(header)
         if content_header:
             transmission.write(content_header)
-        if payload:
-            transmission.write(payload.getvalue())
+        transmission.write(payload.getvalue())
         transmission.write(amqp_constants.FRAME_END)
         return self.writer.write(transmission.getvalue())
 
