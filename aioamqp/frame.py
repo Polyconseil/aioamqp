@@ -56,7 +56,7 @@ DUMP_FRAMES = False
 
 class AmqpEncoder:
 
-    def __init__(self, writer=None):
+    def __init__(self):
         self.payload = io.BytesIO()
 
     def write_table(self, data_dict):

@@ -139,7 +139,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_METHOD, 0)
         frame.declare_method(
             amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE)
-        encoder = amqp_frame.AmqpEncoder(frame.payload)
+        encoder = amqp_frame.AmqpEncoder()
         # we request a clean connection close
         encoder.write_short(0)
         encoder.write_shortstr('')
