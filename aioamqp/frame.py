@@ -336,7 +336,6 @@ class AmqpRequest:
         self.class_id = None
         self.weight = None
         self.method_id = None
-        self.payload = None
         self.next_body_size = None
 
     def declare_class(self, class_id, weight=0):
