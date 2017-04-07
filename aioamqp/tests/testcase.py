@@ -203,7 +203,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         channel = channel or self.channel
         full_queue_name = self.full_name(queue_name)
         try:
-            yield from channel.queue_delete(full_queue_name, no_wait=False, timeout=1.0)
+            yield from channel.queue_delete(full_queue_name, no_wait=False)
         except asyncio.TimeoutError:
             logger.warning('Timeout on queue %s deletion', full_queue_name, exc_info=True)
         except Exception:  # pylint: disable=broad-except
@@ -218,7 +218,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         channel = channel or self.channel
         full_exchange_name = self.full_name(exchange_name)
         try:
-            yield from channel.exchange_delete(full_exchange_name, no_wait=False, timeout=1.0)
+            yield from channel.exchange_delete(full_exchange_name, no_wait=False)
         except asyncio.TimeoutError:
             logger.warning('Timeout on exchange %s deletion', full_exchange_name, exc_info=True)
         except Exception:  # pylint: disable=broad-except
