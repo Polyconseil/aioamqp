@@ -107,7 +107,7 @@ class Channel:
         yield from methods[(frame.class_id, frame.method_id)](frame)
 
     @asyncio.coroutine
-    def _write_frame(self, frame, request, no_wait, no_check_open=False):
+    def _write_frame(self, frame, request, no_check_open=False):
         yield from self.protocol.ensure_open()
         if not self.is_open and not no_check_open:
             raise exceptions.ChannelClosed()
@@ -127,7 +127,7 @@ class Channel:
         request.write_shortstr('')
         fut = self._set_waiter('open')
         try:
-            yield from self._write_frame(frame, request, no_wait=False, no_check_open=True)
+            yield from self._write_frame(frame, request, no_check_open=True)
         except Exception:
             self._get_waiter('open')
             fut.cancel()
@@ -173,7 +173,7 @@ class Channel:
         frame.declare_method(
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE_OK)
         request = amqp_frame.AmqpEncoder()
-        yield from self._write_frame(frame, request, no_wait=False)
+        yield from self._write_frame(frame, request)
 
     @asyncio.coroutine
     def server_channel_close(self, frame):
@@ -190,11 +190,11 @@ class Channel:
     def _write_frame_awaiting_response(self, waiter_id, frame, request, no_wait, **kwargs):
         '''Write a frame and set a waiter for the response (unless no_wait is set)'''
         if no_wait:
-            yield from self._write_frame(frame, request, no_wait=True, **kwargs)
+            yield from self._write_frame(frame, request, **kwargs)
         else:
             f = self._set_waiter(waiter_id)
             try:
-                yield from self._write_frame(frame, request, no_wait=False, **kwargs)
+                yield from self._write_frame(frame, request, **kwargs)
             except Exception:
                 self._get_waiter(waiter_id)
                 f.cancel()
@@ -464,10 +464,10 @@ class Channel:
         request.write_octet(int(no_wait))
         if not no_wait:
             future = self._set_waiter('queue_purge')
-            yield from self._write_frame(frame, request, no_wait)
+            yield from self._write_frame(frame, request)
             return (yield from future)
 
-        yield from self._write_frame(frame, request, no_wait)
+        yield from self._write_frame(frame, request)
 
     @asyncio.coroutine
     def queue_purge_ok(self, frame):
@@ -551,7 +551,7 @@ class Channel:
         request.write_bits(connection_global)
 
         future = self._set_waiter('basic_qos')
-        yield from self._write_frame(frame, request, no_wait=False)
+        yield from self._write_frame(frame, request)
         return (yield from future)
 
     @asyncio.coroutine
@@ -732,7 +732,7 @@ class Channel:
         request = amqp_frame.AmqpEncoder()
         request.write_long_long(delivery_tag)
         request.write_bits(multiple)
-        yield from self._write_frame(frame, request, no_wait=False)
+        yield from self._write_frame(frame, request)
 
     @asyncio.coroutine
     def basic_client_nack(self, delivery_tag, multiple=False, requeue=True):
@@ -743,7 +743,7 @@ class Channel:
         request = amqp_frame.AmqpEncoder()
         request.write_long_long(delivery_tag)
         request.write_bits(multiple, requeue)
-        yield from self._write_frame(frame, request, no_wait=False)
+        yield from self._write_frame(frame, request)
 
 
     @asyncio.coroutine
@@ -763,7 +763,7 @@ class Channel:
         request = amqp_frame.AmqpEncoder()
         request.write_long_long(delivery_tag)
         request.write_bits(requeue)
-        yield from self._write_frame(frame, request, no_wait=False)
+        yield from self._write_frame(frame, request)
 
     @asyncio.coroutine
     def basic_recover_async(self, requeue=True):
@@ -773,7 +773,7 @@ class Channel:
             amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RECOVER_ASYNC)
         request = amqp_frame.AmqpEncoder()
         request.write_bits(requeue)
-        yield from self._write_frame(frame, request, no_wait=False)
+        yield from self._write_frame(frame, request)
 
     @asyncio.coroutine
     def basic_recover(self, requeue=True):
