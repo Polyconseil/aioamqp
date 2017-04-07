@@ -107,9 +107,9 @@ class Channel:
         yield from methods[(frame.class_id, frame.method_id)](frame)
 
     @asyncio.coroutine
-    def _write_frame(self, frame, request, no_check_open=False):
+    def _write_frame(self, frame, request, check_open=True):
         yield from self.protocol.ensure_open()
-        if not self.is_open and not no_check_open:
+        if not self.is_open and check_open:
             raise exceptions.ChannelClosed()
         frame.write_frame(request)
 
@@ -127,7 +127,7 @@ class Channel:
         request.write_shortstr('')
         fut = self._set_waiter('open')
         try:
-            yield from self._write_frame(frame, request, no_check_open=True)
+            yield from self._write_frame(frame, request, check_open=False)
         except Exception:
             self._get_waiter('open')
             fut.cancel()
@@ -210,7 +210,7 @@ class Channel:
         request.write_bits(active)
         return (yield from self._write_frame_awaiting_response(
             'flow', frame, request, no_wait=False,
-            no_check_open=True))
+            check_open=False))
 
     @asyncio.coroutine
     def flow_ok(self, frame):
