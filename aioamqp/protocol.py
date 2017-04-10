@@ -96,6 +96,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_channel_max = None
         self.channels_ids_ceil = 0
         self.channels_ids_free = set()
+        self._drain_lock = asyncio.Lock(loop=self._loop)
 
     def connection_made(self, transport):
         super().connection_made(transport)
@@ -134,10 +135,18 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         raise exceptions.AioamqpException("connection isn't established yet.")
 
     @asyncio.coroutine
+    def _drain(self):
+        with (yield from self._drain_lock):
+            # drain() cannot be called concurrently by multiple coroutines:
+            # http://bugs.python.org/issue29930. Remove this lock when no
+            # version of Python where this bugs exists is supported anymore.
+            yield from self._stream_writer.drain()
+
+    @asyncio.coroutine
     def _write_frame(self, frame, request, drain=True):
         frame.write_frame(request)
         if drain:
-            yield from self._stream_writer.drain()
+            yield from self._drain()
 
     @asyncio.coroutine
     def close(self, no_wait=False, timeout=None):

@@ -113,7 +113,7 @@ class Channel:
             raise exceptions.ChannelClosed()
         frame.write_frame(request)
         if drain:
-            yield from self.protocol._stream_writer.drain()
+            yield from self.protocol._drain()
 
     @asyncio.coroutine
     def _write_frame_awaiting_response(self, waiter_id, frame, request, no_wait, check_open=True, drain=True):
@@ -508,7 +508,7 @@ class Channel:
                 encoder.payload.write(chunk)
             yield from self._write_frame(content_frame, encoder, drain=False)
 
-        yield from self.protocol._stream_writer.drain()
+        yield from self.protocol._drain()
 
     @asyncio.coroutine
     def basic_qos(self, prefetch_size=0, prefetch_count=0, connection_global=None):
@@ -826,7 +826,7 @@ class Channel:
                 encoder.payload.write(chunk)
             yield from self._write_frame(content_frame, encoder, drain=False)
 
-        yield from self.protocol._stream_writer.drain()
+        yield from self.protocol._drain()
 
         if self.publisher_confirms:
             yield from fut
