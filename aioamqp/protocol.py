@@ -134,6 +134,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         raise exceptions.AioamqpException("connection isn't established yet.")
 
     @asyncio.coroutine
+    def _write_frame(self, frame, request, drain=True):
+        frame.write_frame(request)
+        if drain:
+            yield from self._stream_writer.drain()
+
+    @asyncio.coroutine
     def close(self, no_wait=False, timeout=None):
         """Close connection (and all channels)"""
         yield from self.ensure_open()
@@ -147,7 +153,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder.write_shortstr('')
         encoder.write_short(0)
         encoder.write_short(0)
-        frame.write_frame(encoder)
+        yield from self._write_frame(frame, encoder)
         if not no_wait:
             yield from self.wait_closed(timeout=timeout)
 
@@ -330,7 +336,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """
         frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_HEARTBEAT, 0)
         request = amqp_frame.AmqpEncoder()
-        frame.write_frame(request)
+        yield from self._write_frame(frame, request)
 
     def _heartbeat_timer_recv_timeout(self):
         # 4.2.7 If a peer detects no incoming traffic (i.e. received octets) for
@@ -398,7 +404,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         request.write_shortstr(mechanism)
         request.write_table(auth)
         request.write_shortstr(locale.encode())
-        frame.write_frame(request)
+        yield from self._write_frame(frame, request)
 
     @asyncio.coroutine
     def server_close(self, frame):
@@ -420,7 +426,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         frame.declare_method(
             amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK)
         request = amqp_frame.AmqpEncoder()
-        frame.write_frame(request)
+        yield from self._write_frame(frame, request)
 
     @asyncio.coroutine
     def tune(self, frame):
@@ -439,7 +445,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder.write_long(frame_max)
         encoder.write_short(heartbeat)
 
-        frame.write_frame(encoder)
+        yield from self._write_frame(frame, encoder)
 
     @asyncio.coroutine
     def secure_ok(self, login_response):
@@ -456,7 +462,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         encoder.write_shortstr(capabilities)
         encoder.write_bool(insist)
 
-        frame.write_frame(encoder)
+        yield from self._write_frame(frame, encoder)
 
     @asyncio.coroutine
     def open_ok(self, frame):
