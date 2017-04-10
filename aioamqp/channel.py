@@ -125,15 +125,8 @@ class Channel:
             amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_OPEN)
         request = amqp_frame.AmqpEncoder()
         request.write_shortstr('')
-        fut = self._set_waiter('open')
-        try:
-            yield from self._write_frame(frame, request, check_open=False)
-        except Exception:
-            self._get_waiter('open')
-            fut.cancel()
-            raise
-        yield from fut
-        return fut.result()
+        return (yield from self._write_frame_awaiting_response(
+            'open', frame, request, no_wait=False, check_open=False))
 
     @asyncio.coroutine
     def open_ok(self, frame):
@@ -156,9 +149,8 @@ class Channel:
         request.write_shortstr(reply_text)
         request.write_short(0)
         request.write_short(0)
-        frame.write_frame(request)
-        future = self._set_waiter('close')
-        return (yield from future)
+        return (yield from self._write_frame_awaiting_response(
+            'close', frame, request, no_wait=False, check_open=False))
 
     @asyncio.coroutine
     def close_ok(self, frame):
@@ -462,12 +454,8 @@ class Channel:
         request.write_short(0)
         request.write_shortstr(queue_name)
         request.write_octet(int(no_wait))
-        if not no_wait:
-            future = self._set_waiter('queue_purge')
-            yield from self._write_frame(frame, request)
-            return (yield from future)
-
-        yield from self._write_frame(frame, request)
+        return (yield from self._write_frame_awaiting_response(
+            'queue_purge', frame, request, no_wait=no_wait))
 
     @asyncio.coroutine
     def queue_purge_ok(self, frame):
@@ -550,9 +538,8 @@ class Channel:
         request.write_short(prefetch_count)
         request.write_bits(connection_global)
 
-        future = self._set_waiter('basic_qos')
-        yield from self._write_frame(frame, request)
-        return (yield from future)
+        return (yield from self._write_frame_awaiting_response(
+            'basic_qos', frame, request, no_wait=False))
 
     @asyncio.coroutine
     def basic_qos_ok(self, frame):
