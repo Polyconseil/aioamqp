@@ -107,21 +107,23 @@ class Channel:
         yield from methods[(frame.class_id, frame.method_id)](frame)
 
     @asyncio.coroutine
-    def _write_frame(self, frame, request, check_open=True):
+    def _write_frame(self, frame, request, check_open=True, drain=True):
         yield from self.protocol.ensure_open()
         if not self.is_open and check_open:
             raise exceptions.ChannelClosed()
         frame.write_frame(request)
+        if drain:
+            yield from self.protocol._stream_writer.drain()
 
     @asyncio.coroutine
-    def _write_frame_awaiting_response(self, waiter_id, frame, request, no_wait, check_open=True):
+    def _write_frame_awaiting_response(self, waiter_id, frame, request, no_wait, check_open=True, drain=True):
         '''Write a frame and set a waiter for the response (unless no_wait is set)'''
         if no_wait:
-            yield from self._write_frame(frame, request, check_open=check_open)
+            yield from self._write_frame(frame, request, check_open=check_open, drain=drain)
         else:
             f = self._set_waiter(waiter_id)
             try:
-                yield from self._write_frame(frame, request, check_open=check_open)
+                yield from self._write_frame(frame, request, check_open=check_open, drain=drain)
             except Exception:
                 self._get_waiter(waiter_id)
                 f.cancel()
@@ -481,7 +483,7 @@ class Channel:
         method_request.write_shortstr(exchange_name)
         method_request.write_shortstr(routing_key)
         method_request.write_bits(mandatory, immediate)
-        yield from self._write_frame(method_frame, method_request)
+        yield from self._write_frame(method_frame, method_request, drain=False)
 
         header_frame = amqp_frame.AmqpRequest(
             self.protocol._stream_writer, amqp_constants.TYPE_HEADER, self.channel_id)
@@ -489,7 +491,7 @@ class Channel:
         header_frame.set_body_size(len(payload))
         encoder = amqp_frame.AmqpEncoder()
         encoder.write_message_properties(properties)
-        yield from self._write_frame(header_frame, encoder)
+        yield from self._write_frame(header_frame, encoder, drain=False)
 
         # split the payload
 
@@ -504,7 +506,7 @@ class Channel:
                 encoder.payload.write(chunk.encode())
             else:
                 encoder.payload.write(chunk)
-            yield from self._write_frame(content_frame, encoder)
+            yield from self._write_frame(content_frame, encoder, drain=False)
 
         yield from self.protocol._stream_writer.drain()
 
@@ -799,7 +801,7 @@ class Channel:
         method_request.write_shortstr(exchange_name)
         method_request.write_shortstr(routing_key)
         method_request.write_bits(mandatory, immediate)
-        yield from self._write_frame(method_frame, method_request)
+        yield from self._write_frame(method_frame, method_request, drain=False)
 
         header_frame = amqp_frame.AmqpRequest(
             self.protocol._stream_writer, amqp_constants.TYPE_HEADER, self.channel_id)
@@ -807,7 +809,7 @@ class Channel:
         header_frame.set_body_size(len(payload))
         encoder = amqp_frame.AmqpEncoder()
         encoder.write_message_properties(properties)
-        yield from self._write_frame(header_frame, encoder)
+        yield from self._write_frame(header_frame, encoder, drain=False)
 
         # split the payload
 
@@ -822,7 +824,7 @@ class Channel:
                 encoder.payload.write(chunk.encode())
             else:
                 encoder.payload.write(chunk)
-            yield from self._write_frame(content_frame, encoder)
+            yield from self._write_frame(content_frame, encoder, drain=False)
 
         yield from self.protocol._stream_writer.drain()
 
