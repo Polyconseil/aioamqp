@@ -113,6 +113,21 @@ class Channel:
             raise exceptions.ChannelClosed()
         frame.write_frame(request)
 
+    @asyncio.coroutine
+    def _write_frame_awaiting_response(self, waiter_id, frame, request, no_wait, check_open=True):
+        '''Write a frame and set a waiter for the response (unless no_wait is set)'''
+        if no_wait:
+            yield from self._write_frame(frame, request, check_open=check_open)
+        else:
+            f = self._set_waiter(waiter_id)
+            try:
+                yield from self._write_frame(frame, request, check_open=check_open)
+            except Exception:
+                self._get_waiter(waiter_id)
+                f.cancel()
+                raise
+            return (yield from f)
+
 #
 ## Channel class implementation
 #
@@ -177,21 +192,6 @@ class Channel:
             'method_id': frame.payload_decoder.read_short(),
         }
         self.connection_closed(results['reply_code'], results['reply_text'])
-
-    @asyncio.coroutine
-    def _write_frame_awaiting_response(self, waiter_id, frame, request, no_wait, check_open=True):
-        '''Write a frame and set a waiter for the response (unless no_wait is set)'''
-        if no_wait:
-            yield from self._write_frame(frame, request, check_open=check_open)
-        else:
-            f = self._set_waiter(waiter_id)
-            try:
-                yield from self._write_frame(frame, request, check_open=check_open)
-            except Exception:
-                self._get_waiter(waiter_id)
-                f.cancel()
-                raise
-            return (yield from f)
 
     @asyncio.coroutine
     def flow(self, active):
