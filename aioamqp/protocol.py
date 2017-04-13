@@ -89,6 +89,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_heartbeat = None
         self._heartbeat_timer_recv = None
         self._heartbeat_timer_send = None
+        self._heartbeat_trigger_send = asyncio.Event(loop=self._loop)
+        self._heartbeat_worker = None
         self.channels = {}
         self.server_frame_max = None
         self.server_channel_max = None
@@ -320,6 +322,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """
         yield from self.stop_now
 
+    @asyncio.coroutine
     def send_heartbeat(self):
         """Sends an heartbeat message.
         It can be an ack for the server or the client willing to check for the
@@ -353,7 +356,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             self._heartbeat_timer_send.cancel()
         self._heartbeat_timer_send = self._loop.call_later(
             self.server_heartbeat,
-            self.send_heartbeat)
+            self._heartbeat_trigger_send.set)
+        if self._heartbeat_worker is None:
+            self._heartbeat_worker = ensure_future(self._heartbeat(), loop=self._loop)
 
     def _heartbeat_stop(self):
         self.server_heartbeat = None
@@ -361,6 +366,15 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             self._heartbeat_timer_recv.cancel()
         if self._heartbeat_timer_send is not None:
             self._heartbeat_timer_send.cancel()
+        if self._heartbeat_worker is not None:
+            self._heartbeat_worker.cancel()
+
+    @asyncio.coroutine
+    def _heartbeat(self):
+        while True:
+            yield from self._heartbeat_trigger_send.wait()
+            self._heartbeat_trigger_send.clear()
+            yield from self.send_heartbeat()
 
     # Amqp specific methods
     @asyncio.coroutine
