@@ -67,8 +67,12 @@ def connect(host='localhost', port=None, login='guest', password='guest',
     if sock is not None and (sock.type & ~nonblock & ~cloexec) == socket.SOCK_STREAM:
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
-    yield from protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl,
-        login_method=login_method, insist=insist)
+    try:
+        yield from protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl,
+            login_method=login_method, insist=insist)
+    except Exception:
+        yield from protocol.wait_closed()
+        raise
 
     return (transport, protocol)
 
