@@ -169,6 +169,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def wait_closed(self, timeout=None):
         yield from asyncio.wait_for(self.connection_closed.wait(), timeout=timeout, loop=self._loop)
+        if self._heartbeat_worker is not None:
+            try:
+                yield from asyncio.wait_for(self._heartbeat_worker, timeout=timeout, loop=self._loop)
+            except asyncio.CancelledError:
+                pass
 
     @asyncio.coroutine
     def close_ok(self, frame):
@@ -386,7 +391,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def _heartbeat(self):
-        while True:
+        while self.state != CLOSED:
             yield from self._heartbeat_trigger_send.wait()
             self._heartbeat_trigger_send.clear()
             yield from self.send_heartbeat()
