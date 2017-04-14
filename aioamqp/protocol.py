@@ -102,6 +102,13 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         super().connection_made(transport)
         self._stream_writer = _StreamWriter(transport, self, self._stream_reader, self._loop)
 
+    def eof_received(self):
+        super().eof_received()
+        # Python 3.5+ started returning True here to keep the transport open.
+        # We really couldn't care less so keep the behavior from 3.4 to make
+        # sure connection_lost() is called.
+        return False
+
     def connection_lost(self, exc):
         logger.warning("Connection lost exc=%r", exc)
         self.connection_closed.set()
