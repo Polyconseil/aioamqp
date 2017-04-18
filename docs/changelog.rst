@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Aioamqp next
+------------
+
+ * Remove ``timeout`` argument from all channel methods.
+ * Clean up uses of ``no_wait`` argument from most channel methods.
+ * Call ``drain()`` after sending every frame (or group of frames).
+ * Make sure AmqpProtocol behaves identically on 3.4 and 3.5+ wrt EOF reception.
+
 Aioamqp 0.9.0
 -------------
 
