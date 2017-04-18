@@ -7,7 +7,6 @@ services:
 - rabbitmq
 env:
 - PYTHONASYNCIODEBUG=1
-- AMQP_REFRESH_TIME=5
 install:
 - pip install -r requirements_dev.txt
 - pip install --editable .
