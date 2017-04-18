@@ -62,7 +62,7 @@ class AmqpEncoder:
     def write_table(self, data_dict):
 
         self.write_long(0)                  # the table length (set later)
-        if data_dict is not None and len(data_dict):
+        if data_dict:
             start = self.payload.tell()
             for key, value in data_dict.items():
                 self.write_shortstr(key)

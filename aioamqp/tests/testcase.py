@@ -227,14 +227,12 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
     def full_name(self, name):
         if self.is_full_name(name):
             return name
-        else:
-            return self.id() + '.' + name
+        return self.id() + '.' + name
 
     def local_name(self, name):
         if self.is_full_name(name):
             return name[len(self.id()) + 1:]  # +1 because of the '.'
-        else:
-            return name
+        return name
 
     def is_full_name(self, name):
         return name.startswith(self.id())

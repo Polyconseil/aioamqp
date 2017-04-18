@@ -472,7 +472,7 @@ class Channel:
 
     @asyncio.coroutine
     def basic_publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
-        assert len(payload) != 0, "Payload cannot be empty"
+        assert payload, "Payload cannot be empty"
 
         method_frame = amqp_frame.AmqpRequest(
             self.protocol._stream_writer, amqp_constants.TYPE_METHOD, self.channel_id)
@@ -786,7 +786,7 @@ class Channel:
 
     @asyncio.coroutine
     def publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
-        assert len(payload) != 0, "Payload cannot be empty"
+        assert payload, "Payload cannot be empty"
 
         if self.publisher_confirms:
             delivery_tag = next(self.delivery_tag_iter)
