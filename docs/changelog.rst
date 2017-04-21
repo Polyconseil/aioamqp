@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Aioamqp next
-------------
+Aioamqp 0.10.0
+--------------
 
  * Remove ``timeout`` argument from all channel methods.
  * Clean up uses of ``no_wait`` argument from most channel methods.
