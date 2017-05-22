@@ -5,6 +5,8 @@
 import asyncio
 import logging
 
+from time import time
+
 from . import channel as amqp_channel
 from . import constants as amqp_constants
 from . import frame as amqp_frame
@@ -87,10 +89,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_locales = None
         self.worker = None
         self.server_heartbeat = None
-        self._heartbeat_timer_recv = None
-        self._heartbeat_timer_send = None
-        self._heartbeat_trigger_send = asyncio.Event(loop=self._loop)
-        self._heartbeat_worker = None
+        self._heartbeat_worker_recv = None
+        self._heartbeat_worker_send = None
+        self._heartbeat_last_send = 0
+        self._heartbeat_last_recv = 0
         self.channels = {}
         self.server_frame_max = None
         self.server_channel_max = None
@@ -176,9 +178,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def wait_closed(self, timeout=None):
         yield from asyncio.wait_for(self.connection_closed.wait(), timeout=timeout, loop=self._loop)
-        if self._heartbeat_worker is not None:
+        if self._heartbeat_worker_send is not None:
             try:
-                yield from asyncio.wait_for(self._heartbeat_worker, timeout=timeout, loop=self._loop)
+                yield from asyncio.wait_for(self._heartbeat_worker_send, timeout=timeout, loop=self._loop)
             except asyncio.CancelledError:
                 pass
 
@@ -186,6 +188,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     def close_ok(self, frame):
         logger.info("Recv close ok")
         self._stream_writer.close()
+
+    def _heartbeat_timer_recv_reset(self):
+        self._heartbeat_last_recv = int(time())
+
+    def _heartbeat_timer_send_reset(self):
+        self._heartbeat_last_send = int(time())
 
     @asyncio.coroutine
     def start_connection(self, host, port, login, password, virtualhost, ssl=False,
@@ -240,6 +248,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         if self.server_heartbeat > 0:
             self._heartbeat_timer_recv_reset()
             self._heartbeat_timer_send_reset()
+            self._start_heartbeat_send()
+            self._start_heartbeat_recv()
 
         # open a virtualhost
         yield from self.open(virtualhost, capabilities='', insist=insist)
@@ -367,41 +377,37 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         # TODO(rcardona) raise a "timeout" exception somewhere
         self._stream_writer.close()
 
-    def _heartbeat_timer_recv_reset(self):
-        if self.server_heartbeat is None:
-            return
-        if self._heartbeat_timer_recv is not None:
-            self._heartbeat_timer_recv.cancel()
-        self._heartbeat_timer_recv = self._loop.call_later(
-            self.server_heartbeat * 2,
-            self._heartbeat_timer_recv_timeout)
+    def _start_heartbeat_send(self):
+        self._heartbeat_worker_recv = ensure_future(self._heartbeat_sender(), loop=self._loop)
 
-    def _heartbeat_timer_send_reset(self):
-        if self.server_heartbeat is None:
-            return
-        if self._heartbeat_timer_send is not None:
-            self._heartbeat_timer_send.cancel()
-        self._heartbeat_timer_send = self._loop.call_later(
-            self.server_heartbeat,
-            self._heartbeat_trigger_send.set)
-        if self._heartbeat_worker is None:
-            self._heartbeat_worker = ensure_future(self._heartbeat(), loop=self._loop)
+    def _start_heartbeat_recv(self):
+        self._heartbeat_worker_send = ensure_future(self._heartbeat_recv(), loop=self._loop)
 
     def _heartbeat_stop(self):
         self.server_heartbeat = None
-        if self._heartbeat_timer_recv is not None:
-            self._heartbeat_timer_recv.cancel()
-        if self._heartbeat_timer_send is not None:
-            self._heartbeat_timer_send.cancel()
-        if self._heartbeat_worker is not None:
-            self._heartbeat_worker.cancel()
+        if self._heartbeat_worker_recv is not None:
+            self._heartbeat_worker_recv.cancel()
+        if self._heartbeat_worker_send is not None:
+            self._heartbeat_worker_send.cancel()
 
     @asyncio.coroutine
-    def _heartbeat(self):
+    def _heartbeat_sender(self):
         while self.state != CLOSED:
-            yield from self._heartbeat_trigger_send.wait()
-            self._heartbeat_trigger_send.clear()
-            yield from self.send_heartbeat()
+            сurr = int(time())
+            if self._heartbeat_last_send + self.server_heartbeat > сurr:
+                yield from asyncio.sleep(0.5)
+            else:
+                yield from self.send_heartbeat()
+                self._heartbeat_timer_send_reset()
+
+    @asyncio.coroutine
+    def _heartbeat_recv(self):
+        while self.state != CLOSED:
+            сurr = int(time())
+            if self._heartbeat_last_recv + self.server_heartbeat * 2 < сurr:
+                self._heartbeat_timer_recv_timeout()
+            else:
+                yield from asyncio.sleep(0.5)
 
     # Amqp specific methods
     @asyncio.coroutine
