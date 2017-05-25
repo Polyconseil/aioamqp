@@ -331,13 +331,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         while not self.stop_now.done():
             try:
                 yield from self.dispatch_frame()
-            except exceptions.AmqpClosedConnection as exc:
+            except Exception:  # pylint: disable=broad-except
                 logger.info("Close connection")
                 self.stop_now.set_result(None)
-
                 self._close_channels(exception=exc)
-            except Exception:  # pylint: disable=broad-except
-                logger.exception('error on dispatch')
 
     @asyncio.coroutine
     def heartbeat(self):
