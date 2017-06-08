@@ -4,7 +4,6 @@
 
 import asynctest
 from unittest import mock
-import ssl as ssl_module
 
 from . import testcase
 from .. import exceptions
@@ -90,7 +89,7 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             )
 
     async def test_ssl_context_connection_from_url(self):
-        ssl_context = ssl_module.create_default_context()
+        ssl_context = mock.Mock()
         with mock.patch('aioamqp.connect') as connect:
             async def func(*x, **y):
                 return 1, 2
