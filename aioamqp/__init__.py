@@ -40,7 +40,7 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
     create_connection_kwargs = {}
 
     if ssl:
-        ssl_context = ssl_module.create_default_context()
+        ssl_context = ssl_module.create_default_context() if isinstance(ssl, bool) else ssl
         if not verify_ssl:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl_module.CERT_NONE
@@ -104,10 +104,9 @@ async def from_url(
         login=url.username or 'guest',
         password=url.password or 'guest',
         virtualhost=(url.path[1:] if len(url.path) > 1 else '/'),
-        ssl=(url.scheme == 'amqps'),
         login_method=login_method,
         insist=insist,
         protocol_factory=protocol_factory,
         verify_ssl=verify_ssl,
-        **kwargs)
+        **dict(kwargs, ssl=kwargs.get('ssl', url.scheme == 'amqps')))
     return transport, protocol

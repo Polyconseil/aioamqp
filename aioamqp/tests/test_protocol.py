@@ -4,6 +4,7 @@
 
 import asynctest
 from unittest import mock
+import ssl as ssl_module
 
 from . import testcase
 from .. import exceptions
@@ -59,6 +60,47 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
                 password='pass',
                 login_method='AMQPLAIN',
                 ssl=False,
+                login='tom',
+                host='example.com',
+                protocol_factory=AmqpProtocol,
+                virtualhost='myvhost',
+                port=7777,
+                verify_ssl=True,
+                loop=self.loop,
+            )
+
+    async def test_ssl_connection_from_url(self):
+        with mock.patch('aioamqp.connect') as connect:
+            async def func(*x, **y):
+                return 1, 2
+            connect.side_effect = func
+            await amqp_from_url('amqps://tom:pass@example.com:7777/myvhost', loop=self.loop)
+            connect.assert_called_once_with(
+                insist=False,
+                password='pass',
+                login_method='AMQPLAIN',
+                ssl=True,
+                login='tom',
+                host='example.com',
+                protocol_factory=AmqpProtocol,
+                virtualhost='myvhost',
+                port=7777,
+                verify_ssl=True,
+                loop=self.loop,
+            )
+
+    async def test_ssl_context_connection_from_url(self):
+        ssl_context = ssl_module.create_default_context()
+        with mock.patch('aioamqp.connect') as connect:
+            async def func(*x, **y):
+                return 1, 2
+            connect.side_effect = func
+            await amqp_from_url('amqp://tom:pass@example.com:7777/myvhost', loop=self.loop, ssl=ssl_context)
+            connect.assert_called_once_with(
+                insist=False,
+                password='pass',
+                login_method='AMQPLAIN',
+                ssl=ssl_context,
                 login='tom',
                 host='example.com',
                 protocol_factory=AmqpProtocol,
