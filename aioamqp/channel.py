@@ -474,6 +474,10 @@ class Channel:
     def basic_publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
         assert payload, "Payload cannot be empty"
 
+        yield from self.protocol.ensure_open()
+        if not self.is_open:
+            raise exceptions.ChannelClosed()
+
         method_frame = amqp_frame.AmqpRequest(
             self.protocol._stream_writer, amqp_constants.TYPE_METHOD, self.channel_id)
         method_frame.declare_method(
@@ -483,7 +487,7 @@ class Channel:
         method_request.write_shortstr(exchange_name)
         method_request.write_shortstr(routing_key)
         method_request.write_bits(mandatory, immediate)
-        yield from self._write_frame(method_frame, method_request, drain=False)
+        method_frame.write_frame(method_request)
 
         header_frame = amqp_frame.AmqpRequest(
             self.protocol._stream_writer, amqp_constants.TYPE_HEADER, self.channel_id)
@@ -491,7 +495,7 @@ class Channel:
         header_frame.set_body_size(len(payload))
         encoder = amqp_frame.AmqpEncoder()
         encoder.write_message_properties(properties)
-        yield from self._write_frame(header_frame, encoder, drain=False)
+        header_frame.write_frame(encoder)
 
         # split the payload
 
@@ -506,7 +510,7 @@ class Channel:
                 encoder.payload.write(chunk.encode())
             else:
                 encoder.payload.write(chunk)
-            yield from self._write_frame(content_frame, encoder, drain=False)
+            content_frame.write_frame(encoder)
 
         yield from self.protocol._drain()
 
@@ -788,6 +792,10 @@ class Channel:
     def publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
         assert payload, "Payload cannot be empty"
 
+        yield from self.protocol.ensure_open()
+        if not self.is_open:
+            raise exceptions.ChannelClosed()
+
         if self.publisher_confirms:
             delivery_tag = next(self.delivery_tag_iter)
             fut = self._set_waiter('basic_server_ack_{}'.format(delivery_tag))
@@ -801,7 +809,7 @@ class Channel:
         method_request.write_shortstr(exchange_name)
         method_request.write_shortstr(routing_key)
         method_request.write_bits(mandatory, immediate)
-        yield from self._write_frame(method_frame, method_request, drain=False)
+        method_frame.write_frame(method_request)
 
         header_frame = amqp_frame.AmqpRequest(
             self.protocol._stream_writer, amqp_constants.TYPE_HEADER, self.channel_id)
@@ -809,7 +817,7 @@ class Channel:
         header_frame.set_body_size(len(payload))
         encoder = amqp_frame.AmqpEncoder()
         encoder.write_message_properties(properties)
-        yield from self._write_frame(header_frame, encoder, drain=False)
+        header_frame.write_frame(encoder)
 
         # split the payload
 
@@ -824,7 +832,7 @@ class Channel:
                 encoder.payload.write(chunk.encode())
             else:
                 encoder.payload.write(chunk)
-            yield from self._write_frame(content_frame, encoder, drain=False)
+            content_frame.write_frame(encoder)
 
         yield from self.protocol._drain()
 
