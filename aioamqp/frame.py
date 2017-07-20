@@ -404,7 +404,7 @@ class AmqpResponse:
     @asyncio.coroutine
     def read_frame(self):
         """Decode the frame"""
-        if self.reader is None:
+        if not self.reader:
             raise exceptions.AmqpClosedConnection()
 
         try:
