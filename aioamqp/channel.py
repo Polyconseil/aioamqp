@@ -480,7 +480,7 @@ class Channel:
         if isinstance(payload, str):
             warnings.warn("Str payload support will be removed in next release", DeprecationWarning)
             payload = payload.encode()
-
+        payload_len = len(payload)
         method_frame = amqp_frame.AmqpRequest(
             self.protocol._stream_writer, amqp_constants.TYPE_METHOD, self.channel_id)
         method_frame.declare_method(
@@ -495,15 +495,15 @@ class Channel:
         header_frame = amqp_frame.AmqpRequest(
             self.protocol._stream_writer, amqp_constants.TYPE_HEADER, self.channel_id)
         header_frame.declare_class(amqp_constants.CLASS_BASIC)
-        header_frame.set_body_size(len(payload))
+        header_frame.set_body_size(payload_len)
         encoder = amqp_frame.AmqpEncoder()
         encoder.write_message_properties(properties)
         yield from self._write_frame(header_frame, encoder, drain=False)
 
         # split the payload
 
-        frame_max = self.protocol.server_frame_max or len(payload)
-        for chunk in (payload[0+i:frame_max+i] for i in range(0, len(payload), frame_max)):
+        frame_max = self.protocol.server_frame_max or payload_len
+        for chunk in (payload[0+i:frame_max+i] for i in range(0, payload_len, frame_max)):
 
             content_frame = amqp_frame.AmqpRequest(
                 self.protocol._stream_writer, amqp_constants.TYPE_BODY, self.channel_id)
