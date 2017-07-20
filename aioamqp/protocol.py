@@ -410,6 +410,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             сurr = int(time())
             if self._heartbeat_last_recv + self.server_heartbeat * 2 < сurr:
                 self._heartbeat_timer_recv_timeout()
+                yield from asyncio.sleep(0.01)
             else:
                 yield from asyncio.sleep(0.5)
 
