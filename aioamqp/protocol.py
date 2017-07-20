@@ -379,6 +379,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         # an error.
         # TODO(rcardona) raise a "timeout" exception somewhere
         self._stream_writer.close()
+        self._heartbeat_stop()
 
     def _start_heartbeat_send(self):
         self._heartbeat_worker_recv = ensure_future(self._heartbeat_sender(), loop=self._loop)
