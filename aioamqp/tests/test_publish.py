@@ -1,4 +1,5 @@
 import unittest
+import asyncio
 
 from . import testcase
 from . import testing
@@ -7,6 +8,26 @@ from . import testing
 class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     _multiprocess_can_split_ = True
+
+    def assertOneMessage(self):
+        for x in range(10):
+            try:
+                queues = self.list_queues()
+                self.assertIn("q", queues)
+                try:
+                    self.assertEqual(1, queues["q"]['messages_ready_ram'])
+                except (KeyError,AssertionError):
+                    try:
+                        self.assertEqual(1, queues["q"]['messages'])
+                    except (KeyError,AssertionError):
+                        self.assertEqual(1, queues["q"]['message_stats']['publish'])
+            except Exception as exc:
+                ex = exc
+            else:
+                break
+            yield from asyncio.sleep(0.5, loop=self.loop)
+        else:
+            raise ex
 
     @testing.coroutine
     def test_publish(self):
@@ -18,9 +39,7 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # publish
         yield from self.channel.publish("coucou", "e", routing_key='')
 
-        queues = self.list_queues()
-        self.assertIn("q", queues)
-        self.assertEqual(1, queues["q"]['messages'])
+        self.assertOneMessage()
 
     @testing.coroutine
     def test_big_publish(self):
@@ -32,9 +51,7 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # publish
         yield from self.channel.publish("a"*1000000, "e", routing_key='')
 
-        queues = self.list_queues()
-        self.assertIn("q", queues)
-        self.assertEqual(1, queues["q"]['messages'])
+        self.assertOneMessage()
 
     @testing.coroutine
     def test_confirmed_publish(self):
@@ -48,6 +65,5 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # publish
         yield from self.channel.publish("coucou", "e", routing_key='')
 
-        queues = self.list_queues()
-        self.assertIn("q", queues)
-        self.assertEqual(1, queues["q"]['messages'])
+        self.assertOneMessage()
+

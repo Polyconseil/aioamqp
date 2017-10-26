@@ -49,7 +49,6 @@ class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertIn("q", queues)
         self.assertEqual(1, queues["q"]['messages'])
 
-        yield from asyncio.sleep(2, loop=self.loop)
         # start consume
         with self.assertRaises(exceptions.ConfigurationError):
             yield from channel.basic_consume(badcallback, queue_name="q")

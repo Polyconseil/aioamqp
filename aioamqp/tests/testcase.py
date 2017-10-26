@@ -81,10 +81,10 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
     def setUp(self):
         super().setUp()
         self.host = os.environ.get('AMQP_HOST', 'localhost')
-        self.port = os.environ.get('AMQP_PORT', 5672)
+        self.port = int(os.environ.get('AMQP_PORT', 5672))
         self.vhost = os.environ.get('AMQP_VHOST', self.VHOST + str(uuid.uuid4()))
         self.http_client = pyrabbit.api.Client(
-            'localhost:15672/api/', 'guest', 'guest', timeout=20
+            '%s:%s/' % (self.host, 10000+self.port), 'guest', 'guest', timeout=20
         )
 
         self.amqps = []
@@ -184,7 +184,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
 
     def list_queues(self, vhost=None, fully_qualified_name=False):
         # wait for the http client to get the correct state of the queue
-        time.sleep(int(os.environ.get('AMQP_REFRESH_TIME', 6)))
+        time.sleep(int(os.environ.get('AMQP_REFRESH_TIME', 1.1)))
         queues_list = self.http_client.get_queues(vhost=vhost or self.vhost)
         queues = {}
         for queue_info in queues_list:
