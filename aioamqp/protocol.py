@@ -111,7 +111,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         return False
 
     def connection_lost(self, exc):
-        logger.warning("Connection lost exc=%r", exc)
+        if exc is not None:
+            logger.warning("Connection lost exc=%r", exc)
         self.connection_closed.set()
         self.state = CLOSED
         self._close_channels(exception=exc)
