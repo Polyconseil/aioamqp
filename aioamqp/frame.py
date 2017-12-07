@@ -72,6 +72,14 @@ class AmqpEncoder:
             self.write_long(table_length)   # and set the table length
             self.payload.seek(0, os.SEEK_END)  # return at the end
 
+    def write_array(self, value):
+        array_data = AmqpEncoder()
+        for item in value:
+            array_data.write_value(item)
+        array_data = array_data.payload.getvalue()
+        self.write_long(len(array_data))
+        self.payload.write(array_data)
+
     def write_value(self, value):
         if isinstance(value, (bytes, str)):
             self.payload.write(b'S')
@@ -85,6 +93,9 @@ class AmqpEncoder:
         elif isinstance(value, int):
             self.payload.write(b'I')
             self.write_long(value)
+        elif isinstance(value, (list, tuple)):
+            self.payload.write(b'A')
+            self.write_array(value)
         else:
             raise Exception("type({}) unsupported".format(type(value)))
 
