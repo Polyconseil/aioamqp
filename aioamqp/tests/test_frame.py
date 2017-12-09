@@ -30,6 +30,12 @@ class EncoderTestCase(unittest.TestCase):
         self.encoder.write_value(True)
         self.assertEqual(self.encoder.payload.getvalue(), b't\x01')
 
+    def test_write_array(self):
+        self.encoder.write_array(["v1", 123])
+        self.assertEqual(self.encoder.payload.getvalue(),
+                         # total size (4 bytes) + 'S' + size (4 bytes) + payload + 'I' + size (4 bytes) + payload
+                         b'\x00\x00\x00\x0cS\x00\x00\x00\x02v1I\x00\x00\x00{')
+
     def test_write_dict(self):
         self.encoder.write_value({'foo': 'bar', 'bar': 'baz'})
         self.assertIn(self.encoder.payload.getvalue(),
