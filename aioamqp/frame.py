@@ -43,6 +43,7 @@ import io
 import struct
 import socket
 import os
+import datetime
 from itertools import count
 from decimal import Decimal
 
@@ -102,6 +103,9 @@ class AmqpEncoder:
         elif isinstance(value, Decimal):
             self.payload.write(b'D')
             self.write_decimal(value)
+        elif isinstance(value, datetime.datetime):
+            self.payload.write(b'T')
+            self.write_timestamp(value)
         else:
             raise Exception("type({}) unsupported".format(type(value)))
 
@@ -143,6 +147,10 @@ class AmqpEncoder:
             v = -v
         self.write_octet(-exponent)
         self.payload.write(struct.pack('>i', v))
+
+    def write_timestamp(self, value):
+        """Write out a Python datetime.datetime object as a 64-bit integer representing seconds since the Unix epoch."""
+        self.payload.write(struct.pack('>Q', int(value.replace(tzinfo=datetime.timezone.utc).timestamp())))
 
     def _write_string(self, string):
         if isinstance(string, str):

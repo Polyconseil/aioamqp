@@ -5,6 +5,7 @@
 import io
 import unittest
 import sys
+import datetime
 
 from decimal import Decimal
 
@@ -48,6 +49,10 @@ class EncoderTestCase(unittest.TestCase):
 
         self.encoder.write_value(Decimal("1.1"))
         self.assertEqual(self.encoder.payload.getvalue(), b'D\x01\xff\xff\xff\xf5D\x01\x00\x00\x00\x0b')
+
+    def test_write_datetime(self):
+        self.encoder.write_value(datetime.datetime(2017, 12, 10, 4, 6, 49, 548918))
+        self.assertEqual(self.encoder.payload.getvalue(), b'T\x00\x00\x00\x00Z,\xb2\xd9')
 
     def test_write_dict(self):
         self.encoder.write_value({'foo': 'bar', 'bar': 'baz'})
