@@ -106,6 +106,8 @@ class AmqpEncoder:
         elif isinstance(value, datetime.datetime):
             self.payload.write(b'T')
             self.write_timestamp(value)
+        elif value is None:
+            self.payload.write(b'V')
         else:
             raise Exception("type({}) unsupported".format(type(value)))
 
