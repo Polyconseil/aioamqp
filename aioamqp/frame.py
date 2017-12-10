@@ -310,8 +310,7 @@ class AmqpDecoder:
         return data.decode()
 
     def read_timestamp(self):
-        # TODO: decode into datetime?
-        return self.read_long_long()
+        return datetime.datetime.fromtimestamp(self.read_long_long(), datetime.timezone.utc)
 
     def read_table(self):
         """Reads an AMQP table"""
