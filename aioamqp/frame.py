@@ -93,9 +93,15 @@ class AmqpEncoder:
         elif isinstance(value, int):
             self.payload.write(b'I')
             self.write_long(value)
+        elif isinstance(value, float):
+            self.payload.write(b'd')
+            self.write_float(value)
         elif isinstance(value, (list, tuple)):
             self.payload.write(b'A')
             self.write_array(value)
+        elif isinstance(value, Decimal):
+            self.payload.write(b'D')
+            self.write_decimal(value)
         else:
             raise Exception("type({}) unsupported".format(type(value)))
 
@@ -124,6 +130,19 @@ class AmqpEncoder:
 
     def write_long_long(self, longlong):
         self.payload.write(struct.pack('!Q', longlong))
+
+    def write_float(self, value):
+        self.payload.write(struct.pack('>d', value))
+
+    def write_decimal(self, value):
+        sign, digits, exponent = value.as_tuple()
+        v = 0
+        for d in digits:
+            v = (v * 10) + d
+        if sign:
+            v = -v
+        self.write_octet(-exponent)
+        self.payload.write(struct.pack('>i', v))
 
     def _write_string(self, string):
         if isinstance(string, str):

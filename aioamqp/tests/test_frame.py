@@ -6,6 +6,8 @@ import io
 import unittest
 import sys
 
+from decimal import Decimal
+
 from .. import constants as amqp_constants
 from .. import frame as frame_module
 from ..frame import AmqpEncoder
@@ -31,10 +33,21 @@ class EncoderTestCase(unittest.TestCase):
         self.assertEqual(self.encoder.payload.getvalue(), b't\x01')
 
     def test_write_array(self):
-        self.encoder.write_array(["v1", 123])
+        self.encoder.write_value(["v1", 123])
         self.assertEqual(self.encoder.payload.getvalue(),
                          # total size (4 bytes) + 'S' + size (4 bytes) + payload + 'I' + size (4 bytes) + payload
-                         b'\x00\x00\x00\x0cS\x00\x00\x00\x02v1I\x00\x00\x00{')
+                         b'A\x00\x00\x00\x0cS\x00\x00\x00\x02v1I\x00\x00\x00{')
+
+    def test_write_float(self):
+        self.encoder.write_value(1.1)
+        self.assertEqual(self.encoder.payload.getvalue(), b'd?\xf1\x99\x99\x99\x99\x99\x9a')
+
+    def test_write_decimal(self):
+        self.encoder.write_value(Decimal("-1.1"))
+        self.assertEqual(self.encoder.payload.getvalue(), b'D\x01\xff\xff\xff\xf5')
+
+        self.encoder.write_value(Decimal("1.1"))
+        self.assertEqual(self.encoder.payload.getvalue(), b'D\x01\xff\xff\xff\xf5D\x01\x00\x00\x00\x0b')
 
     def test_write_dict(self):
         self.encoder.write_value({'foo': 'bar', 'bar': 'baz'})
