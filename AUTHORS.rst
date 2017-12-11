@@ -16,3 +16,5 @@ AUTHORS are (and/or have been)::
     * Hans Lellelid
     * `iceboy-sjtu`
     * Sergio Medina Toledo
+    * Alexander Gromyko
+

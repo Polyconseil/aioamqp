@@ -1,6 +1,12 @@
 Changelog
 =========
 
+Next release
+------------
+
+ * Support for missings encoding and decoding types (closes #156).
+
+
 Aioamqp 0.10.0
 --------------
 
