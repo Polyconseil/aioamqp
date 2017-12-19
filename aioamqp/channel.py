@@ -120,15 +120,16 @@ class Channel:
         '''Write a frame and set a waiter for the response (unless no_wait is set)'''
         if no_wait:
             yield from self._write_frame(frame, request, check_open=check_open, drain=drain)
-        else:
-            f = self._set_waiter(waiter_id)
-            try:
-                yield from self._write_frame(frame, request, check_open=check_open, drain=drain)
-            except Exception:
-                self._get_waiter(waiter_id)
-                f.cancel()
-                raise
-            return (yield from f)
+            return None
+
+        f = self._set_waiter(waiter_id)
+        try:
+            yield from self._write_frame(frame, request, check_open=check_open, drain=drain)
+        except Exception:
+            self._get_waiter(waiter_id)
+            f.cancel()
+            raise
+        return (yield from f)
 
 #
 ## Channel class implementation
