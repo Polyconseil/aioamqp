@@ -790,7 +790,7 @@ class Channel:
         assert payload, "Payload cannot be empty"
 
         if self.publisher_confirms:
-            delivery_tag = next(self.delivery_tag_iter)
+            delivery_tag = next(self.delivery_tag_iter)  # pylint: disable=stop-iteration-return
             fut = self._set_waiter('basic_server_ack_{}'.format(delivery_tag))
 
         method_frame = amqp_frame.AmqpRequest(
