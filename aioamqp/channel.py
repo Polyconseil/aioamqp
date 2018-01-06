@@ -11,6 +11,7 @@ from itertools import count
 from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
+from .compat import iscoroutinepartial
 from .envelope import Envelope
 
 
@@ -563,7 +564,7 @@ class Channel:
         the callback will be called each time we're receiving a message.
 
             Args:
-                callback:       coroutine, the called callback
+                callback:       callable, the called callback
                 queue_name:     str, the queue to receive message from
                 consumer_tag:   str, optional consumer tag
                 no_local:       bool, if set the server will not send messages
@@ -639,7 +640,11 @@ class Channel:
             yield from event.wait()
             del self._ctag_events[consumer_tag]
 
-        yield from callback(self, body, envelope, properties)
+        if iscoroutinepartial(callback):
+            yield from callback(self, body, envelope, properties)
+        else:
+            self._loop.call_soon(callback, self, body, envelope, properties)
+
 
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
