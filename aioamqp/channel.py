@@ -11,7 +11,7 @@ from itertools import count
 from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
-from .envelope import Envelope
+from .envelope import Envelope, ReturnEnvelope
 
 
 logger = logging.getLogger(__name__)
@@ -19,12 +19,13 @@ logger = logging.getLogger(__name__)
 
 class Channel:
 
-    def __init__(self, protocol, channel_id):
+    def __init__(self, protocol, channel_id, return_callback=None):
         self._loop = protocol._loop
         self.protocol = protocol
         self.channel_id = channel_id
         self.consumer_queues = {}
         self.consumer_callbacks = {}
+        self.return_callback = return_callback
         self.response_future = None
         self.close_event = asyncio.Event(loop=self._loop)
         self.cancelled_consumers = set()
@@ -98,6 +99,7 @@ class Channel:
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_ACK): self.basic_server_ack,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_NACK): self.basic_server_nack,
             (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RECOVER_OK): self.basic_recover_ok,
+            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RETURN): self.basic_return,
 
             (amqp_constants.CLASS_CONFIRM, amqp_constants.CONFIRM_SELECT_OK): self.confirm_select_ok,
         }
@@ -777,6 +779,32 @@ class Channel:
         future = self._get_waiter('basic_recover')
         future.set_result(True)
         logger.debug("Cancel ok")
+
+    @asyncio.coroutine
+    def basic_return(self, frame):
+        response = amqp_frame.AmqpDecoder(frame.payload)
+        reply_code = response.read_short()
+        reply_text = response.read_shortstr()
+        exchange_name = response.read_shortstr()
+        routing_key = response.read_shortstr()
+        content_header_frame = yield from self.protocol.get_frame()
+
+        buffer = io.BytesIO()
+        while buffer.tell() < content_header_frame.body_size:
+            content_body_frame = yield from self.protocol.get_frame()
+            buffer.write(content_body_frame.payload)
+
+        body = buffer.getvalue()
+        envelope = ReturnEnvelope(reply_code, reply_text,
+                                  exchange_name, routing_key)
+        properties = content_header_frame.properties
+        callback = self.return_callback
+        if callback is None:
+            # they have set mandatory bit, but havent added a callback
+            logger.warning('You have received a returned message, but dont have a callback registered for returns.'
+                           ' Please set channel.return_callback')
+        else:
+            yield from callback(self, body, envelope, properties)
 
 
 #

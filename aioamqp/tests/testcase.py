@@ -67,8 +67,9 @@ class ProxyAmqpProtocol(AmqpProtocol):
         super().__init__(*args, **kw)
         self.test_case = test_case
 
-    def channel_factory(self, protocol, channel_id):
-        return ProxyChannel(self.test_case, protocol, channel_id)
+    def channel_factory(self, protocol, channel_id, return_callback=None):
+        return ProxyChannel(self.test_case, protocol, channel_id,
+                            return_callback=return_callback)
     CHANNEL_FACTORY = channel_factory
 
 

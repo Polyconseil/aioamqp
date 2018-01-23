@@ -13,3 +13,14 @@ class Envelope:
         self.exchange_name = exchange_name
         self.routing_key = routing_key
         self.is_redeliver = is_redeliver
+
+
+class ReturnEnvelope:
+    """ Class for basic return message fields"""
+    __slots__ = ('reply_code', 'reply_text', 'exchange_name', 'routing_key')
+
+    def __init__(self, reply_code, reply_text, exchange_name, routing_key):
+        self.reply_code = reply_code
+        self.reply_text = reply_text
+        self.exchange_name = exchange_name
+        self.routing_key = routing_key

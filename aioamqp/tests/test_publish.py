@@ -1,4 +1,5 @@
 import unittest
+import asyncio
 
 from . import testcase
 from . import testing
@@ -51,3 +52,27 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
         queues = self.list_queues()
         self.assertIn("q", queues)
         self.assertEqual(1, queues["q"]['messages'])
+
+    @testing.coroutine
+    def test_return_from_publish(self):
+        called = False
+
+        @asyncio.coroutine
+        def callback(channel, body, envelope, properties):
+            nonlocal called
+            called = True
+        channel = yield from self.amqp.channel(return_callback=callback)
+
+        # declare
+        yield from channel.exchange_declare("e", "topic")
+
+        # publish
+        yield from channel.publish("coucou", "e", routing_key="not.found",
+                                   mandatory=True)
+
+        for i in range(10):
+            if called:
+                break
+            yield from asyncio.sleep(0.1)
+
+        self.assertTrue(called)
