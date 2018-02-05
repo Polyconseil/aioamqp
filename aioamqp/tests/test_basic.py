@@ -66,8 +66,6 @@ class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
         result = yield from self.channel.publish("payload", exchange_name, routing_key='')
 
-        yield from asyncio.sleep(5, loop=self.loop)
-
         result = yield from self.channel.queue_declare(queue_name, passive=True)
         self.assertEqual(result['message_count'], 1)
         self.assertEqual(result['consumer_count'], 0)

@@ -98,15 +98,25 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         # declared queue we have to use self.full_name function
         self.assertEqual(self.full_name(queue_name), result['queue'])
 
-        queues = self.list_queues()
-        queue = queues[queue_name]
+        for x in range(5):
+            try:
+                queues = self.list_queues()
+                queue = queues[queue_name]
 
-        # assert queue has been declared witht the good arguments
-        self.assertEqual(queue_name, queue['name'])
-        self.assertEqual(0, queue['consumers'])
-        self.assertEqual(0, queue['messages_ready'])
-        self.assertEqual(auto_delete, queue['auto_delete'])
-        self.assertEqual(durable, queue['durable'])
+                # assert queue has been declared witht the good arguments
+                self.assertEqual(queue_name, queue['name'])
+                self.assertEqual(0, queue['consumers'])
+                self.assertEqual(0, queue['messages_ready'])
+                self.assertEqual(auto_delete, queue['auto_delete'])
+                self.assertEqual(durable, queue['durable'])
+            except (KeyError, AssertionError) as exc:
+                ex = exc
+            else:
+                break
+            asyncio.sleep(0.5, loop=self.loop)
+        else:
+            raise ex
+
 
         # delete queue
         yield from self.safe_queue_delete(queue_name)
