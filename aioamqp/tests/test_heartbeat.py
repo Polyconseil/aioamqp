@@ -24,6 +24,8 @@ class HeartbeatTestCase(testcase.RabbitTestCase, unittest.TestCase):
             self.amqp.server_heartbeat = 1
             self.amqp._heartbeat_timer_send_reset()
             self.amqp._heartbeat_timer_recv_reset()
+            self.amqp._start_heartbeat_send()
+            self.amqp._start_heartbeat_recv()
 
             yield from asyncio.sleep(1.001)
             send_heartbeat.assert_called_once_with()
