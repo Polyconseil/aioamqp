@@ -397,8 +397,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def _heartbeat_sender(self):
         while self.state != CLOSED:
-            сurr = int(time())
-            if self._heartbeat_last_send + self.server_heartbeat > сurr:
+            curr = int(time())
+            if self._heartbeat_last_send + self.server_heartbeat > curr:
                 yield from asyncio.sleep(0.5)
             else:
                 yield from self.send_heartbeat()
@@ -407,8 +407,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def _heartbeat_recv(self):
         while self.state != CLOSED:
-            сurr = int(time())
-            if self._heartbeat_last_recv + self.server_heartbeat * 2 < сurr:
+            curr = int(time())
+            if self._heartbeat_last_recv + self.server_heartbeat * 2 < curr:
                 self._heartbeat_timer_recv_timeout()
                 yield from asyncio.sleep(0.01)
             else:
