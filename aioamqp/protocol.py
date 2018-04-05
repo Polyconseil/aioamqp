@@ -412,7 +412,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 self._heartbeat_timer_recv_timeout()
                 yield from asyncio.sleep(0.01)
             else:
-                yield from asyncio.sleep(0.5)
+                yield from asyncio.sleep(0.1)
 
     # Amqp specific methods
     @asyncio.coroutine
