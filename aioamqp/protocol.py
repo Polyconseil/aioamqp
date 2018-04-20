@@ -4,16 +4,14 @@
 
 import asyncio
 import logging
-
 from time import time
 
 from . import channel as amqp_channel
 from . import constants as amqp_constants
-from . import frame as amqp_frame
 from . import exceptions
+from . import frame as amqp_frame
 from . import version
 from .compat import ensure_future
-
 
 logger = logging.getLogger(__name__)
 
