@@ -500,16 +500,16 @@ class Channel:
         # split the payload
 
         frame_max = self.protocol.server_frame_max or payload_len
+        if isinstance(payload, str):
+            payload = payload.encode()
+
         for chunk in chunker(payload, frame_max):
 
             content_frame = amqp_frame.AmqpRequest(
                 self.protocol._stream_writer, amqp_constants.TYPE_BODY, self.channel_id)
             content_frame.declare_class(amqp_constants.CLASS_BASIC)
             encoder = amqp_frame.AmqpEncoder()
-            if isinstance(chunk, str):
-                encoder.payload.write(chunk.encode())
-            else:
-                encoder.payload.write(chunk)
+            encoder.payload.write(chunk)
             yield from self._write_frame(content_frame, encoder, drain=False)
 
         yield from self.protocol._drain()
@@ -816,7 +816,8 @@ class Channel:
         yield from self._write_frame(header_frame, encoder, drain=False)
 
         # split the payload
-
+        if isinstance(payload, str):
+            payload = payload.encode()
         frame_max = self.protocol.server_frame_max or len(payload)
         for chunk in chunker(payload, frame_max):
 
@@ -824,10 +825,7 @@ class Channel:
                 self.protocol._stream_writer, amqp_constants.TYPE_BODY, self.channel_id)
             content_frame.declare_class(amqp_constants.CLASS_BASIC)
             encoder = amqp_frame.AmqpEncoder()
-            if isinstance(chunk, str):
-                encoder.payload.write(chunk.encode())
-            else:
-                encoder.payload.write(chunk)
+            encoder.payload.write(chunk)
             yield from self._write_frame(content_frame, encoder, drain=False)
 
         yield from self.protocol._drain()
