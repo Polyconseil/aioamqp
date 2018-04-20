@@ -18,6 +18,10 @@ from .envelope import Envelope, ReturnEnvelope
 logger = logging.getLogger(__name__)
 
 
+def chunker(seq, size):
+    return [seq[i:size+i] for i in range(0, len(seq), size)]
+
+
 class Channel:
 
     def __init__(self, protocol, channel_id, return_callback=None):
@@ -503,7 +507,10 @@ class Channel:
         # split the payload
 
         frame_max = self.protocol.server_frame_max or payload_len
-        for chunk in (payload[0+i:frame_max+i] for i in range(0, payload_len, frame_max)):
+        if isinstance(payload, str):
+            payload = payload.encode()
+
+        for chunk in chunker(payload, frame_max):
 
             content_frame = amqp_frame.AmqpRequest(
                 self.protocol._stream_writer, amqp_constants.TYPE_BODY, self.channel_id)
@@ -845,9 +852,8 @@ class Channel:
         yield from self._write_frame(header_frame, encoder, drain=False)
 
         # split the payload
-
         frame_max = self.protocol.server_frame_max or len(payload)
-        for chunk in (payload[0+i:frame_max+i] for i in range(0, len(payload), frame_max)):
+        for chunk in chunker(payload, frame_max):
 
             content_frame = amqp_frame.AmqpRequest(
                 self.protocol._stream_writer, amqp_constants.TYPE_BODY, self.channel_id)
