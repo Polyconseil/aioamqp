@@ -17,4 +17,5 @@ AUTHORS are (and/or have been)::
     * `iceboy-sjtu`
     * Sergio Medina Toledo
     * Alexander Gromyko
+    * Nick Humrich
 
