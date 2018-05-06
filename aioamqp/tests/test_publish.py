@@ -38,6 +38,21 @@ class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertEqual(1, queues["q"]['messages'])
 
     @testing.coroutine
+    def test_big_unicode_publish(self):
+        # declare
+        yield from self.channel.queue_declare("q", exclusive=True, no_wait=False)
+        yield from self.channel.exchange_declare("e", "fanout")
+        yield from self.channel.queue_bind("q", "e", routing_key='')
+
+        # publish
+        yield from self.channel.publish("Ы"*1000000, "e", routing_key='')
+        yield from self.channel.publish("Ы"*1000000, "e", routing_key='')
+
+        queues = self.list_queues()
+        self.assertIn("q", queues)
+        self.assertEqual(2, queues["q"]['messages'])
+
+    @testing.coroutine
     def test_confirmed_publish(self):
         # declare
         yield from self.channel.confirm_select()
