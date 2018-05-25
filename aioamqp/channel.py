@@ -7,6 +7,7 @@ import logging
 import uuid
 import io
 from itertools import count
+import warnings
 
 from . import constants as amqp_constants
 from . import frame as amqp_frame
@@ -477,6 +478,7 @@ class Channel:
     def basic_publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
         assert payload, "Payload cannot be empty"
         if isinstance(payload, str):
+            warnings.warn("Str payload support will be removed in next release", DeprecationWarning)
             payload = payload.encode()
 
         method_frame = amqp_frame.AmqpRequest(
@@ -816,6 +818,7 @@ class Channel:
     def publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
         assert payload, "Payload cannot be empty"
         if isinstance(payload, str):
+            warnings.warn("Str payload support will be removed in next release", DeprecationWarning)
             payload = payload.encode()
 
         if self.publisher_confirms:
