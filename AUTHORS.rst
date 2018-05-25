@@ -18,4 +18,5 @@ AUTHORS are (and/or have been)::
     * Sergio Medina Toledo
     * Alexander Gromyko
     * Nick Humrich
+    * Pavel Kamaev
 
