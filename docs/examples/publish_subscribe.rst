@@ -16,7 +16,7 @@ The publisher create a new `fanout` exchange:
 
  .. code-block:: python
 
-    yield from channel.exchange_declare(exchange_name='logs', type_name='fanout'
+    yield from channel.exchange_declare(exchange_name='logs', type_name='fanout')
 
 
 And publish message into that exchange:
