@@ -24,3 +24,4 @@ AUTHORS are (and/or have been)::
     * Jacob Hagstedt P Suorra
     * Corey `notmeta`
     * Paul Wistrand
+    * Aleksandr Balezin
