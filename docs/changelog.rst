@@ -4,6 +4,9 @@ Changelog
 Next release
 ------------
 
+Aioamqp 0.11.0
+--------------
+
  * Fix publish str payloads. Support will be removed in next major release.
  * Support for ``basic_return`` (closes #158).
  * Support for missings encoding and decoding types (closes #156).
