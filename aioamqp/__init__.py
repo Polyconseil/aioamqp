@@ -1,6 +1,5 @@
 import asyncio
 import socket
-import sys
 import ssl as ssl_module  # import as to enable argument named ssl in connect
 from urllib.parse import urlparse
 
@@ -41,8 +40,6 @@ def connect(host='localhost', port=None, login='guest', password='guest',
     create_connection_kwargs = {}
 
     if ssl:
-        if sys.version_info < (3, 4):
-            raise NotImplementedError('SSL not supported on Python 3.3 yet')
         ssl_context = ssl_module.create_default_context()
         if not verify_ssl:
             ssl_context.check_hostname = False
