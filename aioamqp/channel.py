@@ -507,8 +507,6 @@ class Channel:
         # split the payload
 
         frame_max = self.protocol.server_frame_max or payload_len
-        if isinstance(payload, str):
-            payload = payload.encode()
 
         for chunk in chunker(payload, frame_max):
 
