@@ -476,7 +476,6 @@ class Channel:
 
     @asyncio.coroutine
     def basic_publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
-        assert payload, "Payload cannot be empty"
         if isinstance(payload, str):
             warnings.warn("Str payload support will be removed in next release", DeprecationWarning)
             payload = payload.encode()
@@ -816,7 +815,6 @@ class Channel:
 
     @asyncio.coroutine
     def publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
-        assert payload, "Payload cannot be empty"
         if isinstance(payload, str):
             warnings.warn("Str payload support will be removed in next release", DeprecationWarning)
             payload = payload.encode()
