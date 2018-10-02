@@ -51,5 +51,5 @@ class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
         transport, proto = yield from connect(virtualhost=self.vhost, loop=self.loop)
         sock = transport.get_extra_info('socket')
         opt_val = sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY)
-        self.assertEqual(opt_val, 1)
+        self.assertNotEqual(opt_val, 0)
         yield from proto.close()
