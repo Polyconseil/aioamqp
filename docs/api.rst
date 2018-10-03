@@ -180,7 +180,33 @@ In the callback:
     app_id
     cluster_id
 
+Server Cancellation
+~~~~~~~~~~~~~~~~~~~
 
+RabbitMQ offers an AMQP extension to notify a consumer when a queue is deleted.
+See `Consumer Cancel Notification <https://www.rabbitmq.com/consumer-cancel.html>`_
+for additional details.  ``aioamqp`` enables the extension for all channels but
+takes no action when the consumer is cancelled.  Your application can be notified
+of consumer cancellations by adding a callback to the channel::
+
+    @asyncio.coroutine
+    def consumer_cancelled(channel, consumer_tag):
+        # implement required cleanup here
+        pass
+
+
+    @asyncio.coroutine
+    def consumer(channel, body, envelope, properties):
+        channel.basic_ack(envelope.delivery_tag)
+
+
+    channel = yield from protocol.channel()
+    channel.add_cancellation_callback(consumer_cancelled)
+    yield from channel.basic_consume(consumer, queue_name="my_queue")
+
+The callback can be a simple callable or an asynchronous co-routine.  It can
+be used to restart consumption on the channel, close the channel, or anything
+else that is appropriate for your application.
 
 Queues
 ------

@@ -4,6 +4,8 @@ Changelog
 Next release
 ------------
 
+ * Call user-specified callback when a consumer is cancelled.
+
 Aioamqp 0.11.0
 --------------
 

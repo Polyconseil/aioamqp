@@ -26,6 +26,7 @@ class Channel:
         self.channel_id = channel_id
         self.consumer_queues = {}
         self.consumer_callbacks = {}
+        self.cancellation_callbacks = []
         self.return_callback = return_callback
         self.response_future = None
         self.close_event = asyncio.Event(loop=self._loop)
@@ -650,6 +651,12 @@ class Channel:
         _no_wait = frame.payload_decoder.read_bit()
         self.cancelled_consumers.add(consumer_tag)
         logger.info("consume cancelled received")
+        for callback in self.cancellation_callbacks:
+            try:
+                yield from callback(self, consumer_tag)
+            except Exception as error:  # pylint: disable=broad-except
+                logger.error("cancellation callback %r raised exception %r",
+                             callback, error)
 
     @asyncio.coroutine
     def basic_cancel(self, consumer_tag, no_wait=False):
@@ -879,3 +886,15 @@ class Channel:
         fut = self._get_waiter('confirm_select')
         fut.set_result(True)
         logger.debug("Confirm selected")
+
+    def add_cancellation_callback(self, callback):
+        """Add a callback that is invoked when a consumer is cancelled.
+
+        :param callback: function to call
+
+        `callback` is called with the channel and consumer tag as positional
+        parameters.  The callback can be either a plain callable or an
+        asynchronous co-routine.
+
+        """
+        self.cancellation_callbacks.append(callback)
