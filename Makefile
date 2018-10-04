@@ -22,11 +22,9 @@ SPHINXBUILDDIR ?= $(BUILD_DIR)/sphinx/html
 ALLSPHINXOPTS ?= -d $(BUILD_DIR)/sphinx/doctrees $(SPHINXOPTS) docs
 
 doc:
-	@ pip install -q Sphinx sphinx-rtd-theme
 	sphinx-build -a $(INPUT_DIR) build
 
 livehtml: docs
-	@ pip install -q Sphinx sphinx-rtd-theme
 	sphinx-autobuild $(AUTOSPHINXOPTS) $(ALLSPHINXOPTS) $(SPHINXBUILDDIR)
 
 test:
