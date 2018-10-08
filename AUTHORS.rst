@@ -20,4 +20,4 @@ AUTHORS are (and/or have been)::
     * Nick Humrich
     * Pavel Kamaev
     * Mads Sejersen
-
+    * Dave Shawley
