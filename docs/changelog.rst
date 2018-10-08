@@ -5,6 +5,7 @@ Next release
 ------------
 
  * Uses pamqp to encode or decode protocol frames.
+ * Drops support of python 3.3 and python 3.4.
 
 Aioamqp 0.12.0
 --------------
