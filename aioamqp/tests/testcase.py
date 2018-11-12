@@ -210,7 +210,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         except asyncio.TimeoutError:
             logger.warning('Timeout on queue %s deletion', full_queue_name, exc_info=True)
         except Exception:  # pylint: disable=broad-except
-            logger.error('Unexpected error on queue %s deletion', full_queue_name, exc_info=True)
+            logger.exception('Unexpected error on queue %s deletion', full_queue_name)
 
     @asyncio.coroutine
     def safe_exchange_delete(self, exchange_name, channel=None):
@@ -225,7 +225,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         except asyncio.TimeoutError:
             logger.warning('Timeout on exchange %s deletion', full_exchange_name, exc_info=True)
         except Exception:  # pylint: disable=broad-except
-            logger.error('Unexpected error on exchange %s deletion', full_exchange_name, exc_info=True)
+            logger.exception('Unexpected error on exchange %s deletion', full_exchange_name)
 
     def full_name(self, name):
         if self.is_full_name(name):
