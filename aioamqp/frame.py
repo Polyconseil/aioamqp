@@ -92,8 +92,12 @@ class AmqpEncoder:
             self.payload.write(b'F')
             self.write_table(value)
         elif isinstance(value, int):
-            self.payload.write(b'I')
-            self.write_long(value)
+            if value.bit_length() >= 32:
+                self.payload.write(b'L')
+                self.write_long_long(value)
+            else:
+                self.payload.write(b'I')
+                self.write_long(value)
         elif isinstance(value, float):
             self.payload.write(b'd')
             self.write_float(value)
