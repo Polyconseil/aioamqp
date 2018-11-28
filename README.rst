@@ -30,6 +30,12 @@ Tests require an instance of RabbitMQ. You can start a new instance using docker
 
 Then you can run the tests with ``make test`` (requires ``nose``).
 
+tests using docker-compose
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Start RabbitMQ using ``docker-compose up -d rabbitmq``. When RabbitMQ has started, start the tests using ``docker-compose up --build aioamqp-test``
+
+
+
 
 .. _AMQP 0.9.1 protocol: https://www.rabbitmq.com/amqp-0-9-1-quickref.html
 .. _PEP 3156: http://www.python.org/dev/peps/pep-3156/

@@ -1,0 +1,17 @@
+version: '3'
+services:
+  aioamqp-test:
+    build: .
+    command: ["make", "test"]
+    depends_on:
+      - rabbitmq
+    environment:
+      - AMQP_HOST=rabbitmq
+  rabbitmq:
+    hostname: rabbitmq
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_NODENAME=my-rabbit
+    ports:
+      - 15672
+      - 5672
