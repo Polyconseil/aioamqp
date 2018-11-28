@@ -51,6 +51,20 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertEqual(result['queue'].split('.')[-1], queue_name)
 
     @testing.coroutine
+    def test_queue_declare_custom_x_message_ttl_32_bits(self):
+        queue_name = 'queue_name'
+        # 2147483648 == 10000000000000000000000000000000
+        # in binary, meaning it is 32 bit long
+        x_message_ttl = 2147483648
+        result = yield from self.channel.queue_declare('queue_name', arguments={
+            'x-message-ttl': x_message_ttl
+        })
+        self.assertEqual(result['message_count'], 0)
+        self.assertEqual(result['consumer_count'], 0)
+        self.assertEqual(result['queue'].split('.')[-1], queue_name)
+        self.assertTrue(result)
+
+    @testing.coroutine
     def test_queue_declare_passive_nonexistant_queue(self):
         queue_name = 'queue_name'
         with self.assertRaises(exceptions.ChannelClosed) as cm:
