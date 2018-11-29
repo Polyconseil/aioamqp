@@ -5,6 +5,10 @@
 import asyncio
 import logging
 
+import pamqp.frame
+import pamqp.heartbeat
+import pamqp.specification
+
 from . import channel as amqp_channel
 from . import constants as amqp_constants
 from . import frame as amqp_frame
@@ -150,8 +154,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             yield from self._stream_writer.drain()
 
     @asyncio.coroutine
-    def _write_frame(self, frame, request, drain=True):
-        frame.write_frame(request)
+    def _write_frame(self, channel_id, request, drain=True):
+        amqp_frame.write(self._stream_writer, channel_id, request)
         if drain:
             yield from self._drain()
 
@@ -160,16 +164,14 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """Close connection (and all channels)"""
         yield from self.ensure_open()
         self.state = CLOSING
-        frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_METHOD, 0)
-        frame.declare_method(
-            amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE)
-        encoder = amqp_frame.AmqpEncoder()
-        # we request a clean connection close
-        encoder.write_short(0)
-        encoder.write_shortstr('')
-        encoder.write_short(0)
-        encoder.write_short(0)
-        yield from self._write_frame(frame, encoder)
+        request = pamqp.specification.Connection.Close(
+            reply_code=0,
+            reply_text='',
+            class_id=0,
+            method_id=0
+        )
+
+        yield from self._write_frame(0, request)
         if not no_wait:
             yield from self.wait_closed(timeout=timeout)
 
@@ -219,7 +221,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         }
 
         # waiting reply start with credentions and co
-        yield from self.start_ok(client_properties, 'AMQPLAIN', auth, self.server_locales[0])
+        yield from self.start_ok(client_properties, 'PLAIN', auth, self.server_locales[0])
 
         # wait for a "tune" reponse
         yield from self.dispatch_frame()
@@ -355,9 +357,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         It can be an ack for the server or the client willing to check for the
         connexion timeout
         """
-        frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_HEARTBEAT, 0)
-        request = amqp_frame.AmqpEncoder()
-        yield from self._write_frame(frame, request)
+        request = pamqp.heartbeat.Heartbeat()
+        yield from self._write_frame(0, request)
 
     def _heartbeat_timer_recv_timeout(self):
         # 4.2.7 If a peer detects no incoming traffic (i.e. received octets) for
@@ -417,15 +418,16 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def start_ok(self, client_properties, mechanism, auth, locale):
-        frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_METHOD, 0)
-        frame.declare_method(
-            amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_START_OK)
-        request = amqp_frame.AmqpEncoder()
-        request.write_table(client_properties)
-        request.write_shortstr(mechanism)
-        request.write_table(auth)
-        request.write_shortstr(locale.encode())
-        yield from self._write_frame(frame, request)
+        def credentials():
+            return '\0{LOGIN}\0{PASSWORD}'.format(**auth)
+
+        request = pamqp.specification.Connection.StartOk(
+            client_properties=client_properties,
+            mechanism=mechanism,
+            locale=locale,
+            response=credentials()
+        )
+        yield from self._write_frame(0, request)
 
     @asyncio.coroutine
     def server_close(self, frame):
@@ -443,11 +445,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self._stream_writer.close()
 
     def _close_ok(self):
-        frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_METHOD, 0)
-        frame.declare_method(
-            amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK)
-        request = amqp_frame.AmqpEncoder()
-        yield from self._write_frame(frame, request)
+        request = pamqp.specification.Connection.CloseOk()
+        yield from self._write_frame(0, request)
 
     @asyncio.coroutine
     def tune(self, frame):
@@ -458,15 +457,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def tune_ok(self, channel_max, frame_max, heartbeat):
-        frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_METHOD, 0)
-        frame.declare_method(
-            amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_TUNE_OK)
-        encoder = amqp_frame.AmqpEncoder()
-        encoder.write_short(channel_max)
-        encoder.write_long(frame_max)
-        encoder.write_short(heartbeat)
-
-        yield from self._write_frame(frame, encoder)
+        request = pamqp.specification.Connection.TuneOk(
+            channel_max, frame_max, heartbeat
+        )
+        yield from self._write_frame(0, request)
 
     @asyncio.coroutine
     def secure_ok(self, login_response):
@@ -475,15 +469,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def open(self, virtual_host, capabilities='', insist=False):
         """Open connection to virtual host."""
-        frame = amqp_frame.AmqpRequest(self._stream_writer, amqp_constants.TYPE_METHOD, 0)
-        frame.declare_method(
-            amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_OPEN)
-        encoder = amqp_frame.AmqpEncoder()
-        encoder.write_shortstr(virtual_host)
-        encoder.write_shortstr(capabilities)
-        encoder.write_bool(insist)
-
-        yield from self._write_frame(frame, encoder)
+        request = pamqp.specification.Connection.Open(
+            virtual_host, capabilities, insist
+        )
+        yield from self._write_frame(0, request)
 
     @asyncio.coroutine
     def open_ok(self, frame):

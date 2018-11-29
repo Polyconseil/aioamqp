@@ -47,206 +47,16 @@ import datetime
 from itertools import count
 from decimal import Decimal
 
+import pamqp.encode
+import pamqp.specification
+import pamqp.frame
+
 from . import exceptions
 from . import constants as amqp_constants
 from .properties import Properties
 
 
 DUMP_FRAMES = False
-
-
-class AmqpEncoder:
-
-    def __init__(self):
-        self.payload = io.BytesIO()
-
-    def write_table(self, data_dict):
-
-        self.write_long(0)                  # the table length (set later)
-        if data_dict:
-            start = self.payload.tell()
-            for key, value in data_dict.items():
-                self.write_shortstr(key)
-                self.write_value(value)
-            table_length = self.payload.tell() - start
-            self.payload.seek(start - 4)    # move before the long
-            self.write_long(table_length)   # and set the table length
-            self.payload.seek(0, os.SEEK_END)  # return at the end
-
-    def write_array(self, value):
-        array_data = AmqpEncoder()
-        for item in value:
-            array_data.write_value(item)
-        array_data = array_data.payload.getvalue()
-        self.write_long(len(array_data))
-        self.payload.write(array_data)
-
-    def write_value(self, value):
-        if isinstance(value, (bytes, str)):
-            self.payload.write(b'S')
-            self.write_longstr(value)
-        elif isinstance(value, bool):
-            self.payload.write(b't')
-            self.write_bool(value)
-        elif isinstance(value, dict):
-            self.payload.write(b'F')
-            self.write_table(value)
-        elif isinstance(value, int):
-            if value.bit_length() >= 32:
-                self.payload.write(b'L')
-                self.write_long_long(value)
-            else:
-                self.payload.write(b'I')
-                self.write_long(value)
-        elif isinstance(value, float):
-            self.payload.write(b'd')
-            self.write_float(value)
-        elif isinstance(value, (list, tuple)):
-            self.payload.write(b'A')
-            self.write_array(value)
-        elif isinstance(value, Decimal):
-            self.payload.write(b'D')
-            self.write_decimal(value)
-        elif isinstance(value, datetime.datetime):
-            self.payload.write(b'T')
-            self.write_timestamp(value)
-        elif value is None:
-            self.payload.write(b'V')
-        else:
-            raise Exception("type({}) unsupported".format(type(value)))
-
-    def write_bits(self, *args):
-        """Write consecutive bools to one byte"""
-        assert len(args) <= 8, "write_bits can only write 8 bits into one octet, sadly"
-        byte_value = 0
-
-        for arg_index, bit in enumerate(args):
-            if bit:
-                byte_value |= (1 << arg_index)
-
-        self.write_octet(byte_value)
-
-    def write_bool(self, value):
-        self.payload.write(struct.pack('?', value))
-
-    def write_octet(self, octet):
-        self.payload.write(struct.pack('!B', octet))
-
-    def write_short(self, short):
-        self.payload.write(struct.pack('!H', short))
-
-    def write_long(self, integer):
-        self.payload.write(struct.pack('!I', integer))
-
-    def write_long_long(self, longlong):
-        self.payload.write(struct.pack('!Q', longlong))
-
-    def write_float(self, value):
-        self.payload.write(struct.pack('>d', value))
-
-    def write_decimal(self, value):
-        sign, digits, exponent = value.as_tuple()
-        v = 0
-        for d in digits:
-            v = (v * 10) + d
-        if sign:
-            v = -v
-        self.write_octet(-exponent)
-        self.payload.write(struct.pack('>i', v))
-
-    def write_timestamp(self, value):
-        """Write out a Python datetime.datetime object as a 64-bit integer representing seconds since the Unix epoch."""
-        self.payload.write(struct.pack('>Q', int(value.replace(tzinfo=datetime.timezone.utc).timestamp())))
-
-    def _write_string(self, string):
-        if isinstance(string, str):
-            self.payload.write(string.encode())
-        elif isinstance(string, bytes):
-            self.payload.write(string)
-
-    def write_longstr(self, string):
-        self.write_long(len(string))
-        self._write_string(string)
-
-    def write_shortstr(self, string):
-        self.write_octet(len(string))
-        self._write_string(string)
-
-    def write_message_properties(self, properties):
-
-        properties_flag_value = 0
-        if properties is None:
-            self.write_short(0)
-            return
-
-        diff = set(properties.keys()) - set(amqp_constants.MESSAGE_PROPERTIES)
-        if diff:
-            raise ValueError("%s are not properties, valid properties are %s" % (
-                diff, amqp_constants.MESSAGE_PROPERTIES))
-
-        start = self.payload.tell()                 # record the position
-        self.write_short(properties_flag_value)     # set the flag later
-
-        content_type = properties.get('content_type')
-        if content_type:
-            properties_flag_value |= amqp_constants.FLAG_CONTENT_TYPE
-            self.write_shortstr(content_type)
-        content_encoding = properties.get('content_encoding')
-        if content_encoding:
-            properties_flag_value |= amqp_constants.FLAG_CONTENT_ENCODING
-            self.write_shortstr(content_encoding)
-        headers = properties.get('headers')
-        if headers is not None:
-            properties_flag_value |= amqp_constants.FLAG_HEADERS
-            self.write_table(headers)
-        delivery_mode = properties.get('delivery_mode')
-        if delivery_mode is not None:
-            properties_flag_value |= amqp_constants.FLAG_DELIVERY_MODE
-            self.write_octet(delivery_mode)
-        priority = properties.get('priority')
-        if priority is not None:
-            properties_flag_value |= amqp_constants.FLAG_PRIORITY
-            self.write_octet(priority)
-        correlation_id = properties.get('correlation_id')
-        if correlation_id:
-            properties_flag_value |= amqp_constants.FLAG_CORRELATION_ID
-            self.write_shortstr(correlation_id)
-        reply_to = properties.get('reply_to')
-        if reply_to:
-            properties_flag_value |= amqp_constants.FLAG_REPLY_TO
-            self.write_shortstr(reply_to)
-        expiration = properties.get('expiration')
-        if expiration:
-            properties_flag_value |= amqp_constants.FLAG_EXPIRATION
-            self.write_shortstr(expiration)
-        message_id = properties.get('message_id')
-        if message_id:
-            properties_flag_value |= amqp_constants.FLAG_MESSAGE_ID
-            self.write_shortstr(message_id)
-        timestamp = properties.get('timestamp')
-        if timestamp is not None:
-            properties_flag_value |= amqp_constants.FLAG_TIMESTAMP
-            self.write_long_long(timestamp)
-        type_ = properties.get('type')
-        if type_:
-            properties_flag_value |= amqp_constants.FLAG_TYPE
-            self.write_shortstr(type_)
-        user_id = properties.get('user_id')
-        if user_id:
-            properties_flag_value |= amqp_constants.FLAG_USER_ID
-            self.write_shortstr(user_id)
-        app_id = properties.get('app_id')
-        if app_id:
-            properties_flag_value |= amqp_constants.FLAG_APP_ID
-            self.write_shortstr(app_id)
-        cluster_id = properties.get('cluster_id')
-        if cluster_id:
-            properties_flag_value |= amqp_constants.FLAG_CLUSTER_ID
-            self.write_shortstr(cluster_id)
-
-        self.payload.seek(start)                    # move before the flag
-        self.write_short(properties_flag_value)     # set the flag
-        self.payload.seek(0, os.SEEK_END)
 
 
 class AmqpDecoder:
@@ -371,51 +181,16 @@ class AmqpDecoder:
         return field_array
 
 
-class AmqpRequest:
-    def __init__(self, writer, frame_type, channel):
-        self.writer = writer
-        self.frame_type = frame_type
-        self.channel = channel
-        self.class_id = None
-        self.weight = None
-        self.method_id = None
-        self.next_body_size = None
+def write(writer, channel, encoder):
+    """Writes the built frame from the encoder
 
-    def declare_class(self, class_id, weight=0):
-        self.class_id = class_id
-        self.weight = 0
+        writer:     asyncio StreamWriter
+        channel:    amqp Channel identifier
+        encoder:    frame encoder from pamqp which can be marshalled
 
-    def set_body_size(self, size):
-        self.next_body_size = size
-
-    def declare_method(self, class_id, method_id):
-        self.class_id = class_id
-        self.method_id = method_id
-
-    def write_frame(self, encoder):
-        payload = encoder.payload
-        content_header = ''
-        transmission = io.BytesIO()
-        if self.frame_type == amqp_constants.TYPE_METHOD:
-            content_header = struct.pack('!HH', self.class_id, self.method_id)
-        elif self.frame_type == amqp_constants.TYPE_HEADER:
-            content_header = struct.pack('!HHQ', self.class_id, self.weight, self.next_body_size)
-        elif self.frame_type == amqp_constants.TYPE_BODY:
-            # no specific headers
-            pass
-        elif self.frame_type == amqp_constants.TYPE_HEARTBEAT:
-            # no specific headers
-            pass
-        else:
-            raise Exception("frame_type {} not handled".format(self.frame_type))
-
-        header = struct.pack('!BHI', self.frame_type, self.channel, payload.tell() + len(content_header))
-        transmission.write(header)
-        if content_header:
-            transmission.write(content_header)
-        transmission.write(payload.getvalue())
-        transmission.write(amqp_constants.FRAME_END)
-        return self.writer.write(transmission.getvalue())
+    Returns int, the number of bytes written.
+    """
+    return writer.write(pamqp.frame.marshal(encoder, channel))
 
 
 class AmqpResponse:

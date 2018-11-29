@@ -40,7 +40,7 @@ class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
     @testing.coroutine
     def test_basic_qos_wrong_values(self):
-        with self.assertRaises(struct.error):
+        with self.assertRaises(TypeError):
             yield from self.channel.basic_qos(
                 prefetch_size=100000,
                 prefetch_count=1000000000,
