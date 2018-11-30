@@ -150,7 +150,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         if amqp is None:
             amqp = self.amqp
 
-        server_version = tuple(int(x) for x in amqp.server_properties['version'].split('.'))
+        server_version = tuple(int(x) for x in amqp.server_properties['version'].decode().split('.'))
         return server_version
 
     @asyncio.coroutine

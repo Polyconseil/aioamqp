@@ -16,7 +16,6 @@ class Handler(logging.Handler):
 
     def emit(self, record):
         message = record.msg % record.args
-        print(message)
         self.messages.append(message)
 
 

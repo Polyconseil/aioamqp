@@ -186,7 +186,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def close_ok(self, frame):
-        logger.info("Recv close ok")
         self._stream_writer.close()
 
     @asyncio.coroutine
@@ -221,7 +220,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         }
 
         # waiting reply start with credentions and co
-        yield from self.start_ok(client_properties, 'PLAIN', auth, self.server_locales[0])
+        yield from self.start_ok(client_properties, 'PLAIN', auth, self.server_locales)
 
         # wait for a "tune" reponse
         yield from self.dispatch_frame()
@@ -247,13 +246,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         yield from self.open(virtualhost, capabilities='', insist=insist)
 
         # wait for open-ok
-        frame = yield from self.get_frame()
-        yield from self.dispatch_frame(frame)
-        if (frame.frame_type == amqp_constants.TYPE_METHOD and
-                frame.class_id == amqp_constants.CLASS_CONNECTION and
-                frame.method_id == amqp_constants.CONNECTION_CLOSE):
-            raise exceptions.AmqpClosedConnection()
-
+        channel, frame = yield from self.get_frame()
+        yield from self.dispatch_frame(channel, frame)
         # for now, we read server's responses asynchronously
         self.worker = ensure_future(self.run(), loop=self._loop)
 
@@ -262,40 +256,37 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """Read the frame, and only decode its header
 
         """
-        frame = amqp_frame.AmqpResponse(self._stream_reader)
-        yield from frame.read_frame()
-
-        return frame
+        return amqp_frame.read(self._stream_reader)
 
     @asyncio.coroutine
-    def dispatch_frame(self, frame=None):
+    def dispatch_frame(self, frame_channel=None, frame=None):
         """Dispatch the received frame to the corresponding handler"""
 
         method_dispatch = {
-            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE): self.server_close,
-            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_CLOSE_OK): self.close_ok,
-            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_TUNE): self.tune,
-            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_START): self.start,
-            (amqp_constants.CLASS_CONNECTION, amqp_constants.CONNECTION_OPEN_OK): self.open_ok,
+            pamqp.specification.Connection.Close.name: self.server_close,
+            pamqp.specification.Connection.CloseOk.name: self.close_ok,
+            pamqp.specification.Connection.Tune.name: self.tune,
+            pamqp.specification.Connection.Start.name: self.start,
+            pamqp.specification.Connection.OpenOk.name: self.open_ok,
         }
-        if not frame:
-            frame = yield from self.get_frame()
+        if not frame_channel and not frame:
+            frame_channel, frame = yield from self.get_frame()
 
-        if frame.frame_type == amqp_constants.TYPE_HEARTBEAT:
+        if isinstance(frame, pamqp.heartbeat.Heartbeat):
             return
 
-        if frame.channel is not 0:
-            channel = self.channels.get(frame.channel)
+        if frame_channel is not 0:
+            channel = self.channels.get(frame_channel)
             if channel is not None:
                 yield from channel.dispatch_frame(frame)
             else:
-                logger.info("Unknown channel %s", frame.channel)
+                logger.info("Unknown channel %s", frame_channel)
             return
 
-        if (frame.class_id, frame.method_id) not in method_dispatch:
-            logger.info("frame %s %s is not handled", frame.class_id, frame.method_id)
+        if frame.name not in method_dispatch:
+            logger.info("frame %s is not handled", frame.name)
             return
-        yield from method_dispatch[(frame.class_id, frame.method_id)](frame)
+        yield from method_dispatch[frame.name](frame)
 
     def release_channel_id(self, channel_id):
         """Called from the channel instance, it relase a previously used
@@ -408,13 +399,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     @asyncio.coroutine
     def start(self, frame):
         """Method sent from the server to begin a new connection"""
-        response = amqp_frame.AmqpDecoder(frame.payload)
-
-        self.version_major = response.read_octet()
-        self.version_minor = response.read_octet()
-        self.server_properties = response.read_table()
-        self.server_mechanisms = response.read_longstr().split(' ')
-        self.server_locales = response.read_longstr().split(' ')
+        self.version_major = frame.version_major
+        self.version_minor = frame.version_minor
+        self.server_properties = frame.server_properties
+        self.server_mechanisms = frame.mechanisms
+        self.server_locales = frame.locales
 
     @asyncio.coroutine
     def start_ok(self, client_properties, mechanism, auth, locale):
@@ -433,11 +422,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     def server_close(self, frame):
         """The server is closing the connection"""
         self.state = CLOSING
-        response = amqp_frame.AmqpDecoder(frame.payload)
-        reply_code = response.read_short()
-        reply_text = response.read_shortstr()
-        class_id = response.read_short()
-        method_id = response.read_short()
+        reply_code = frame.reply_code
+        reply_text = frame.reply_text
+        class_id = frame.class_id
+        method_id = frame.method_id
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
             reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
@@ -450,10 +438,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def tune(self, frame):
-        decoder = amqp_frame.AmqpDecoder(frame.payload)
-        self.server_channel_max = decoder.read_short()
-        self.server_frame_max = decoder.read_long()
-        self.server_heartbeat = decoder.read_short()
+        self.server_channel_max = frame.channel_max
+        self.server_frame_max = frame.frame_max
+        self.server_heartbeat = frame.heartbeat
 
     @asyncio.coroutine
     def tune_ok(self, channel_max, frame_max, heartbeat):

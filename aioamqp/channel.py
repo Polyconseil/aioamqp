@@ -14,6 +14,7 @@ import pamqp.specification
 from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
+from . import properties as amqp_properties
 from .envelope import Envelope, ReturnEnvelope
 
 
@@ -77,40 +78,41 @@ class Channel:
     @asyncio.coroutine
     def dispatch_frame(self, frame):
         methods = {
-            (amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_OPEN_OK): self.open_ok,
-            (amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_FLOW_OK): self.flow_ok,
-            (amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE_OK): self.close_ok,
-            (amqp_constants.CLASS_CHANNEL, amqp_constants.CHANNEL_CLOSE): self.server_channel_close,
+            pamqp.specification.Channel.OpenOk.name: self.open_ok,
+            pamqp.specification.Channel.FlowOk.name: self.flow_ok,
+            pamqp.specification.Channel.CloseOk.name: self.close_ok,
+            pamqp.specification.Channel.Close.name: self.server_channel_close,
 
-            (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DECLARE_OK): self.exchange_declare_ok,
-            (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_BIND_OK): self.exchange_bind_ok,
-            (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_UNBIND_OK): self.exchange_unbind_ok,
-            (amqp_constants.CLASS_EXCHANGE, amqp_constants.EXCHANGE_DELETE_OK): self.exchange_delete_ok,
+            pamqp.specification.Exchange.DeclareOk.name: self.exchange_declare_ok,
+            pamqp.specification.Exchange.BindOk.name: self.exchange_bind_ok,
+            pamqp.specification.Exchange.UnbindOk.name: self.exchange_unbind_ok,
+            pamqp.specification.Exchange.DeleteOk.name: self.exchange_delete_ok,
 
-            (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_DECLARE_OK): self.queue_declare_ok,
-            (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_DELETE_OK): self.queue_delete_ok,
-            (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_BIND_OK): self.queue_bind_ok,
-            (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_UNBIND_OK): self.queue_unbind_ok,
-            (amqp_constants.CLASS_QUEUE, amqp_constants.QUEUE_PURGE_OK): self.queue_purge_ok,
+            pamqp.specification.Queue.DeclareOk.name: self.queue_declare_ok,
+            pamqp.specification.Queue.DeleteOk.name: self.queue_delete_ok,
+            pamqp.specification.Queue.BindOk.name: self.queue_bind_ok,
+            pamqp.specification.Queue.UnbindOk.name: self.queue_unbind_ok,
+            pamqp.specification.Queue.PurgeOk.name: self.queue_purge_ok,
 
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_QOS_OK): self.basic_qos_ok,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CONSUME_OK): self.basic_consume_ok,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CANCEL_OK): self.basic_cancel_ok,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_GET_OK): self.basic_get_ok,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_GET_EMPTY): self.basic_get_empty,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_DELIVER): self.basic_deliver,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_CANCEL): self.server_basic_cancel,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_ACK): self.basic_server_ack,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_NACK): self.basic_server_nack,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RECOVER_OK): self.basic_recover_ok,
-            (amqp_constants.CLASS_BASIC, amqp_constants.BASIC_RETURN): self.basic_return,
+            pamqp.specification.Basic.QosOk.name: self.basic_qos_ok,
+            pamqp.specification.Basic.ConsumeOk.name: self.basic_consume_ok,
+            pamqp.specification.Basic.CancelOk.name: self.basic_cancel_ok,
+            pamqp.specification.Basic.GetOk.name: self.basic_get_ok,
+            pamqp.specification.Basic.GetEmpty.name: self.basic_get_empty,
+            pamqp.specification.Basic.Deliver.name: self.basic_deliver,
+            pamqp.specification.Basic.Cancel.name: self.server_basic_cancel,
+            pamqp.specification.Basic.Ack.name: self.basic_server_ack,
+            pamqp.specification.Basic.Nack.name: self.basic_server_nack,
+            pamqp.specification.Basic.RecoverOk.name: self.basic_recover_ok,
+            pamqp.specification.Basic.Return.name: self.basic_return,
 
-            (amqp_constants.CLASS_CONFIRM, amqp_constants.CONFIRM_SELECT_OK): self.confirm_select_ok,
+            pamqp.specification.Confirm.SelectOk.name: self.confirm_select_ok,
         }
 
-        if (frame.class_id, frame.method_id) not in methods:
-            raise NotImplementedError("Frame (%s, %s) is not implemented" % (frame.class_id, frame.method_id))
-        yield from methods[(frame.class_id, frame.method_id)](frame)
+        if frame.name not in methods:
+            raise NotImplementedError("Frame %s is not implemented" % frame.name)
+
+        yield from methods[frame.name](frame)
 
     @asyncio.coroutine
     def _write_frame(self, channel_id, request, check_open=True, drain=True):
@@ -180,10 +182,10 @@ class Channel:
     def server_channel_close(self, frame):
         yield from self._send_channel_close_ok()
         results = {
-            'reply_code': frame.payload_decoder.read_short(),
-            'reply_text': frame.payload_decoder.read_shortstr(),
-            'class_id': frame.payload_decoder.read_short(),
-            'method_id': frame.payload_decoder.read_short(),
+            'reply_code': frame.reply_code,
+            'reply_text': frame.reply_text,
+            'class_id': frame.class_id,
+            'method_id': frame.method_id,
         }
         self.connection_closed(results['reply_code'], results['reply_text'])
 
@@ -196,11 +198,9 @@ class Channel:
 
     @asyncio.coroutine
     def flow_ok(self, frame):
-        decoder = amqp_frame.AmqpDecoder(frame.payload)
-        active = bool(decoder.read_octet())
         self.close_event.clear()
         fut = self._get_waiter('flow')
-        fut.set_result({'active': active})
+        fut.set_result({'active': frame.active})
 
         logger.debug("Flow ok")
 
@@ -329,9 +329,9 @@ class Channel:
     @asyncio.coroutine
     def queue_declare_ok(self, frame):
         results = {
-            'queue': frame.payload_decoder.read_shortstr(),
-            'message_count': frame.payload_decoder.read_long(),
-            'consumer_count': frame.payload_decoder.read_long(),
+            'queue': frame.queue,
+            'message_count': frame.message_count,
+            'consumer_count': frame.consumer_count,
         }
         future = self._get_waiter('queue_declare')
         future.set_result(results)
@@ -416,10 +416,8 @@ class Channel:
 
     @asyncio.coroutine
     def queue_purge_ok(self, frame):
-        decoder = amqp_frame.AmqpDecoder(frame.payload)
-        message_count = decoder.read_long()
         future = self._get_waiter('queue_purge')
-        future.set_result({'message_count': message_count})
+        future.set_result({'message_count': frame.message_count})
 
 #
 ## Basic class implementation
@@ -492,8 +490,7 @@ class Channel:
     @asyncio.coroutine
     def basic_server_nack(self, frame, delivery_tag=None):
         if delivery_tag is None:
-            decoder = amqp_frame.AmqpDecoder(frame.payload)
-            delivery_tag = decoder.read_long_long()
+            delivery_tag = frame.delivery_tag
         fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
         logger.debug('Received nack for delivery tag %r', delivery_tag)
         fut.set_exception(exceptions.PublishFailed(delivery_tag))
@@ -546,7 +543,7 @@ class Channel:
 
     @asyncio.coroutine
     def basic_consume_ok(self, frame):
-        ctag = frame.payload_decoder.read_shortstr()
+        ctag = frame.consumer_tag
         results = {
             'consumer_tag': ctag,
         }
@@ -556,22 +553,22 @@ class Channel:
 
     @asyncio.coroutine
     def basic_deliver(self, frame):
-        response = amqp_frame.AmqpDecoder(frame.payload)
-        consumer_tag = response.read_shortstr()
-        delivery_tag = response.read_long_long()
-        is_redeliver = response.read_bit()
-        exchange_name = response.read_shortstr()
-        routing_key = response.read_shortstr()
-        content_header_frame = yield from self.protocol.get_frame()
+        consumer_tag = frame.consumer_tag
+        delivery_tag = frame.delivery_tag
+        is_redeliver = frame.redelivered
+        exchange_name = frame.exchange
+        routing_key = frame.routing_key
+        channel, content_header_frame = yield from self.protocol.get_frame()
 
         buffer = io.BytesIO()
+
         while(buffer.tell() < content_header_frame.body_size):
-            content_body_frame = yield from self.protocol.get_frame()
-            buffer.write(content_body_frame.payload)
+            _channel, content_body_frame = yield from self.protocol.get_frame()
+            buffer.write(content_body_frame.value)
 
         body = buffer.getvalue()
         envelope = Envelope(consumer_tag, delivery_tag, exchange_name, routing_key, is_redeliver)
-        properties = content_header_frame.properties
+        properties = amqp_properties.from_pamqp(content_header_frame.properties)
 
         callback = self.consumer_callbacks[consumer_tag]
 
@@ -585,8 +582,8 @@ class Channel:
     @asyncio.coroutine
     def server_basic_cancel(self, frame):
         # https://www.rabbitmq.com/consumer-cancel.html
-        consumer_tag = frame.payload_decoder.read_shortstr()
-        _no_wait = frame.payload_decoder.read_bit()
+        consumer_tag = frame.consumer_tag
+        _no_wait = frame.nowait
         self.cancelled_consumers.add(consumer_tag)
         logger.info("consume cancelled received")
         for callback in self.cancellation_callbacks:
@@ -606,7 +603,7 @@ class Channel:
     @asyncio.coroutine
     def basic_cancel_ok(self, frame):
         results = {
-            'consumer_tag': frame.payload_decoder.read_shortstr(),
+            'consumer_tag': frame.consumer_tag,
         }
         future = self._get_waiter('basic_cancel')
         future.set_result(results)
@@ -621,22 +618,23 @@ class Channel:
 
     @asyncio.coroutine
     def basic_get_ok(self, frame):
-        data = {}
-        decoder = amqp_frame.AmqpDecoder(frame.payload)
-        data['delivery_tag'] = decoder.read_long_long()
-        data['redelivered'] = bool(decoder.read_octet())
-        data['exchange_name'] = decoder.read_shortstr()
-        data['routing_key'] = decoder.read_shortstr()
-        data['message_count'] = decoder.read_long()
-        content_header_frame = yield from self.protocol.get_frame()
+        data = {
+            'delivery_tag': frame.delivery_tag,
+            'redelivered': frame.redelivered,
+            'exchange_name': frame.exchange,
+            'routing_key': frame.routing_key,
+            'message_count': frame.message_count,
+        }
+
+        channel, content_header_frame = yield from self.protocol.get_frame()
 
         buffer = io.BytesIO()
         while(buffer.tell() < content_header_frame.body_size):
-            content_body_frame = yield from self.protocol.get_frame()
-            buffer.write(content_body_frame.payload)
+            _channel, content_body_frame = yield from self.protocol.get_frame()
+            buffer.write(content_body_frame.value)
 
         data['message'] = buffer.getvalue()
-        data['properties'] = content_header_frame.properties
+        data['properties'] = amqp_properties.from_pamqp(content_header_frame.properties)
         future = self._get_waiter('basic_get')
         future.set_result(data)
 
@@ -658,8 +656,7 @@ class Channel:
 
     @asyncio.coroutine
     def basic_server_ack(self, frame):
-        decoder = amqp_frame.AmqpDecoder(frame.payload)
-        delivery_tag = decoder.read_long_long()
+        delivery_tag = frame.delivery_tag
         fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
         logger.debug('Received ack for delivery tag %s', delivery_tag)
         fut.set_result(True)
@@ -689,22 +686,21 @@ class Channel:
 
     @asyncio.coroutine
     def basic_return(self, frame):
-        response = amqp_frame.AmqpDecoder(frame.payload)
-        reply_code = response.read_short()
-        reply_text = response.read_shortstr()
-        exchange_name = response.read_shortstr()
-        routing_key = response.read_shortstr()
-        content_header_frame = yield from self.protocol.get_frame()
+        reply_code = frame.reply_code
+        reply_text = frame.reply_text
+        exchange_name = frame.exchange
+        routing_key = frame.routing_key
+        channel, content_header_frame = yield from self.protocol.get_frame()
 
         buffer = io.BytesIO()
-        while buffer.tell() < content_header_frame.body_size:
-            content_body_frame = yield from self.protocol.get_frame()
-            buffer.write(content_body_frame.payload)
+        while(buffer.tell() < content_header_frame.body_size):
+            _channel, content_body_frame = yield from self.protocol.get_frame()
+            buffer.write(content_body_frame.value)
 
         body = buffer.getvalue()
         envelope = ReturnEnvelope(reply_code, reply_text,
                                   exchange_name, routing_key)
-        properties = content_header_frame.properties
+        properties = amqp_properties.from_pamqp(content_header_frame.properties)
         callback = self.return_callback
         if callback is None:
             # they have set mandatory bit, but havent added a callback
