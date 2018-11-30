@@ -4,6 +4,7 @@ Changelog
 Next release
 ------------
 
+ * Fix an issue to use correct int encoder depending on int size (closes #180).
  * Call user-specified callback when a consumer is cancelled.
 
 Aioamqp 0.11.0
