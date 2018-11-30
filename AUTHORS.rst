@@ -21,3 +21,4 @@ AUTHORS are (and/or have been)::
     * Pavel Kamaev
     * Mads Sejersen
     * Dave Shawley
+    * Jacob Hagstedt P Suorra
