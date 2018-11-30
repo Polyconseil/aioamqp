@@ -2,8 +2,8 @@
 
 PACKAGE = aioamqp
 
-NOSETESTS ?= nosetests
-TEST_OPTIONS ?= --verbosity=2
+TEST_LAUNCHER ?= pytest
+TEST_OPTIONS ?= -v -s --timeout=20
 PYLINT_RC ?= .pylintrc
 
 BUILD_DIR ?= build
@@ -28,7 +28,7 @@ livehtml: docs
 	sphinx-autobuild $(AUTOSPHINXOPTS) $(ALLSPHINXOPTS) $(SPHINXBUILDDIR)
 
 test:
-	$(NOSETESTS) $(PACKAGE) $(TEST_OPTIONS)
+	$(TEST_LAUNCHER) $(TEST_OPTIONS) $(PACKAGE)
 
 
 update:

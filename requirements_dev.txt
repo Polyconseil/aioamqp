@@ -1,8 +1,9 @@
 -e .
 
-nose
 coverage
 pylint
+pytest>4
+pytest-timeout
 Sphinx
 sphinx-rtd-theme
 
