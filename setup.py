@@ -23,6 +23,9 @@ setuptools.setup(
     packages=[
         'aioamqp',
     ],
+    install_requires=[
+        'pamqp>=2.0,<3',
+    ],
     extras_require={
         ':python_version=="3.3"': ['asyncio'],
     },
