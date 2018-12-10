@@ -5,4 +5,5 @@ coverage
 pylint
 Sphinx
 sphinx-rtd-theme
--e git+https://github.com/bkjones/pyrabbit.git#egg=pyrabbit
+
+pyrabbit2
