@@ -248,6 +248,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         # wait for open-ok
         channel, frame = yield from self.get_frame()
         yield from self.dispatch_frame(channel, frame)
+
+        yield from self.ensure_open()
         # for now, we read server's responses asynchronously
         self.worker = ensure_future(self.run(), loop=self._loop)
 
