@@ -271,7 +271,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             pamqp.specification.Connection.Start.name: self.start,
             pamqp.specification.Connection.OpenOk.name: self.open_ok,
         }
-        if not frame_channel and not frame:
+        if frame_channel is None and frame is None:
             frame_channel, frame = yield from self.get_frame()
 
         if isinstance(frame, pamqp.heartbeat.Heartbeat):
