@@ -11,7 +11,6 @@ import warnings
 
 import pamqp.specification
 
-from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
 from . import properties as amqp_properties
@@ -558,7 +557,7 @@ class Channel:
         is_redeliver = frame.redelivered
         exchange_name = frame.exchange
         routing_key = frame.routing_key
-        channel, content_header_frame = yield from self.protocol.get_frame()
+        _channel, content_header_frame = yield from self.protocol.get_frame()
 
         buffer = io.BytesIO()
 
@@ -626,7 +625,7 @@ class Channel:
             'message_count': frame.message_count,
         }
 
-        channel, content_header_frame = yield from self.protocol.get_frame()
+        _channel, content_header_frame = yield from self.protocol.get_frame()
 
         buffer = io.BytesIO()
         while(buffer.tell() < content_header_frame.body_size):
@@ -690,7 +689,7 @@ class Channel:
         reply_text = frame.reply_text
         exchange_name = frame.exchange
         routing_key = frame.routing_key
-        channel, content_header_frame = yield from self.protocol.get_frame()
+        _channel, content_header_frame = yield from self.protocol.get_frame()
 
         buffer = io.BytesIO()
         while(buffer.tell() < content_header_frame.body_size):

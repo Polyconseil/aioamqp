@@ -39,13 +39,7 @@ Content Payload
 """
 
 import asyncio
-import io
-import struct
 import socket
-import os
-import datetime
-from itertools import count
-from decimal import Decimal
 
 import pamqp.encode
 import pamqp.specification
@@ -53,7 +47,6 @@ import pamqp.frame
 
 from . import exceptions
 from . import constants as amqp_constants
-from .properties import Properties
 
 
 DUMP_FRAMES = False
