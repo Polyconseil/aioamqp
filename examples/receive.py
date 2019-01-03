@@ -7,18 +7,16 @@ import asyncio
 import aioamqp
 
 
-@asyncio.coroutine
-def callback(channel, body, envelope, properties):
+async def callback(channel, body, envelope, properties):
     print(" [x] Received %r" % body)
 
-@asyncio.coroutine
-def receive():
-    transport, protocol = yield from aioamqp.connect()
-    channel = yield from protocol.channel()
+async def receive():
+    transport, protocol = await aioamqp.connect()
+    channel = await protocol.channel()
 
-    yield from channel.queue_declare(queue_name='hello')
+    await channel.queue_declare(queue_name='hello')
 
-    yield from channel.basic_consume(callback, queue_name='hello')
+    await channel.basic_consume(callback, queue_name='hello')
 
 
 event_loop = asyncio.get_event_loop()

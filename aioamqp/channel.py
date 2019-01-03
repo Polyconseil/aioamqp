@@ -74,8 +74,7 @@ class Channel:
         self.protocol.release_channel_id(self.channel_id)
         self.close_event.set()
 
-    @asyncio.coroutine
-    def dispatch_frame(self, frame):
+    async def dispatch_frame(self, frame):
         methods = {
             pamqp.specification.Channel.OpenOk.name: self.open_ok,
             pamqp.specification.Channel.FlowOk.name: self.flow_ok,
@@ -111,75 +110,67 @@ class Channel:
         if frame.name not in methods:
             raise NotImplementedError("Frame %s is not implemented" % frame.name)
 
-        yield from methods[frame.name](frame)
+        await methods[frame.name](frame)
 
-    @asyncio.coroutine
-    def _write_frame(self, channel_id, request, check_open=True, drain=True):
-        yield from self.protocol.ensure_open()
+    async def _write_frame(self, channel_id, request, check_open=True, drain=True):
+        await self.protocol.ensure_open()
         if not self.is_open and check_open:
             raise exceptions.ChannelClosed()
         amqp_frame.write(self.protocol._stream_writer, channel_id, request)
         if drain:
-            yield from self.protocol._drain()
+            await self.protocol._drain()
 
-    @asyncio.coroutine
-    def _write_frame_awaiting_response(self, waiter_id, channel_id, request, no_wait, check_open=True, drain=True):
+    async def _write_frame_awaiting_response(self, waiter_id, channel_id, request, no_wait, check_open=True, drain=True):
         '''Write a frame and set a waiter for the response (unless no_wait is set)'''
         if no_wait:
-            yield from self._write_frame(channel_id, request, check_open=check_open, drain=drain)
+            await self._write_frame(channel_id, request, check_open=check_open, drain=drain)
             return None
 
         f = self._set_waiter(waiter_id)
         try:
-            yield from self._write_frame(channel_id, request, check_open=check_open, drain=drain)
+            await self._write_frame(channel_id, request, check_open=check_open, drain=drain)
         except Exception:
             self._get_waiter(waiter_id)
             f.cancel()
             raise
-        return (yield from f)
+        return (await f)
 
 #
 ## Channel class implementation
 #
 
-    @asyncio.coroutine
-    def open(self):
+    async def open(self):
         """Open the channel on the server."""
         request = pamqp.specification.Channel.Open()
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'open', self.channel_id, request, no_wait=False, check_open=False))
 
-    @asyncio.coroutine
-    def open_ok(self, frame):
+    async def open_ok(self, frame):
         self.close_event.clear()
         fut = self._get_waiter('open')
         fut.set_result(True)
         logger.debug("Channel is open")
 
-    @asyncio.coroutine
-    def close(self, reply_code=0, reply_text="Normal Shutdown"):
+    async def close(self, reply_code=0, reply_text="Normal Shutdown"):
         """Close the channel."""
         if not self.is_open:
             raise exceptions.ChannelClosed("channel already closed or closing")
         self.close_event.set()
         request = pamqp.specification.Channel.Close(reply_code, reply_text, class_id=0, method_id=0)
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'close', self.channel_id, request, no_wait=False, check_open=False))
 
-    @asyncio.coroutine
-    def close_ok(self, frame):
+    async def close_ok(self, frame):
         self._get_waiter('close').set_result(True)
         logger.info("Channel closed")
         self.protocol.release_channel_id(self.channel_id)
 
-    @asyncio.coroutine
-    def _send_channel_close_ok(self):
+    async def _send_channel_close_ok(self):
         request = pamqp.specification.Channel.CloseOk()
-        yield from self._write_frame(self.channel_id, request)
+        await self._write_frame(self.channel_id, request)
 
-    @asyncio.coroutine
-    def server_channel_close(self, frame):
-        yield from self._send_channel_close_ok()
+    async def server_channel_close(self, frame):
+        await self._send_channel_close_ok()
         results = {
             'reply_code': frame.reply_code,
             'reply_text': frame.reply_text,
@@ -188,15 +179,13 @@ class Channel:
         }
         self.connection_closed(results['reply_code'], results['reply_text'])
 
-    @asyncio.coroutine
-    def flow(self, active):
+    async def flow(self, active):
         request = pamqp.specification.Channel.Flow(active)
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'flow', self.channel_id, request, no_wait=False,
             check_open=False))
 
-    @asyncio.coroutine
-    def flow_ok(self, frame):
+    async def flow_ok(self, frame):
         self.close_event.clear()
         fut = self._get_waiter('flow')
         fut.set_result({'active': frame.active})
@@ -207,8 +196,7 @@ class Channel:
 ## Exchange class implementation
 #
 
-    @asyncio.coroutine
-    def exchange_declare(self, exchange_name, type_name, passive=False, durable=False,
+    async def exchange_declare(self, exchange_name, type_name, passive=False, durable=False,
                          auto_delete=False, no_wait=False, arguments=None):
         request = pamqp.specification.Exchange.Declare(
             exchange=exchange_name,
@@ -220,30 +208,26 @@ class Channel:
             arguments=arguments
         )
 
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'exchange_declare', self.channel_id, request, no_wait))
 
-    @asyncio.coroutine
-    def exchange_declare_ok(self, frame):
+    async def exchange_declare_ok(self, frame):
         future = self._get_waiter('exchange_declare')
         future.set_result(True)
         logger.debug("Exchange declared")
         return future
 
-    @asyncio.coroutine
-    def exchange_delete(self, exchange_name, if_unused=False, no_wait=False):
+    async def exchange_delete(self, exchange_name, if_unused=False, no_wait=False):
         request = pamqp.specification.Exchange.Delete(exchange=exchange_name, if_unused=if_unused, nowait=no_wait)
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'exchange_delete', self.channel_id, request, no_wait))
 
-    @asyncio.coroutine
-    def exchange_delete_ok(self, frame):
+    async def exchange_delete_ok(self, frame):
         future = self._get_waiter('exchange_delete')
         future.set_result(True)
         logger.debug("Exchange deleted")
 
-    @asyncio.coroutine
-    def exchange_bind(self, exchange_destination, exchange_source, routing_key,
+    async def exchange_bind(self, exchange_destination, exchange_source, routing_key,
                       no_wait=False, arguments=None):
         if arguments is None:
             arguments = {}
@@ -254,17 +238,15 @@ class Channel:
             nowait=no_wait,
             arguments=arguments
         )
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'exchange_bind', self.channel_id, request, no_wait))
 
-    @asyncio.coroutine
-    def exchange_bind_ok(self, frame):
+    async def exchange_bind_ok(self, frame):
         future = self._get_waiter('exchange_bind')
         future.set_result(True)
         logger.debug("Exchange bound")
 
-    @asyncio.coroutine
-    def exchange_unbind(self, exchange_destination, exchange_source, routing_key,
+    async def exchange_unbind(self, exchange_destination, exchange_source, routing_key,
                         no_wait=False, arguments=None):
         if arguments is None:
             arguments = {}
@@ -276,11 +258,10 @@ class Channel:
             nowait=no_wait,
             arguments=arguments,
         )
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'exchange_unbind', self.channel_id, request, no_wait))
 
-    @asyncio.coroutine
-    def exchange_unbind_ok(self, frame):
+    async def exchange_unbind_ok(self, frame):
         future = self._get_waiter('exchange_unbind')
         future.set_result(True)
         logger.debug("Exchange bound")
@@ -289,8 +270,7 @@ class Channel:
 ## Queue class implementation
 #
 
-    @asyncio.coroutine
-    def queue_declare(self, queue_name=None, passive=False, durable=False,
+    async def queue_declare(self, queue_name=None, passive=False, durable=False,
                       exclusive=False, auto_delete=False, no_wait=False, arguments=None):
         """Create or check a queue on the broker
            Args:
@@ -322,11 +302,10 @@ class Channel:
             nowait=no_wait,
             arguments=arguments
         )
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'queue_declare', self.channel_id, request, no_wait))
 
-    @asyncio.coroutine
-    def queue_declare_ok(self, frame):
+    async def queue_declare_ok(self, frame):
         results = {
             'queue': frame.queue,
             'message_count': frame.message_count,
@@ -337,8 +316,7 @@ class Channel:
         logger.debug("Queue declared")
 
 
-    @asyncio.coroutine
-    def queue_delete(self, queue_name, if_unused=False, if_empty=False, no_wait=False):
+    async def queue_delete(self, queue_name, if_unused=False, if_empty=False, no_wait=False):
         """Delete a queue in RabbitMQ
             Args:
                queue_name:     str, the queue to receive message from
@@ -352,17 +330,15 @@ class Channel:
             if_empty=if_empty,
             nowait=no_wait
         )
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'queue_delete', self.channel_id, request, no_wait))
 
-    @asyncio.coroutine
-    def queue_delete_ok(self, frame):
+    async def queue_delete_ok(self, frame):
         future = self._get_waiter('queue_delete')
         future.set_result(True)
         logger.debug("Queue deleted")
 
-    @asyncio.coroutine
-    def queue_bind(self, queue_name, exchange_name, routing_key, no_wait=False, arguments=None):
+    async def queue_bind(self, queue_name, exchange_name, routing_key, no_wait=False, arguments=None):
         """Bind a queue and a channel."""
         if arguments is None:
             arguments = {}
@@ -375,17 +351,15 @@ class Channel:
             arguments=arguments
         )
         # short reserved-1
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'queue_bind', self.channel_id, request, no_wait))
 
-    @asyncio.coroutine
-    def queue_bind_ok(self, frame):
+    async def queue_bind_ok(self, frame):
         future = self._get_waiter('queue_bind')
         future.set_result(True)
         logger.debug("Queue bound")
 
-    @asyncio.coroutine
-    def queue_unbind(self, queue_name, exchange_name, routing_key, arguments=None):
+    async def queue_unbind(self, queue_name, exchange_name, routing_key, arguments=None):
         if arguments is None:
             arguments = {}
 
@@ -396,25 +370,22 @@ class Channel:
             arguments=arguments
         )
 
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'queue_unbind', self.channel_id, request, no_wait=False))
 
-    @asyncio.coroutine
-    def queue_unbind_ok(self, frame):
+    async def queue_unbind_ok(self, frame):
         future = self._get_waiter('queue_unbind')
         future.set_result(True)
         logger.debug("Queue unbound")
 
-    @asyncio.coroutine
-    def queue_purge(self, queue_name, no_wait=False):
+    async def queue_purge(self, queue_name, no_wait=False):
         request = pamqp.specification.Queue.Purge(
             queue=queue_name, nowait=no_wait
         )
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'queue_purge', self.channel_id, request, no_wait=no_wait))
 
-    @asyncio.coroutine
-    def queue_purge_ok(self, frame):
+    async def queue_purge_ok(self, frame):
         future = self._get_waiter('queue_purge')
         future.set_result({'message_count': frame.message_count})
 
@@ -422,8 +393,7 @@ class Channel:
 ## Basic class implementation
 #
 
-    @asyncio.coroutine
-    def basic_publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
+    async def basic_publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
         if isinstance(payload, str):
             warnings.warn("Str payload support will be removed in next release", DeprecationWarning)
             payload = payload.encode()
@@ -438,25 +408,24 @@ class Channel:
             immediate=immediate
         )
 
-        yield from self._write_frame(self.channel_id, method_request, drain=False)
+        await self._write_frame(self.channel_id, method_request, drain=False)
 
         header_request = pamqp.header.ContentHeader(
             body_size=len(payload),
             properties=pamqp.specification.Basic.Properties(**properties)
         )
-        yield from self._write_frame(self.channel_id, header_request, drain=False)
+        await self._write_frame(self.channel_id, header_request, drain=False)
 
         # split the payload
 
         frame_max = self.protocol.server_frame_max or len(payload)
         for chunk in (payload[0+i:frame_max+i] for i in range(0, len(payload), frame_max)):
             content_request = pamqp.body.ContentBody(chunk)
-            yield from self._write_frame(self.channel_id, content_request, drain=False)
+            await self._write_frame(self.channel_id, content_request, drain=False)
 
-        yield from self.protocol._drain()
+        await self.protocol._drain()
 
-    @asyncio.coroutine
-    def basic_qos(self, prefetch_size=0, prefetch_count=0, connection_global=False):
+    async def basic_qos(self, prefetch_size=0, prefetch_count=0, connection_global=False):
         """Specifies quality of service.
 
         Args:
@@ -475,27 +444,24 @@ class Channel:
         request = pamqp.specification.Basic.Qos(
             prefetch_size, prefetch_count, connection_global
         )
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'basic_qos', self.channel_id, request, no_wait=False)
         )
 
-    @asyncio.coroutine
-    def basic_qos_ok(self, frame):
+    async def basic_qos_ok(self, frame):
         future = self._get_waiter('basic_qos')
         future.set_result(True)
         logger.debug("Qos ok")
 
 
-    @asyncio.coroutine
-    def basic_server_nack(self, frame, delivery_tag=None):
+    async def basic_server_nack(self, frame, delivery_tag=None):
         if delivery_tag is None:
             delivery_tag = frame.delivery_tag
         fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
         logger.debug('Received nack for delivery tag %r', delivery_tag)
         fut.set_exception(exceptions.PublishFailed(delivery_tag))
 
-    @asyncio.coroutine
-    def basic_consume(self, callback, queue_name='', consumer_tag='', no_local=False, no_ack=False,
+    async def basic_consume(self, callback, queue_name='', consumer_tag='', no_local=False, no_ack=False,
                       exclusive=False, no_wait=False, arguments=None):
         """Starts the consumption of message into a queue.
         the callback will be called each time we're receiving a message.
@@ -532,7 +498,7 @@ class Channel:
         self.consumer_callbacks[consumer_tag] = callback
         self.last_consumer_tag = consumer_tag
 
-        return_value = yield from self._write_frame_awaiting_response(
+        return_value = await self._write_frame_awaiting_response(
             'basic_consume', self.channel_id, request, no_wait)
         if no_wait:
             return_value = {'consumer_tag': consumer_tag}
@@ -540,8 +506,7 @@ class Channel:
             self._ctag_events[consumer_tag].set()
         return return_value
 
-    @asyncio.coroutine
-    def basic_consume_ok(self, frame):
+    async def basic_consume_ok(self, frame):
         ctag = frame.consumer_tag
         results = {
             'consumer_tag': ctag,
@@ -550,19 +515,18 @@ class Channel:
         future.set_result(results)
         self._ctag_events[ctag] = asyncio.Event(loop=self._loop)
 
-    @asyncio.coroutine
-    def basic_deliver(self, frame):
+    async def basic_deliver(self, frame):
         consumer_tag = frame.consumer_tag
         delivery_tag = frame.delivery_tag
         is_redeliver = frame.redelivered
         exchange_name = frame.exchange
         routing_key = frame.routing_key
-        _channel, content_header_frame = yield from self.protocol.get_frame()
+        _channel, content_header_frame = await self.protocol.get_frame()
 
         buffer = io.BytesIO()
 
         while(buffer.tell() < content_header_frame.body_size):
-            _channel, content_body_frame = yield from self.protocol.get_frame()
+            _channel, content_body_frame = await self.protocol.get_frame()
             buffer.write(content_body_frame.value)
 
         body = buffer.getvalue()
@@ -573,13 +537,12 @@ class Channel:
 
         event = self._ctag_events.get(consumer_tag)
         if event:
-            yield from event.wait()
+            await event.wait()
             del self._ctag_events[consumer_tag]
 
-        yield from callback(self, body, envelope, properties)
+        await callback(self, body, envelope, properties)
 
-    @asyncio.coroutine
-    def server_basic_cancel(self, frame):
+    async def server_basic_cancel(self, frame):
         # https://www.rabbitmq.com/consumer-cancel.html
         consumer_tag = frame.consumer_tag
         _no_wait = frame.nowait
@@ -587,20 +550,18 @@ class Channel:
         logger.info("consume cancelled received")
         for callback in self.cancellation_callbacks:
             try:
-                yield from callback(self, consumer_tag)
+                await callback(self, consumer_tag)
             except Exception as error:  # pylint: disable=broad-except
                 logger.error("cancellation callback %r raised exception %r",
                              callback, error)
 
-    @asyncio.coroutine
-    def basic_cancel(self, consumer_tag, no_wait=False):
+    async def basic_cancel(self, consumer_tag, no_wait=False):
         request = pamqp.specification.Basic.Cancel(consumer_tag, no_wait)
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'basic_cancel', self.channel_id, request, no_wait=no_wait)
         )
 
-    @asyncio.coroutine
-    def basic_cancel_ok(self, frame):
+    async def basic_cancel_ok(self, frame):
         results = {
             'consumer_tag': frame.consumer_tag,
         }
@@ -608,15 +569,13 @@ class Channel:
         future.set_result(results)
         logger.debug("Cancel ok")
 
-    @asyncio.coroutine
-    def basic_get(self, queue_name='', no_ack=False):
+    async def basic_get(self, queue_name='', no_ack=False):
         request = pamqp.specification.Basic.Get(queue=queue_name, no_ack=no_ack)
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'basic_get', self.channel_id, request, no_wait=False)
         )
 
-    @asyncio.coroutine
-    def basic_get_ok(self, frame):
+    async def basic_get_ok(self, frame):
         data = {
             'delivery_tag': frame.delivery_tag,
             'redelivered': frame.redelivered,
@@ -625,11 +584,11 @@ class Channel:
             'message_count': frame.message_count,
         }
 
-        _channel, content_header_frame = yield from self.protocol.get_frame()
+        _channel, content_header_frame = await self.protocol.get_frame()
 
         buffer = io.BytesIO()
         while(buffer.tell() < content_header_frame.body_size):
-            _channel, content_body_frame = yield from self.protocol.get_frame()
+            _channel, content_body_frame = await self.protocol.get_frame()
             buffer.write(content_body_frame.value)
 
         data['message'] = buffer.getvalue()
@@ -637,63 +596,54 @@ class Channel:
         future = self._get_waiter('basic_get')
         future.set_result(data)
 
-    @asyncio.coroutine
-    def basic_get_empty(self, frame):
+    async def basic_get_empty(self, frame):
         future = self._get_waiter('basic_get')
         future.set_exception(exceptions.EmptyQueue)
 
-    @asyncio.coroutine
-    def basic_client_ack(self, delivery_tag, multiple=False):
+    async def basic_client_ack(self, delivery_tag, multiple=False):
         request = pamqp.specification.Basic.Ack(delivery_tag, multiple)
-        yield from self._write_frame(self.channel_id, request)
+        await self._write_frame(self.channel_id, request)
 
-    @asyncio.coroutine
-    def basic_client_nack(self, delivery_tag, multiple=False, requeue=True):
+    async def basic_client_nack(self, delivery_tag, multiple=False, requeue=True):
         request = pamqp.specification.Basic.Nack(delivery_tag, multiple, requeue)
-        yield from self._write_frame(self.channel_id, request)
+        await self._write_frame(self.channel_id, request)
 
 
-    @asyncio.coroutine
-    def basic_server_ack(self, frame):
+    async def basic_server_ack(self, frame):
         delivery_tag = frame.delivery_tag
         fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
         logger.debug('Received ack for delivery tag %s', delivery_tag)
         fut.set_result(True)
 
-    @asyncio.coroutine
-    def basic_reject(self, delivery_tag, requeue=False):
+    async def basic_reject(self, delivery_tag, requeue=False):
         request = pamqp.specification.Basic.Reject(delivery_tag, requeue)
-        yield from self._write_frame(self.channel_id, request)
+        await self._write_frame(self.channel_id, request)
 
-    @asyncio.coroutine
-    def basic_recover_async(self, requeue=True):
+    async def basic_recover_async(self, requeue=True):
         request = pamqp.specification.Basic.RecoverAsync(requeue)
-        yield from self._write_frame(self.channel_id, request)
+        await self._write_frame(self.channel_id, request)
 
-    @asyncio.coroutine
-    def basic_recover(self, requeue=True):
+    async def basic_recover(self, requeue=True):
         request = pamqp.specification.Basic.Recover(requeue)
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'basic_recover', self.channel_id, request, no_wait=False)
         )
 
-    @asyncio.coroutine
-    def basic_recover_ok(self, frame):
+    async def basic_recover_ok(self, frame):
         future = self._get_waiter('basic_recover')
         future.set_result(True)
         logger.debug("Cancel ok")
 
-    @asyncio.coroutine
-    def basic_return(self, frame):
+    async def basic_return(self, frame):
         reply_code = frame.reply_code
         reply_text = frame.reply_text
         exchange_name = frame.exchange
         routing_key = frame.routing_key
-        _channel, content_header_frame = yield from self.protocol.get_frame()
+        _channel, content_header_frame = await self.protocol.get_frame()
 
         buffer = io.BytesIO()
         while(buffer.tell() < content_header_frame.body_size):
-            _channel, content_body_frame = yield from self.protocol.get_frame()
+            _channel, content_body_frame = await self.protocol.get_frame()
             buffer.write(content_body_frame.value)
 
         body = buffer.getvalue()
@@ -706,7 +656,7 @@ class Channel:
             logger.warning('You have received a returned message, but dont have a callback registered for returns.'
                            ' Please set channel.return_callback')
         else:
-            yield from callback(self, body, envelope, properties)
+            await callback(self, body, envelope, properties)
 
 
 #
@@ -715,8 +665,7 @@ class Channel:
     queue = queue_declare
     exchange = exchange_declare
 
-    @asyncio.coroutine
-    def publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
+    async def publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
         if isinstance(payload, str):
             warnings.warn("Str payload support will be removed in next release", DeprecationWarning)
             payload = payload.encode()
@@ -734,38 +683,36 @@ class Channel:
             mandatory=mandatory,
             immediate=immediate
         )
-        yield from self._write_frame(self.channel_id, method_request, drain=False)
+        await self._write_frame(self.channel_id, method_request, drain=False)
 
         properties = pamqp.specification.Basic.Properties(**properties)
         header_request = pamqp.header.ContentHeader(
             body_size=len(payload), properties=properties
         )
-        yield from self._write_frame(self.channel_id, header_request, drain=False)
+        await self._write_frame(self.channel_id, header_request, drain=False)
 
         # split the payload
 
         frame_max = self.protocol.server_frame_max or len(payload)
         for chunk in (payload[0+i:frame_max+i] for i in range(0, len(payload), frame_max)):
             content_request = pamqp.body.ContentBody(chunk)
-            yield from self._write_frame(self.channel_id, content_request, drain=False)
+            await self._write_frame(self.channel_id, content_request, drain=False)
 
-        yield from self.protocol._drain()
+        await self.protocol._drain()
 
         if self.publisher_confirms:
-            yield from fut
+            await fut
 
-    @asyncio.coroutine
-    def confirm_select(self, *, no_wait=False):
+    async def confirm_select(self, *, no_wait=False):
         if self.publisher_confirms:
             raise ValueError('publisher confirms already enabled')
         request = pamqp.specification.Confirm.Select(nowait=no_wait)
 
-        return (yield from self._write_frame_awaiting_response(
+        return (await self._write_frame_awaiting_response(
             'confirm_select', self.channel_id, request, no_wait)
         )
 
-    @asyncio.coroutine
-    def confirm_select_ok(self, frame):
+    async def confirm_select_ok(self, frame):
         self.publisher_confirms = True
         self.delivery_tag_iter = count(1)
         fut = self._get_waiter('confirm_select')

@@ -9,7 +9,7 @@ The API will probably look like:
  .. code-block:: python
 
      fibonacci_rpc = FibonacciRpcClient()
-     result = yield from fibonacci_rpc.call(4)
+     result = await fibonacci_rpc.call(4)
      print("fib(4) is %r" % result)
 
 
@@ -21,7 +21,7 @@ For that purpose, we publish a message to the `rpc_queue` and add a `reply_to` p
 
  .. code-block:: python
 
-    result = yield from channel.queue_declare(exclusive=True)
+    result = await channel.queue_declare(exclusive=True)
     callback_queue = result['queue']
 
     channel.basic_publish(
@@ -44,14 +44,13 @@ When unqueing a message, the server will publish a response directly in the call
 
  .. code-block:: python
 
-    @asyncio.coroutine
-    def on_request(channel, body, envelope, properties):
+    async def on_request(channel, body, envelope, properties):
         n = int(body)
 
         print(" [.] fib(%s)" % n)
         response = fib(n)
 
-        yield from channel.basic_publish(
+        await channel.basic_publish(
             payload=str(response),
             exchange_name='',
             routing_key=properties.reply_to,
@@ -60,5 +59,4 @@ When unqueing a message, the server will publish a response directly in the call
             },
         )
 
-        yield from channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
-
+        await channel.basic_client_ack(delivery_tag=envelope.delivery_tag)

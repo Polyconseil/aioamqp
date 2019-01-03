@@ -8,21 +8,20 @@ import asyncio
 import aioamqp
 
 
-@asyncio.coroutine
-def send():
-    transport, protocol = yield from aioamqp.connect()
-    channel = yield from protocol.channel()
+async def send():
+    transport, protocol = await aioamqp.connect()
+    channel = await protocol.channel()
 
-    yield from channel.queue_declare(queue_name='hello')
+    await channel.queue_declare(queue_name='hello')
 
-    yield from channel.basic_publish(
+    await channel.basic_publish(
         payload='Hello World!',
         exchange_name='',
         routing_key='hello'
     )
 
     print(" [x] Sent 'Hello World!'")
-    yield from protocol.close()
+    await protocol.close()
     transport.close()
 
 

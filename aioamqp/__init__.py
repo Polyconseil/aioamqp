@@ -11,8 +11,7 @@ from .version import __version__
 from .version import __packagename__
 
 
-@asyncio.coroutine
-def connect(host='localhost', port=None, login='guest', password='guest',
+async def connect(host='localhost', port=None, login='guest', password='guest',
             virtualhost='/', ssl=False, login_method='AMQPLAIN', insist=False,
             protocol_factory=AmqpProtocol, *, verify_ssl=True, loop=None, **kwargs):
     """Convenient method to connect to an AMQP broker
@@ -53,7 +52,7 @@ def connect(host='localhost', port=None, login='guest', password='guest',
         else:
             port = 5672
 
-    transport, protocol = yield from loop.create_connection(
+    transport, protocol = await loop.create_connection(
         factory, host, port, **create_connection_kwargs
     )
 
@@ -66,17 +65,16 @@ def connect(host='localhost', port=None, login='guest', password='guest',
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
     try:
-        yield from protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl,
+        await protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl,
             login_method=login_method, insist=insist)
     except Exception:
-        yield from protocol.wait_closed()
+        await protocol.wait_closed()
         raise
 
     return (transport, protocol)
 
 
-@asyncio.coroutine
-def from_url(
+async def from_url(
         url, login_method='AMQPLAIN', insist=False, protocol_factory=AmqpProtocol, *,
         verify_ssl=True, **kwargs):
     """ Connect to the AMQP using a single url parameter and return the client.
@@ -100,7 +98,7 @@ def from_url(
     if url.scheme not in ('amqp', 'amqps'):
         raise ValueError('Invalid protocol %s, valid protocols are amqp or amqps' % url.scheme)
 
-    transport, protocol = yield from connect(
+    transport, protocol = await connect(
         host=url.hostname or 'localhost',
         port=url.port,
         login=url.username or 'guest',

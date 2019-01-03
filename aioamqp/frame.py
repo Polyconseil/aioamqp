@@ -64,8 +64,7 @@ def write(writer, channel, encoder):
     return writer.write(pamqp.frame.marshal(encoder, channel))
 
 
-@asyncio.coroutine
-def read(reader):
+async def read(reader):
     """Read a new frame from the wire
 
         reader:     asyncio StreamReader
@@ -76,13 +75,13 @@ def read(reader):
     if not reader:
         raise exceptions.AmqpClosedConnection()
     try:
-        data = yield from reader.readexactly(7)
+        data = await reader.readexactly(7)
     except (asyncio.IncompleteReadError, socket.error) as ex:
         raise exceptions.AmqpClosedConnection() from ex
 
     frame_type, channel, frame_length = pamqp.frame._frame_parts(data)
 
-    payload_data = yield from reader.readexactly(frame_length)
+    payload_data = await reader.readexactly(frame_length)
     frame = None
 
     if frame_type == amqp_constants.TYPE_METHOD:
@@ -97,6 +96,6 @@ def read(reader):
     elif frame_type == amqp_constants.TYPE_HEARTBEAT:
         frame = pamqp.heartbeat.Heartbeat()
 
-    frame_end = yield from reader.readexactly(1)
+    frame_end = await reader.readexactly(1)
     assert frame_end == amqp_constants.FRAME_END
     return channel, frame

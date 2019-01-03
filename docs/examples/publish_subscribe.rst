@@ -16,14 +16,14 @@ The publisher create a new `fanout` exchange:
 
  .. code-block:: python
 
-    yield from channel.exchange_declare(exchange_name='logs', type_name='fanout')
+    await channel.exchange_declare(exchange_name='logs', type_name='fanout')
 
 
 And publish message into that exchange:
 
  .. code-block:: python
 
-    yield from channel.basic_publish(message, exchange_name='logs', routing_key='')
+    await channel.basic_publish(message, exchange_name='logs', routing_key='')
 
 Consumer
 --------
@@ -32,11 +32,11 @@ The consumer create a temporary queue and binds it to the exchange.
 
  .. code-block:: python
 
-    yield from channel.exchange(exchange_name='logs', type_name='fanout')
+    await channel.exchange(exchange_name='logs', type_name='fanout')
     # let RabbitMQ generate a random queue name
-    result = yield from channel.queue(queue_name='', exclusive=True)
+    result = await channel.queue(queue_name='', exclusive=True)
 
     queue_name = result['queue']
-    yield from channel.queue_bind(exchange_name='logs', queue_name=queue_name, routing_key='')
+    await channel.queue_bind(exchange_name='logs', queue_name=queue_name, routing_key='')
 
 

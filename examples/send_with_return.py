@@ -11,8 +11,7 @@ import asyncio
 import aioamqp
 
 
-@asyncio.coroutine
-def handle_return(channel, body, envelope, properties):
+async def handle_return(channel, body, envelope, properties):
     print('Got a returned message with routing key: {}.\n'
           'Return code: {}\n'
           'Return message: {}\n'
@@ -20,14 +19,13 @@ def handle_return(channel, body, envelope, properties):
                                 envelope.reply_text, envelope.exchange_name))
 
 
-@asyncio.coroutine
-def send():
-    transport, protocol = yield from aioamqp.connect()
-    channel = yield from protocol.channel(return_callback=handle_return)
+async def send():
+    transport, protocol = await aioamqp.connect()
+    channel = await protocol.channel(return_callback=handle_return)
 
-    yield from channel.queue_declare(queue_name='hello')
+    await channel.queue_declare(queue_name='hello')
 
-    yield from channel.basic_publish(
+    await channel.basic_publish(
         payload='Hello World!',
         exchange_name='',
         routing_key='helo',  # typo on purpose, will cause the return
@@ -35,7 +33,7 @@ def send():
     )
 
     print(" [x] Sent 'Hello World!'")
-    yield from protocol.close()
+    await protocol.close()
     transport.close()
 
 

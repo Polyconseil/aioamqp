@@ -125,8 +125,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self._heartbeat_timer_recv_reset()
         super().data_received(data)
 
-    @asyncio.coroutine
-    def ensure_open(self):
+    async def ensure_open(self):
         # Raise a suitable exception if the connection isn't open.
         # Handle cases from the most common to the least common.
 
@@ -138,31 +137,28 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         # If the closing handshake is in progress, let it complete.
         if self.state == CLOSING:
-            yield from self.wait_closed()
+            await self.wait_closed()
             raise exceptions.AmqpClosedConnection()
 
         # Control may only reach this point in buggy third-party subclasses.
         assert self.state == CONNECTING
         raise exceptions.AioamqpException("connection isn't established yet.")
 
-    @asyncio.coroutine
-    def _drain(self):
-        with (yield from self._drain_lock):
+    async def _drain(self):
+        with (await self._drain_lock):
             # drain() cannot be called concurrently by multiple coroutines:
             # http://bugs.python.org/issue29930. Remove this lock when no
             # version of Python where this bugs exists is supported anymore.
-            yield from self._stream_writer.drain()
+            await self._stream_writer.drain()
 
-    @asyncio.coroutine
-    def _write_frame(self, channel_id, request, drain=True):
+    async def _write_frame(self, channel_id, request, drain=True):
         amqp_frame.write(self._stream_writer, channel_id, request)
         if drain:
-            yield from self._drain()
+            await self._drain()
 
-    @asyncio.coroutine
-    def close(self, no_wait=False, timeout=None):
+    async def close(self, no_wait=False, timeout=None):
         """Close connection (and all channels)"""
-        yield from self.ensure_open()
+        await self.ensure_open()
         self.state = CLOSING
         request = pamqp.specification.Connection.Close(
             reply_code=0,
@@ -171,25 +167,22 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             method_id=0
         )
 
-        yield from self._write_frame(0, request)
+        await self._write_frame(0, request)
         if not no_wait:
-            yield from self.wait_closed(timeout=timeout)
+            await self.wait_closed(timeout=timeout)
 
-    @asyncio.coroutine
-    def wait_closed(self, timeout=None):
-        yield from asyncio.wait_for(self.connection_closed.wait(), timeout=timeout, loop=self._loop)
+    async def wait_closed(self, timeout=None):
+        await asyncio.wait_for(self.connection_closed.wait(), timeout=timeout, loop=self._loop)
         if self._heartbeat_worker is not None:
             try:
-                yield from asyncio.wait_for(self._heartbeat_worker, timeout=timeout, loop=self._loop)
+                await asyncio.wait_for(self._heartbeat_worker, timeout=timeout, loop=self._loop)
             except asyncio.CancelledError:
                 pass
 
-    @asyncio.coroutine
-    def close_ok(self, frame):
+    async def close_ok(self, frame):
         self._stream_writer.close()
 
-    @asyncio.coroutine
-    def start_connection(self, host, port, login, password, virtualhost, ssl=False,
+    async def start_connection(self, host, port, login, password, virtualhost, ssl=False,
             login_method='PLAIN', insist=False):
         """Initiate a connection at the protocol level
             We send `PROTOCOL_HEADER'
@@ -202,7 +195,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self._stream_writer.write(amqp_constants.PROTOCOL_HEADER)
 
         # Wait 'start' method from the server
-        yield from self.dispatch_frame()
+        await self.dispatch_frame()
 
         client_properties = {
             'capabilities': {
@@ -220,10 +213,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         }
 
         # waiting reply start with credentions and co
-        yield from self.start_ok(client_properties, 'PLAIN', auth, self.server_locales)
+        await self.start_ok(client_properties, 'PLAIN', auth, self.server_locales)
 
         # wait for a "tune" reponse
-        yield from self.dispatch_frame()
+        await self.dispatch_frame()
 
         tune_ok = {
             'channel_max': self.connection_tunning.get('channel_max', self.server_channel_max),
@@ -231,7 +224,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             'heartbeat': self.connection_tunning.get('heartbeat', self.server_heartbeat),
         }
         # "tune" the connexion with max channel, max frame, heartbeat
-        yield from self.tune_ok(**tune_ok)
+        await self.tune_ok(**tune_ok)
 
         # update connection tunning values
         self.server_frame_max = tune_ok['frame_max']
@@ -243,25 +236,23 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             self._heartbeat_timer_send_reset()
 
         # open a virtualhost
-        yield from self.open(virtualhost, capabilities='', insist=insist)
+        await self.open(virtualhost, capabilities='', insist=insist)
 
         # wait for open-ok
-        channel, frame = yield from self.get_frame()
-        yield from self.dispatch_frame(channel, frame)
+        channel, frame = await self.get_frame()
+        await self.dispatch_frame(channel, frame)
 
-        yield from self.ensure_open()
+        await self.ensure_open()
         # for now, we read server's responses asynchronously
         self.worker = ensure_future(self.run(), loop=self._loop)
 
-    @asyncio.coroutine
-    def get_frame(self):
+    async def get_frame(self):
         """Read the frame, and only decode its header
 
         """
-        return amqp_frame.read(self._stream_reader)
+        return await amqp_frame.read(self._stream_reader)
 
-    @asyncio.coroutine
-    def dispatch_frame(self, frame_channel=None, frame=None):
+    async def dispatch_frame(self, frame_channel=None, frame=None):
         """Dispatch the received frame to the corresponding handler"""
 
         method_dispatch = {
@@ -272,7 +263,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             pamqp.specification.Connection.OpenOk.name: self.open_ok,
         }
         if frame_channel is None and frame is None:
-            frame_channel, frame = yield from self.get_frame()
+            frame_channel, frame = await self.get_frame()
 
         if isinstance(frame, pamqp.heartbeat.Heartbeat):
             return
@@ -280,7 +271,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         if frame_channel is not 0:
             channel = self.channels.get(frame_channel)
             if channel is not None:
-                yield from channel.dispatch_frame(frame)
+                await channel.dispatch_frame(frame)
             else:
                 logger.info("Unknown channel %s", frame_channel)
             return
@@ -288,7 +279,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         if frame.name not in method_dispatch:
             logger.info("frame %s is not handled", frame.name)
             return
-        yield from method_dispatch[frame.name](frame)
+        await method_dispatch[frame.name](frame)
 
     def release_channel_id(self, channel_id):
         """Called from the channel instance, it relase a previously used
@@ -321,11 +312,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         for channel in self.channels.values():
             channel.connection_closed(reply_code, reply_text, exception)
 
-    @asyncio.coroutine
-    def run(self):
+    async def run(self):
         while not self.stop_now.done():
             try:
-                yield from self.dispatch_frame()
+                await self.dispatch_frame()
             except exceptions.AmqpClosedConnection as exc:
                 logger.info("Close connection")
                 self.stop_now.set_result(None)
@@ -334,24 +324,22 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             except Exception:  # pylint: disable=broad-except
                 logger.exception('error on dispatch')
 
-    @asyncio.coroutine
-    def heartbeat(self):
+    async def heartbeat(self):
         """ deprecated heartbeat coroutine
 
         This coroutine is now a no-op as the heartbeat is handled directly by
         the rest of the AmqpProtocol class.  This is kept around for backwards
         compatibility purposes only.
         """
-        yield from self.stop_now
+        await self.stop_now
 
-    @asyncio.coroutine
-    def send_heartbeat(self):
+    async def send_heartbeat(self):
         """Sends an heartbeat message.
         It can be an ack for the server or the client willing to check for the
         connexion timeout
         """
         request = pamqp.heartbeat.Heartbeat()
-        yield from self._write_frame(0, request)
+        await self._write_frame(0, request)
 
     def _heartbeat_timer_recv_timeout(self):
         # 4.2.7 If a peer detects no incoming traffic (i.e. received octets) for
@@ -390,16 +378,14 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         if self._heartbeat_worker is not None:
             self._heartbeat_worker.cancel()
 
-    @asyncio.coroutine
-    def _heartbeat(self):
+    async def _heartbeat(self):
         while self.state != CLOSED:
-            yield from self._heartbeat_trigger_send.wait()
+            await self._heartbeat_trigger_send.wait()
             self._heartbeat_trigger_send.clear()
-            yield from self.send_heartbeat()
+            await self.send_heartbeat()
 
     # Amqp specific methods
-    @asyncio.coroutine
-    def start(self, frame):
+    async def start(self, frame):
         """Method sent from the server to begin a new connection"""
         self.version_major = frame.version_major
         self.version_minor = frame.version_minor
@@ -407,8 +393,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_mechanisms = frame.mechanisms
         self.server_locales = frame.locales
 
-    @asyncio.coroutine
-    def start_ok(self, client_properties, mechanism, auth, locale):
+    async def start_ok(self, client_properties, mechanism, auth, locale):
         def credentials():
             return '\0{LOGIN}\0{PASSWORD}'.format(**auth)
 
@@ -418,10 +403,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             locale=locale,
             response=credentials()
         )
-        yield from self._write_frame(0, request)
+        await self._write_frame(0, request)
 
-    @asyncio.coroutine
-    def server_close(self, frame):
+    async def server_close(self, frame):
         """The server is closing the connection"""
         self.state = CLOSING
         reply_code = frame.reply_code
@@ -431,40 +415,35 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         logger.warning("Server closed connection: %s, code=%s, class_id=%s, method_id=%s",
             reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
-        self._close_ok()
+        await self._close_ok()
         self._stream_writer.close()
 
-    def _close_ok(self):
+    async def _close_ok(self):
         request = pamqp.specification.Connection.CloseOk()
-        yield from self._write_frame(0, request)
+        await self._write_frame(0, request)
 
-    @asyncio.coroutine
-    def tune(self, frame):
+    async def tune(self, frame):
         self.server_channel_max = frame.channel_max
         self.server_frame_max = frame.frame_max
         self.server_heartbeat = frame.heartbeat
 
-    @asyncio.coroutine
-    def tune_ok(self, channel_max, frame_max, heartbeat):
+    async def tune_ok(self, channel_max, frame_max, heartbeat):
         request = pamqp.specification.Connection.TuneOk(
             channel_max, frame_max, heartbeat
         )
-        yield from self._write_frame(0, request)
+        await self._write_frame(0, request)
 
-    @asyncio.coroutine
-    def secure_ok(self, login_response):
+    async def secure_ok(self, login_response):
         pass
 
-    @asyncio.coroutine
-    def open(self, virtual_host, capabilities='', insist=False):
+    async def open(self, virtual_host, capabilities='', insist=False):
         """Open connection to virtual host."""
         request = pamqp.specification.Connection.Open(
             virtual_host, capabilities, insist
         )
-        yield from self._write_frame(0, request)
+        await self._write_frame(0, request)
 
-    @asyncio.coroutine
-    def open_ok(self, frame):
+    async def open_ok(self, frame):
         self.state = OPEN
         logger.info("Recv open ok")
 
@@ -472,12 +451,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     ## aioamqp public methods
     #
 
-    @asyncio.coroutine
-    def channel(self, **kwargs):
+    async def channel(self, **kwargs):
         """Factory to create a new channel
 
         """
-        yield from self.ensure_open()
+        await self.ensure_open()
         try:
             channel_id = self.channels_ids_free.pop()
         except KeyError:
@@ -489,5 +467,5 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             channel_id = self.channels_ids_ceil
         channel = self.CHANNEL_FACTORY(self, channel_id, **kwargs)
         self.channels[channel_id] = channel
-        yield from channel.open()
+        await channel.open()
         return channel

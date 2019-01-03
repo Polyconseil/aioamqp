@@ -107,27 +107,25 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             vname=self.vhost, username='guest', config='.*', rd='.*', wr='.*',
         )
 
-        @asyncio.coroutine
-        def go():
-            _transport, protocol = yield from self.create_amqp()
-            channel = yield from self.create_channel(amqp=protocol)
+        async def go():
+            _transport, protocol = await self.create_amqp()
+            channel = await self.create_channel(amqp=protocol)
             self.channels.append(channel)
         self.loop.run_until_complete(go())
 
     def tearDown(self):
-        @asyncio.coroutine
-        def go():
+        async def go():
             for queue_name, channel in self.queues.values():
                 logger.debug('Delete queue %s', self.full_name(queue_name))
-                yield from self.safe_queue_delete(queue_name, channel)
+                await self.safe_queue_delete(queue_name, channel)
             for exchange_name, channel in self.exchanges.values():
                 logger.debug('Delete exchange %s', self.full_name(exchange_name))
-                yield from self.safe_exchange_delete(exchange_name, channel)
+                await self.safe_exchange_delete(exchange_name, channel)
             for amqp in self.amqps:
                 if amqp.state != OPEN:
                     continue
                 logger.debug('Delete amqp %s', amqp)
-                yield from amqp.close()
+                await amqp.close()
                 del amqp
         self.loop.run_until_complete(go())
 
@@ -153,33 +151,29 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         server_version = tuple(int(x) for x in amqp.server_properties['version'].decode().split('.'))
         return server_version
 
-    @asyncio.coroutine
-    def check_exchange_exists(self, exchange_name):
+    async def check_exchange_exists(self, exchange_name):
         """Check if the exchange exist"""
         try:
-            yield from self.exchange_declare(exchange_name, passive=True)
+            await self.exchange_declare(exchange_name, passive=True)
         except exceptions.ChannelClosed:
             return False
 
         return True
 
-    @asyncio.coroutine
-    def assertExchangeExists(self, exchange_name):
+    async def assertExchangeExists(self, exchange_name):
         if not self.check_exchange_exists(exchange_name):
             self.fail("Exchange {} does not exists".format(exchange_name))
 
-    @asyncio.coroutine
-    def check_queue_exists(self, queue_name):
+    async def check_queue_exists(self, queue_name):
         """Check if the queue exist"""
         try:
-            yield from self.queue_declare(queue_name, passive=True)
+            await self.queue_declare(queue_name, passive=True)
         except exceptions.ChannelClosed:
             return False
 
         return True
 
-    @asyncio.coroutine
-    def assertQueueExists(self, queue_name):
+    async def assertQueueExists(self, queue_name):
         if not self.check_queue_exists(queue_name):
             self.fail("Queue {} does not exists".format(queue_name))
 
@@ -197,8 +191,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
             queues[queue_name] = queue_info
         return queues
 
-    @asyncio.coroutine
-    def safe_queue_delete(self, queue_name, channel=None):
+    async def safe_queue_delete(self, queue_name, channel=None):
         """Delete the queue but does not raise any exception if it fails
 
         The operation has a timeout as well.
@@ -206,14 +199,13 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         channel = channel or self.channel
         full_queue_name = self.full_name(queue_name)
         try:
-            yield from channel.queue_delete(full_queue_name, no_wait=False)
+            await channel.queue_delete(full_queue_name, no_wait=False)
         except asyncio.TimeoutError:
             logger.warning('Timeout on queue %s deletion', full_queue_name, exc_info=True)
         except Exception:  # pylint: disable=broad-except
             logger.exception('Unexpected error on queue %s deletion', full_queue_name)
 
-    @asyncio.coroutine
-    def safe_exchange_delete(self, exchange_name, channel=None):
+    async def safe_exchange_delete(self, exchange_name, channel=None):
         """Delete the exchange but does not raise any exception if it fails
 
         The operation has a timeout as well.
@@ -221,7 +213,7 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
         channel = channel or self.channel
         full_exchange_name = self.full_name(exchange_name)
         try:
-            yield from channel.exchange_delete(full_exchange_name, no_wait=False)
+            await channel.exchange_delete(full_exchange_name, no_wait=False)
         except asyncio.TimeoutError:
             logger.warning('Timeout on exchange %s deletion', full_exchange_name, exc_info=True)
         except Exception:  # pylint: disable=broad-except
@@ -240,29 +232,27 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
     def is_full_name(self, name):
         return name.startswith(self.id())
 
-    @asyncio.coroutine
-    def queue_declare(self, queue_name, *args, channel=None, safe_delete_before=True, **kw):
+    async def queue_declare(self, queue_name, *args, channel=None, safe_delete_before=True, **kw):
         channel = channel or self.channel
         if safe_delete_before:
-            yield from self.safe_queue_delete(queue_name, channel=channel)
+            await self.safe_queue_delete(queue_name, channel=channel)
         # prefix queue_name with the test name
         full_queue_name = self.full_name(queue_name)
         try:
-            rep = yield from channel.queue_declare(full_queue_name, *args, **kw)
+            rep = await channel.queue_declare(full_queue_name, *args, **kw)
 
         finally:
             self.queues[queue_name] = (queue_name, channel)
         return rep
 
-    @asyncio.coroutine
-    def exchange_declare(self, exchange_name, *args, channel=None, safe_delete_before=True, **kw):
+    async def exchange_declare(self, exchange_name, *args, channel=None, safe_delete_before=True, **kw):
         channel = channel or self.channel
         if safe_delete_before:
-            yield from self.safe_exchange_delete(exchange_name, channel=channel)
+            await self.safe_exchange_delete(exchange_name, channel=channel)
         # prefix exchange name
         full_exchange_name = self.full_name(exchange_name)
         try:
-            rep = yield from channel.exchange_declare(full_exchange_name, *args, **kw)
+            rep = await channel.exchange_declare(full_exchange_name, *args, **kw)
         finally:
             self.exchanges[exchange_name] = (exchange_name, channel)
         return rep
@@ -270,18 +260,16 @@ class RabbitTestCase(testing.AsyncioTestCaseMixin):
     def register_channel(self, channel):
         self.channels.append(channel)
 
-    @asyncio.coroutine
-    def create_channel(self, amqp=None):
+    async def create_channel(self, amqp=None):
         amqp = amqp or self.amqp
-        channel = yield from amqp.channel()
+        channel = await amqp.channel()
         return channel
 
-    @asyncio.coroutine
-    def create_amqp(self, vhost=None):
+    async def create_amqp(self, vhost=None):
         def protocol_factory(*args, **kw):
             return ProxyAmqpProtocol(self, *args, **kw)
         vhost = vhost or self.vhost
-        transport, protocol = yield from aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
+        transport, protocol = await aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
             protocol_factory=protocol_factory, loop=self.loop)
         self.amqps.append(protocol)
         return transport, protocol

@@ -16,47 +16,41 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         super().setUp()
         self.consume_future = asyncio.Future(loop=self.loop)
 
-    @asyncio.coroutine
-    def callback(self, body, envelope, properties):
+    async def callback(self, body, envelope, properties):
         self.consume_future.set_result((body, envelope, properties))
 
-    @asyncio.coroutine
-    def get_callback_result(self):
-        yield from self.consume_future
+    async def get_callback_result(self):
+        await self.consume_future
         result = self.consume_future.result()
         self.consume_future = asyncio.Future(loop=self.loop)
         return result
 
-    @testing.coroutine
-    def test_queue_declare_no_name(self):
-        result = yield from self.channel.queue_declare()
+    async def test_queue_declare_no_name(self):
+        result = await self.channel.queue_declare()
         self.assertIsNotNone(result['queue'])
 
-    @testing.coroutine
-    def test_queue_declare(self):
+    async def test_queue_declare(self):
         queue_name = 'queue_name'
-        result = yield from self.channel.queue_declare('queue_name')
+        result = await self.channel.queue_declare('queue_name')
         self.assertEqual(result['message_count'], 0)
         self.assertEqual(result['consumer_count'], 0)
         self.assertEqual(result['queue'].split('.')[-1], queue_name)
         self.assertTrue(result)
 
-    @testing.coroutine
-    def test_queue_declare_passive(self):
+    async def test_queue_declare_passive(self):
         queue_name = 'queue_name'
-        yield from self.channel.queue_declare('queue_name')
-        result = yield from self.channel.queue_declare(queue_name, passive=True)
+        await self.channel.queue_declare('queue_name')
+        result = await self.channel.queue_declare(queue_name, passive=True)
         self.assertEqual(result['message_count'], 0)
         self.assertEqual(result['consumer_count'], 0)
         self.assertEqual(result['queue'].split('.')[-1], queue_name)
 
-    @testing.coroutine
-    def test_queue_declare_custom_x_message_ttl_32_bits(self):
+    async def test_queue_declare_custom_x_message_ttl_32_bits(self):
         queue_name = 'queue_name'
         # 2147483648 == 10000000000000000000000000000000
         # in binary, meaning it is 32 bit long
         x_message_ttl = 2147483648
-        result = yield from self.channel.queue_declare('queue_name', arguments={
+        result = await self.channel.queue_declare('queue_name', arguments={
             'x-message-ttl': x_message_ttl
         })
         self.assertEqual(result['message_count'], 0)
@@ -64,46 +58,42 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertEqual(result['queue'].split('.')[-1], queue_name)
         self.assertTrue(result)
 
-    @testing.coroutine
-    def test_queue_declare_passive_nonexistant_queue(self):
+    async def test_queue_declare_passive_nonexistant_queue(self):
         queue_name = 'queue_name'
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            yield from self.channel.queue_declare(queue_name, passive=True)
+            await self.channel.queue_declare(queue_name, passive=True)
 
         self.assertEqual(cm.exception.code, 404)
 
-    @testing.coroutine
-    def test_wrong_parameter_queue(self):
+    async def test_wrong_parameter_queue(self):
         queue_name = 'queue_name'
-        yield from self.channel.queue_declare(queue_name, exclusive=False, auto_delete=False)
+        await self.channel.queue_declare(queue_name, exclusive=False, auto_delete=False)
 
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            yield from self.channel.queue_declare(queue_name,
+            await self.channel.queue_declare(queue_name,
                 passive=False, exclusive=True, auto_delete=True)
 
         self.assertEqual(cm.exception.code, 406)
 
-    @testing.coroutine
-    def test_multiple_channel_same_queue(self):
+    async def test_multiple_channel_same_queue(self):
         queue_name = 'queue_name'
 
-        channel1 = yield from self.amqp.channel()
-        channel2 = yield from self.amqp.channel()
+        channel1 = await self.amqp.channel()
+        channel2 = await self.amqp.channel()
 
-        result = yield from channel1.queue_declare(queue_name, passive=False)
+        result = await channel1.queue_declare(queue_name, passive=False)
         self.assertEqual(result['message_count'], 0)
         self.assertEqual(result['consumer_count'], 0)
         self.assertEqual(result['queue'].split('.')[-1], queue_name)
 
-        result = yield from channel2.queue_declare(queue_name, passive=False)
+        result = await channel2.queue_declare(queue_name, passive=False)
         self.assertEqual(result['message_count'], 0)
         self.assertEqual(result['consumer_count'], 0)
         self.assertEqual(result['queue'].split('.')[-1], queue_name)
 
-    @asyncio.coroutine
-    def _test_queue_declare(self, queue_name, exclusive=False, durable=False, auto_delete=False):
+    async def _test_queue_declare(self, queue_name, exclusive=False, durable=False, auto_delete=False):
         # declare queue
-        result = yield from self.channel.queue_declare(
+        result = await self.channel.queue_declare(
             queue_name, no_wait=False, exclusive=exclusive, durable=durable,
             auto_delete=auto_delete)
 
@@ -123,7 +113,7 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertEqual(durable, queue['durable'])
 
         # delete queue
-        yield from self.safe_queue_delete(queue_name)
+        await self.safe_queue_delete(queue_name)
 
     def test_durable_and_auto_deleted(self):
         self.loop.run_until_complete(
@@ -141,123 +131,113 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.loop.run_until_complete(
             self._test_queue_declare('q', exclusive=False, durable=False, auto_delete=False))
 
-    @testing.coroutine
-    def test_exclusive(self):
+    async def test_exclusive(self):
         # create an exclusive queue
-        yield from self.channel.queue_declare("q", exclusive=True)
+        await self.channel.queue_declare("q", exclusive=True)
         # consume it
-        yield from self.channel.basic_consume(self.callback, queue_name="q", no_wait=False)
+        await self.channel.basic_consume(self.callback, queue_name="q", no_wait=False)
         # create an other amqp connection
 
-        _transport, protocol = yield from self.create_amqp()
-        channel = yield from self.create_channel(amqp=protocol)
+        _transport, protocol = await self.create_amqp()
+        channel = await self.create_channel(amqp=protocol)
         # assert that this connection cannot connect to the queue
         with self.assertRaises(exceptions.ChannelClosed):
-            yield from channel.basic_consume(self.callback, queue_name="q", no_wait=False)
+            await channel.basic_consume(self.callback, queue_name="q", no_wait=False)
         # amqp and channels are auto deleted by test case
 
-    @testing.coroutine
-    def test_not_exclusive(self):
+    async def test_not_exclusive(self):
         # create a non-exclusive queue
-        yield from self.channel.queue_declare('q', exclusive=False)
+        await self.channel.queue_declare('q', exclusive=False)
         # consume it
-        yield from self.channel.basic_consume(self.callback, queue_name='q', no_wait=False)
+        await self.channel.basic_consume(self.callback, queue_name='q', no_wait=False)
         # create an other amqp connection
-        _transport, protocol = yield from self.create_amqp()
-        channel = yield from self.create_channel(amqp=protocol)
+        _transport, protocol = await self.create_amqp()
+        channel = await self.create_channel(amqp=protocol)
         # assert that this connection can connect to the queue
-        yield from channel.basic_consume(self.callback, queue_name='q', no_wait=False)
+        await channel.basic_consume(self.callback, queue_name='q', no_wait=False)
 
 
 class QueueDeleteTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
-    @testing.coroutine
-    def test_delete_queue(self):
+    async def test_delete_queue(self):
         queue_name = 'queue_name'
-        yield from self.channel.queue_declare(queue_name)
-        result = yield from self.channel.queue_delete(queue_name)
+        await self.channel.queue_declare(queue_name)
+        result = await self.channel.queue_delete(queue_name)
         self.assertTrue(result)
 
-    @testing.coroutine
-    def test_delete_inexistant_queue(self):
+    async def test_delete_inexistant_queue(self):
         queue_name = 'queue_name'
         if self.server_version() < (3, 3, 5):
             with self.assertRaises(exceptions.ChannelClosed) as cm:
-                result = yield from self.channel.queue_delete(queue_name)
+                result = await self.channel.queue_delete(queue_name)
 
             self.assertEqual(cm.exception.code, 404)
 
         else:
-            result = yield from self.channel.queue_delete(queue_name)
+            result = await self.channel.queue_delete(queue_name)
             self.assertTrue(result)
 
 class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
-    @testing.coroutine
-    def test_bind_queue(self):
+    async def test_bind_queue(self):
         queue_name = 'queue_name'
         exchange_name = 'exchange_name'
 
-        yield from self.channel.queue_declare(queue_name)
-        yield from self.channel.exchange_declare(exchange_name, type_name='direct')
+        await self.channel.queue_declare(queue_name)
+        await self.channel.exchange_declare(exchange_name, type_name='direct')
 
-        result = yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
+        result = await self.channel.queue_bind(queue_name, exchange_name, routing_key='')
         self.assertTrue(result)
 
-    @testing.coroutine
-    def test_bind_unexistant_exchange(self):
+    async def test_bind_unexistant_exchange(self):
         queue_name = 'queue_name'
         exchange_name = 'exchange_name'
 
 
-        yield from self.channel.queue_declare(queue_name)
+        await self.channel.queue_declare(queue_name)
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
+            await self.channel.queue_bind(queue_name, exchange_name, routing_key='')
         self.assertEqual(cm.exception.code, 404)
 
-    @testing.coroutine
-    def test_bind_unexistant_queue(self):
+    async def test_bind_unexistant_queue(self):
         queue_name = 'queue_name'
         exchange_name = 'exchange_name'
 
 
-        yield from self.channel.exchange_declare(exchange_name, type_name='direct')
+        await self.channel.exchange_declare(exchange_name, type_name='direct')
 
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
+            await self.channel.queue_bind(queue_name, exchange_name, routing_key='')
         self.assertEqual(cm.exception.code, 404)
 
-    @testing.coroutine
-    def test_unbind_queue(self):
+    async def test_unbind_queue(self):
         queue_name = 'queue_name'
         exchange_name = 'exchange_name'
 
-        yield from self.channel.queue_declare(queue_name)
-        yield from self.channel.exchange_declare(exchange_name, type_name='direct')
+        await self.channel.queue_declare(queue_name)
+        await self.channel.exchange_declare(exchange_name, type_name='direct')
 
-        yield from self.channel.queue_bind(queue_name, exchange_name, routing_key='')
+        await self.channel.queue_bind(queue_name, exchange_name, routing_key='')
 
-        result = yield from self.channel.queue_unbind(queue_name, exchange_name, routing_key='')
+        result = await self.channel.queue_unbind(queue_name, exchange_name, routing_key='')
         self.assertTrue(result)
 
 
 class QueuePurgeTestCase(testcase.RabbitTestCase, unittest.TestCase):
 
 
-    @testing.coroutine
-    def test_purge_queue(self):
+    async def test_purge_queue(self):
         queue_name = 'queue_name'
 
-        yield from self.channel.queue_declare(queue_name)
-        result = yield from self.channel.queue_purge(queue_name)
+        await self.channel.queue_declare(queue_name)
+        result = await self.channel.queue_purge(queue_name)
         self.assertEqual(result['message_count'], 0)
 
-    @testing.coroutine
-    def test_purge_queue_inexistant_queue(self):
+    async def test_purge_queue_inexistant_queue(self):
         queue_name = 'queue_name'
 
         with self.assertRaises(exceptions.ChannelClosed) as cm:
-            yield from self.channel.queue_purge(queue_name)
+            await self.channel.queue_purge(queue_name)
         self.assertEqual(cm.exception.code, 404)

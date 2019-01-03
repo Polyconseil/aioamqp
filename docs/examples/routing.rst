@@ -13,14 +13,14 @@ The publisher creater the `direct` exchange:
 
  .. code-block:: python
 
-    yield from channel.exchange(exchange_name='direct_logs', type_name='direct')
+    await channel.exchange(exchange_name='direct_logs', type_name='direct')
 
 
 Message are published into that exchange and routed using the severity for instance:
 
  .. code-block:: python
 
-    yield from channel.publish(message, exchange_name='direct_logs', routing_key='info')
+    await channel.publish(message, exchange_name='direct_logs', routing_key='info')
 
 
 Consumer
@@ -30,7 +30,7 @@ The consumer may subscribe to multiple severities. To accomplish this purpose, i
 
  .. code-block:: python
 
-    result = yield from channel.queue(queue_name='', durable=False, auto_delete=True)
+    result = await channel.queue(queue_name='', durable=False, auto_delete=True)
 
     queue_name = result['queue']
 
@@ -40,7 +40,7 @@ The consumer may subscribe to multiple severities. To accomplish this purpose, i
         sys.exit(1)
 
     for severity in severities:
-        yield from channel.queue_bind(
+        await channel.queue_bind(
             exchange_name='direct_logs',
             queue_name=queue_name,
             routing_key=severity,

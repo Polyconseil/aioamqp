@@ -10,9 +10,9 @@ This publisher creates a queue with the `durable` flag and publish a message wit
 
  .. code-block:: python
 
-    yield from channel.queue('task_queue', durable=True)
+    await channel.queue('task_queue', durable=True)
 
-    yield from channel.basic_publish(
+    await channel.basic_publish(
         payload=message,
         exchange_name='',
         routing_key='task_queue',
@@ -31,14 +31,14 @@ The worker declares the queue with the exact same argument of the `new_task` pro
 
  .. code-block:: python
 
-    yield from channel.queue('task_queue', durable=True)
+    await channel.queue('task_queue', durable=True)
 
 
 Then, the worker configure the `QOS`: it specifies how the worker unqueues message.
 
  .. code-block:: python
 
-    yield from channel.basic_qos(prefetch_count=1, prefetch_size=0, connection_global=False)
+    await channel.basic_qos(prefetch_count=1, prefetch_size=0, connection_global=False)
 
 
 Finaly we have to create a callback that will `ack` the message to mark it as `processed`.
@@ -47,10 +47,8 @@ You probably want to block the eventloop to simulate a CPU intensive task using 
 
  .. code-block:: python
 
-    @asyncio.coroutine
-    def callback(channel, body, envelope, properties):
+    async def callback(channel, body, envelope, properties):
         print(" [x] Received %r" % body)
-        yield from asyncio.sleep(body.count(b'.'))
+        await asyncio.sleep(body.count(b'.'))
         print(" [x] Done")
-        yield from channel.basic_client_ack(delivery_tag=envelope.delivery_tag)
-
+        await channel.basic_client_ack(delivery_tag=envelope.delivery_tag)

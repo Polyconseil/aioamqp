@@ -11,10 +11,10 @@ The publisher prepares the exchange and publish messages using a routing_key whi
 
  .. code-block:: python
 
-    yield from channel.exchange('topic_logs', 'topic')
+    await channel.exchange('topic_logs', 'topic')
 
-    yield from yield from channel.publish(message, exchange_name=exchange_name, routing_key='anonymous.info')
-    yield from yield from channel.publish(message, exchange_name=exchange_name, routing_key='kern.critical')
+    await await channel.publish(message, exchange_name=exchange_name, routing_key='anonymous.info')
+    await await channel.publish(message, exchange_name=exchange_name, routing_key='kern.critical')
 
 
 
@@ -27,7 +27,7 @@ The consumer selects the combination of 'facility'/'severity' he wants to subscr
  .. code-block:: python
 
     for binding_key in ("*.critical", "nginx.*"):
-        yield from channel.queue_bind(
+        await channel.queue_bind(
             exchange_name='topic_logs',
             queue_name=queue_name,
             routing_key=binding_key

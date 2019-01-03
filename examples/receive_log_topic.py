@@ -13,25 +13,23 @@ import random
 import sys
 
 
-@asyncio.coroutine
-def callback(channel, body, envelope, properties):
+async def callback(channel, body, envelope, properties):
     print("consumer {} received {} ({})".format(envelope.consumer_tag, body, envelope.delivery_tag))
 
 
-@asyncio.coroutine
-def receive_log():
+async def receive_log():
     try:
-        transport, protocol = yield from aioamqp.connect('localhost', 5672)
+        transport, protocol = await aioamqp.connect('localhost', 5672)
     except aioamqp.AmqpClosedConnection:
         print("closed connections")
         return
 
-    channel = yield from protocol.channel()
+    channel = await protocol.channel()
     exchange_name = 'topic_logs'
 
-    yield from channel.exchange(exchange_name, 'topic')
+    await channel.exchange(exchange_name, 'topic')
 
-    result = yield from channel.queue(queue_name='', durable=False, auto_delete=True)
+    result = await channel.queue(queue_name='', durable=False, auto_delete=True)
     queue_name = result['queue']
 
     binding_keys = sys.argv[1:]
@@ -40,7 +38,7 @@ def receive_log():
         sys.exit(1)
 
     for binding_key in binding_keys:
-        yield from channel.queue_bind(
+        await channel.queue_bind(
             exchange_name='topic_logs',
             queue_name=queue_name,
             routing_key=binding_key
@@ -48,7 +46,7 @@ def receive_log():
 
     print(' [*] Waiting for logs. To exit press CTRL+C')
 
-    yield from channel.basic_consume(callback, queue_name=queue_name)
+    await channel.basic_consume(callback, queue_name=queue_name)
 
 event_loop = asyncio.get_event_loop()
 event_loop.run_until_complete(receive_log())
