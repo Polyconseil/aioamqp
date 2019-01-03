@@ -190,14 +190,14 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     @asyncio.coroutine
     def start_connection(self, host, port, login, password, virtualhost, ssl=False,
-            login_method='AMQPLAIN', insist=False):
+            login_method='PLAIN', insist=False):
         """Initiate a connection at the protocol level
             We send `PROTOCOL_HEADER'
         """
 
-        if login_method != 'AMQPLAIN':
+        if login_method != 'PLAIN':
             # TODO
-            logger.warning('only AMQPLAIN login_method is supported, falling back to AMQPLAIN')
+            logger.warning('only PLAIN login_method is supported, falling back to AMQPLAIN')
 
         self._stream_writer.write(amqp_constants.PROTOCOL_HEADER)
 
