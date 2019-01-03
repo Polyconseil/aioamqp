@@ -4,6 +4,8 @@ Changelog
 Next release
 ------------
 
+ * Uses pamqp to encode or decode protocol frames.
+
 Aioamqp 0.12.0
 --------------
 
