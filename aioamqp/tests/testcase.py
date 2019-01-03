@@ -73,7 +73,7 @@ class ProxyAmqpProtocol(AmqpProtocol):
     CHANNEL_FACTORY = channel_factory
 
 
-class RabbitTestCase(testing.AsyncioTestCaseMixin):
+class RabbitTestCaseMixin:
     """TestCase with a rabbit running in background"""
 
     RABBIT_TIMEOUT = 1.0

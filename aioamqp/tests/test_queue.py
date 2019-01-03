@@ -3,14 +3,14 @@
 """
 
 import asyncio
-import unittest
+import asynctest
 
 from . import testcase
 from . import testing
 from .. import exceptions
 
 
-class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class QueueDeclareTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     def setUp(self):
         super().setUp()
@@ -157,7 +157,7 @@ class QueueDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
         await channel.basic_consume(self.callback, queue_name='q', no_wait=False)
 
 
-class QueueDeleteTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class QueueDeleteTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
 
     async def test_delete_queue(self):
@@ -178,7 +178,7 @@ class QueueDeleteTestCase(testcase.RabbitTestCase, unittest.TestCase):
             result = await self.channel.queue_delete(queue_name)
             self.assertTrue(result)
 
-class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class QueueBindTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
 
     async def test_bind_queue(self):
@@ -225,7 +225,7 @@ class QueueBindTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertTrue(result)
 
 
-class QueuePurgeTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class QueuePurgeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
 
     async def test_purge_queue(self):

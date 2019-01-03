@@ -4,7 +4,7 @@
 """
 
 import asyncio
-import unittest.mock
+import asynctest.mock
 import uuid
 
 from . import testcase
@@ -15,7 +15,7 @@ async def consumer(channel, body, envelope, properties):
     await channel.basic_client_ack(envelope.delivery_tag)
 
 
-class ServerBasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class ServerBasicCancelTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
     _multiprocess_can_split_ = True
 
     def setUp(self):

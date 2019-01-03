@@ -3,7 +3,7 @@
 """
 
 import asyncio
-import unittest
+import asynctest
 from unittest import mock
 
 from . import testing
@@ -14,7 +14,7 @@ from .. import from_url as amqp_from_url
 from ..protocol import AmqpProtocol, OPEN
 
 
-class ProtocolTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
 
     async def test_connect(self):

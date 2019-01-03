@@ -2,13 +2,13 @@
     Amqp basic tests for recover methods
 """
 
-import unittest
+import asynctest
 
 from . import testcase
 from . import testing
 
 
-class RecoverTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class RecoverTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_basic_recover_async(self):
         await self.channel.basic_recover_async(requeue=True)

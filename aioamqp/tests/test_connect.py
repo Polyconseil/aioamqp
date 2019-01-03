@@ -1,6 +1,6 @@
 """Aioamqp tests"""
 
-import unittest
+import asynctest
 import socket
 
 from aioamqp import connect
@@ -9,7 +9,7 @@ from aioamqp.protocol import OPEN
 from . import testing, testcase
 
 
-class AmqpConnectionTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class AmqpConnectionTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_connect(self):
         _transport, proto = await connect(host=self.host, port=self.port, virtualhost=self.vhost, loop=self.loop)

@@ -3,14 +3,14 @@
 """
 
 import asyncio
-import unittest
+import asynctest
 
 from . import testcase
 from . import testing
 from .. import exceptions
 
 
-class ExchangeDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class ExchangeDeclareTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     _multiprocess_can_split_ = True
 
@@ -77,7 +77,7 @@ class ExchangeDeclareTestCase(testcase.RabbitTestCase, unittest.TestCase):
                 auto_delete=False, durable=False, passive=True)
 
 
-class ExchangeDelete(testcase.RabbitTestCase, unittest.TestCase):
+class ExchangeDelete(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_delete(self):
         exchange_name = 'exchange_name'
@@ -108,7 +108,7 @@ class ExchangeDelete(testcase.RabbitTestCase, unittest.TestCase):
             result = await self.channel.exchange_delete(exchange_name)
             self.assertTrue(result)
 
-class ExchangeBind(testcase.RabbitTestCase, unittest.TestCase):
+class ExchangeBind(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_exchange_bind(self):
         await self.channel.exchange_declare('exchange_destination', type_name='direct')
@@ -127,7 +127,7 @@ class ExchangeBind(testcase.RabbitTestCase, unittest.TestCase):
         self.assertEqual(cm.exception.code, 404)
 
 
-class ExchangeUnbind(testcase.RabbitTestCase, unittest.TestCase):
+class ExchangeUnbind(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
 
     async def test_exchange_unbind(self):

@@ -3,7 +3,7 @@
 """
 
 import asyncio
-import unittest
+import asynctest
 import logging
 
 from . import testcase
@@ -13,7 +13,7 @@ from . import testing
 logger = logging.getLogger(__name__)
 
 
-class ReplyTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class ReplyTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def _server(self, server_future, exchange_name, routing_key):
         """Consume messages and reply to them by publishing messages back to the client using

@@ -1,5 +1,5 @@
-import unittest
-import unittest.mock
+import asynctest
+import asynctest.mock
 import asyncio
 
 from aioamqp.protocol import OPEN, CLOSED
@@ -8,7 +8,7 @@ from . import testcase
 from . import testing
 
 
-class ConnectionLostTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class ConnectionLostTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     _multiprocess_can_split_ = True
 

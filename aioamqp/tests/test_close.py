@@ -1,12 +1,12 @@
 import asyncio
-import unittest
+import asynctest
 
 from . import testcase
 from . import testing
 from .. import exceptions
 
 
-class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class CloseTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     def setUp(self):
         super().setUp()

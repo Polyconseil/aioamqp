@@ -1,6 +1,6 @@
 
 import asyncio
-import unittest
+import asynctest
 
 from . import testcase
 from . import testing
@@ -8,7 +8,7 @@ from .. import exceptions
 from ..properties import Properties
 
 
-class ConsumeTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class ConsumeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     _multiprocess_can_split_ = True
 

@@ -5,13 +5,15 @@
 import os
 import unittest
 
+import asynctest
+
 from . import testcase
 from . import testing
 from .. import exceptions
 
 IMPLEMENT_CHANNEL_FLOW = os.environ.get('IMPLEMENT_CHANNEL_FLOW', False)
 
-class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class ChannelTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     _multiprocess_can_split_ = True
 
@@ -75,7 +77,7 @@ class ChannelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertFalse(result['active'])
 
 
-class ChannelIdTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class ChannelIdTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_channel_id_release_close(self):
         channels_count_start = self.amqp.channels_ids_count

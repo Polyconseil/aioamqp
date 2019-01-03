@@ -4,7 +4,7 @@
 
 import asyncio
 import struct
-import unittest
+import asynctest
 
 from . import testcase
 from . import testing
@@ -12,7 +12,7 @@ from .. import exceptions
 from .. import properties
 
 
-class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class QosTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_basic_qos_default_args(self):
         result = await self.channel.basic_qos()
@@ -43,7 +43,7 @@ class QosTestCase(testcase.RabbitTestCase, unittest.TestCase):
                 connection_global=False)
 
 
-class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class BasicCancelTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_basic_cancel(self):
 
@@ -72,7 +72,7 @@ class BasicCancelTestCase(testcase.RabbitTestCase, unittest.TestCase):
         self.assertTrue(result)
 
 
-class BasicGetTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class BasicGetTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
 
     async def test_basic_get(self):
@@ -106,7 +106,7 @@ class BasicGetTestCase(testcase.RabbitTestCase, unittest.TestCase):
             await self.channel.basic_get(queue_name)
 
 
-class BasicDeliveryTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class BasicDeliveryTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
 
     async def publish(self, queue_name, exchange_name, routing_key, payload):

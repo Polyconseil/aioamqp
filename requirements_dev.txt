@@ -1,5 +1,5 @@
 -e .
-
+asynctest
 coverage
 pylint
 pytest>4

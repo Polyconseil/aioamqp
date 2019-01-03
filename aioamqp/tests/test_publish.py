@@ -1,11 +1,11 @@
-import unittest
+import asynctest
 import asyncio
 
 from . import testcase
 from . import testing
 
 
-class PublishTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class PublishTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     _multiprocess_can_split_ = True
 

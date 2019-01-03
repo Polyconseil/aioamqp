@@ -3,7 +3,7 @@
 """
 
 import asyncio
-import unittest
+import asynctest
 from unittest import mock
 
 from aioamqp.protocol import CLOSED
@@ -12,7 +12,7 @@ from . import testcase
 from . import testing
 
 
-class HeartbeatTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class HeartbeatTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_heartbeat(self):
         with mock.patch.object(

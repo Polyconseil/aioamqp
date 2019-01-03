@@ -1,4 +1,4 @@
-import unittest
+import asynctest
 
 from aioamqp.protocol import OPEN, CLOSED
 from aioamqp.exceptions import AmqpClosedConnection
@@ -7,7 +7,7 @@ from . import testcase
 from . import testing
 
 
-class CloseTestCase(testcase.RabbitTestCase, unittest.TestCase):
+class CloseTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_close(self):
         amqp = self.amqp
