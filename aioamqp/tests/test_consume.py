@@ -26,31 +26,6 @@ class ConsumeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
         self.consume_future = asyncio.Future(loop=self.loop)
         return result
 
-    async def test_wrong_callback_argument(self):
-
-        def badcallback():
-            pass
-
-        await self.channel.queue_declare("q", exclusive=True, no_wait=False)
-        await self.channel.exchange_declare("e", "fanout")
-        await self.channel.queue_bind("q", "e", routing_key='')
-
-        # get a different channel
-        channel = await self.create_channel()
-
-        # publish
-        await channel.publish("coucou", "e", routing_key='',)
-
-        # assert there is a message to consume
-        queues = self.list_queues()
-        self.assertIn("q", queues)
-        self.assertEqual(1, queues["q"]['messages'])
-
-        await asyncio.sleep(2, loop=self.loop)
-        # start consume
-        with self.assertRaises(exceptions.ConfigurationError):
-            await channel.basic_consume(badcallback, queue_name="q")
-
     async def test_consume(self):
         # declare
         await self.channel.queue_declare("q", exclusive=True, no_wait=False)
