@@ -22,22 +22,3 @@ class Handler(logging.Handler):
 asyncio_logger = logging.getLogger('asyncio')
 handler = Handler()
 asyncio_logger.addHandler(handler)
-
-
-def timeout(t):
-    def wrapper(func):
-        setattr(func, '__timeout__', t)
-        return func
-    return wrapper
-
-
-def coroutine(func):
-    @wraps(func)
-    def wrapper(self):
-        handler.messages = []
-        coro = asyncio.coroutine(func)
-        timeout_ = getattr(func, '__timeout__', self.__timeout__)
-        self.loop.run_until_complete(asyncio.wait_for(coro(self), timeout=timeout_, loop=self.loop))
-        if handler.messages:
-            raise AsyncioErrors(handler.messages)
-    return wrapper

@@ -6,14 +6,14 @@
 class AioamqpException(Exception):
     pass
 
-class ConfigurationError(AioamqpException):
-    pass
 
 class AmqpClosedConnection(AioamqpException):
     pass
 
+
 class SynchronizationError(AioamqpException):
     pass
+
 
 class EmptyQueue(AioamqpException):
     pass
