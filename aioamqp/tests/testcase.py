@@ -12,7 +12,6 @@ import uuid
 
 import pyrabbit2.api
 
-from . import testing
 from .. import connect as aioamqp_connect
 from .. import exceptions
 from ..channel import Channel

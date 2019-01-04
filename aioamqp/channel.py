@@ -120,7 +120,8 @@ class Channel:
         if drain:
             await self.protocol._drain()
 
-    async def _write_frame_awaiting_response(self, waiter_id, channel_id, request, no_wait, check_open=True, drain=True):
+    async def _write_frame_awaiting_response(self, waiter_id, channel_id, request,
+                                             no_wait, check_open=True, drain=True):
         '''Write a frame and set a waiter for the response (unless no_wait is set)'''
         if no_wait:
             await self._write_frame(channel_id, request, check_open=check_open, drain=drain)
@@ -393,7 +394,8 @@ class Channel:
 ## Basic class implementation
 #
 
-    async def basic_publish(self, payload, exchange_name, routing_key, properties=None, mandatory=False, immediate=False):
+    async def basic_publish(self, payload, exchange_name, routing_key,
+                            properties=None, mandatory=False, immediate=False):
         if isinstance(payload, str):
             warnings.warn("Str payload support will be removed in next release", DeprecationWarning)
             payload = payload.encode()

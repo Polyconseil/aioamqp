@@ -3,12 +3,11 @@
 
 """
 
-import asyncio
+import asynctest
 import asynctest.mock
 import uuid
 
 from . import testcase
-from . import testing
 
 
 async def consumer(channel, body, envelope, properties):
@@ -47,7 +46,7 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase
         await self.channel.queue_delete(self.queue_name)
 
         self.assertEqual(2, len(callback_calls))
-        for args, kwargs in callback_calls:
+        for args, _kwargs in callback_calls:
             self.assertIs(self.channel, args[0])
             self.assertEqual(rv['consumer_tag'], args[1])
 

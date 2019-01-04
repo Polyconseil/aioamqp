@@ -9,7 +9,6 @@ from unittest import mock
 from aioamqp.protocol import CLOSED
 
 from . import testcase
-from . import testing
 
 
 class HeartbeatTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):

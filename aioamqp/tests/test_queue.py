@@ -6,7 +6,6 @@ import asyncio
 import asynctest
 
 from . import testcase
-from . import testing
 from .. import exceptions
 
 

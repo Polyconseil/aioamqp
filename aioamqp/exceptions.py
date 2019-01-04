@@ -32,12 +32,14 @@ class ChannelClosed(AioamqpException):
 
 class DuplicateConsumerTag(AioamqpException):
     def __repr__(self):
+        #  pylint: disable=unsubscriptable-object
         return ('The consumer tag specified already exists for this '
                 'channel: %s' % self.args[0])
 
 
 class ConsumerCancelled(AioamqpException):
     def __repr__(self):
+        #  pylint: disable=unsubscriptable-object
         return ('The consumer %s has been cancelled' % self.args[0])
 
 

@@ -5,7 +5,6 @@
 import asynctest
 
 from . import testcase
-from . import testing
 
 
 class RecoverTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):

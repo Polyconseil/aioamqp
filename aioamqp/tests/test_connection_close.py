@@ -4,7 +4,6 @@ from aioamqp.protocol import OPEN, CLOSED
 from aioamqp.exceptions import AmqpClosedConnection
 
 from . import testcase
-from . import testing
 
 
 class CloseTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):

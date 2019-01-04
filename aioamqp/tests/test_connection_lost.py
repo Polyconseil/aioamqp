@@ -5,7 +5,6 @@ import asyncio
 from aioamqp.protocol import OPEN, CLOSED
 
 from . import testcase
-from . import testing
 
 
 class ConnectionLostTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):

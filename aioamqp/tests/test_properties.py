@@ -7,7 +7,6 @@ import asynctest
 import logging
 
 from . import testcase
-from . import testing
 
 
 logger = logging.getLogger(__name__)

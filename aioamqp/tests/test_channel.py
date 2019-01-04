@@ -8,7 +8,6 @@ import unittest
 import asynctest
 
 from . import testcase
-from . import testing
 from .. import exceptions
 
 IMPLEMENT_CHANNEL_FLOW = os.environ.get('IMPLEMENT_CHANNEL_FLOW', False)

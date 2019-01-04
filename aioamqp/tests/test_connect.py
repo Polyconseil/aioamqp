@@ -6,7 +6,7 @@ import socket
 from aioamqp import connect
 from aioamqp.protocol import OPEN
 
-from . import testing, testcase
+from . import testcase
 
 
 class AmqpConnectionTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):

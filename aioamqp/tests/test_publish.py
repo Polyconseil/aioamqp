@@ -2,7 +2,6 @@ import asynctest
 import asyncio
 
 from . import testcase
-from . import testing
 
 
 class PublishTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
@@ -93,7 +92,7 @@ class PublishTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
         await channel.publish("coucou", "e", routing_key="not.found",
                                    mandatory=True)
 
-        for i in range(10):
+        for _i in range(10):
             if called:
                 break
             await asyncio.sleep(0.1)

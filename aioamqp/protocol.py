@@ -25,14 +25,12 @@ CONNECTING, OPEN, CLOSING, CLOSED = range(4)
 class _StreamWriter(asyncio.StreamWriter):
 
     def write(self, data):
-        ret = super().write(data)
+        super().write(data)
         self._protocol._heartbeat_timer_send_reset()
-        return ret
 
     def writelines(self, data):
-        ret = super().writelines(data)
+        super().writelines(data)
         self._protocol._heartbeat_timer_send_reset()
-        return ret
 
     def write_eof(self):
         ret = super().write_eof()
@@ -267,7 +265,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         if isinstance(frame, pamqp.heartbeat.Heartbeat):
             return
 
-        if frame_channel is not 0:
+        if frame_channel != 0:
             channel = self.channels.get(frame_channel)
             if channel is not None:
                 await channel.dispatch_frame(frame)

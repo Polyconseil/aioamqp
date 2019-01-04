@@ -2,11 +2,9 @@
     Test our Protocol class
 """
 
-import asyncio
 import asynctest
 from unittest import mock
 
-from . import testing
 from . import testcase
 from .. import exceptions
 from .. import connect as amqp_connect
@@ -18,7 +16,9 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
 
     async def test_connect(self):
-        _transport, protocol = await amqp_connect(host=self.host, port=self.port, virtualhost=self.vhost, loop=self.loop)
+        _transport, protocol = await amqp_connect(
+            host=self.host, port=self.port, virtualhost=self.vhost, loop=self.loop
+        )
         self.assertEqual(protocol.state, OPEN)
         await protocol.close()
 
@@ -44,7 +44,9 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     def test_connection_wrong_login_password(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
-            self.loop.run_until_complete(amqp_connect(host=self.host, port=self.port, login='wrong', password='wrong', loop=self.loop))
+            self.loop.run_until_complete(
+                amqp_connect(host=self.host, port=self.port, login='wrong', password='wrong', loop=self.loop)
+            )
 
     async def test_connection_from_url(self):
         with mock.patch('aioamqp.connect') as connect:

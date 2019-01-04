@@ -1,11 +1,9 @@
-from functools import wraps
 import logging
-
-import asyncio
 
 
 class AsyncioErrors(AssertionError):
     def __repr__(self):
+        #  pylint: disable=unsubscriptable-object
         return "<AsyncioErrors: Got asyncio errors: %r" % self.args[0]
 
 
