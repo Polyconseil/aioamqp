@@ -14,7 +14,6 @@ from . import constants as amqp_constants
 from . import frame as amqp_frame
 from . import exceptions
 from . import version
-from .compat import ensure_future
 
 
 logger = logging.getLogger(__name__)
@@ -244,7 +243,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         await self.ensure_open()
         # for now, we read server's responses asynchronously
-        self.worker = ensure_future(self.run(), loop=self._loop)
+        self.worker = asyncio.ensure_future(self.run(), loop=self._loop)
 
     async def get_frame(self):
         """Read the frame, and only decode its header
@@ -305,7 +304,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         if self._on_error_callback:
             if asyncio.iscoroutinefunction(self._on_error_callback):
-                ensure_future(self._on_error_callback(exception), loop=self._loop)
+                asyncio.ensure_future(self._on_error_callback(exception), loop=self._loop)
             else:
                 self._on_error_callback(exceptions.ChannelClosed(exception))
 
@@ -367,7 +366,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             self.server_heartbeat,
             self._heartbeat_trigger_send.set)
         if self._heartbeat_worker is None:
-            self._heartbeat_worker = ensure_future(self._heartbeat(), loop=self._loop)
+            self._heartbeat_worker = asyncio.ensure_future(self._heartbeat(), loop=self._loop)
 
     def _heartbeat_stop(self):
         self.server_heartbeat = None
