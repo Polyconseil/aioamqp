@@ -32,7 +32,7 @@ test:
 
 
 update:
-	pip install -r requirements_dev.txt
+	pip install --upgrade -r requirements_dev.txt
 
 pylint:
 	pylint aioamqp
