@@ -56,7 +56,6 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
                 insist=False,
                 password='pass',
                 login_method='AMQPLAIN',
-                ssl=False,
                 login='tom',
                 host='example.com',
                 protocol_factory=AmqpProtocol,
