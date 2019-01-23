@@ -1,6 +1,5 @@
 import asyncio
 import socket
-import sys
 import ssl as ssl_module  # import as to enable argument named ssl in connect
 from urllib.parse import urlparse
 
@@ -12,7 +11,7 @@ from .version import __packagename__
 
 
 async def connect(host='localhost', port=None, login='guest', password='guest',
-            virtualhost='/', ssl=False, login_method='AMQPLAIN', insist=False,
+            virtualhost='/', ssl=None, login_method='AMQPLAIN', insist=False,
             protocol_factory=AmqpProtocol, *, verify_ssl=True, loop=None, **kwargs):
     """Convenient method to connect to an AMQP broker
 
@@ -21,7 +20,8 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
         @login:         login
         @password:      password
         @virtualhost:   AMQP virtualhost to use for this connection
-        @ssl:           Create an SSL connection instead of a plain unencrypted one
+        @ssl:           SSL context used for secure connections, omit for no SSL
+                        - see https://docs.python.org/3/library/ssl.html
         @verify_ssl:    Verify server's SSL certificate (True by default)
         @login_method:  AMQP auth method
         @insist:        Insist on connecting to a server
@@ -39,12 +39,11 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
 
     create_connection_kwargs = {}
 
-    if ssl:
-        ssl_context = ssl_module.create_default_context() if isinstance(ssl, bool) else ssl
+    if ssl is not None:
         if not verify_ssl:
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl_module.CERT_NONE
-        create_connection_kwargs['ssl'] = ssl_context
+            ssl.check_hostname = False
+            ssl.verify_mode = ssl_module.CERT_NONE
+        create_connection_kwargs['ssl'] = ssl
 
     if port is None:
         if ssl:
@@ -65,13 +64,13 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
         sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
     try:
-        await protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl,
-            login_method=login_method, insist=insist)
+        await protocol.start_connection(host, port, login, password, virtualhost, ssl=ssl, login_method=login_method,
+                                        insist=insist)
     except Exception:
         await protocol.wait_closed()
         raise
 
-    return (transport, protocol)
+    return transport, protocol
 
 
 async def from_url(
@@ -108,5 +107,5 @@ async def from_url(
         insist=insist,
         protocol_factory=protocol_factory,
         verify_ssl=verify_ssl,
-        **dict(kwargs, ssl=kwargs.get('ssl', url.scheme == 'amqps')))
+        **kwargs)
     return transport, protocol
