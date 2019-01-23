@@ -1,7 +1,6 @@
 """
     Test our Protocol class
 """
-
 import asynctest
 from unittest import mock
 
@@ -13,7 +12,6 @@ from ..protocol import AmqpProtocol, OPEN
 
 
 class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
-
 
     async def test_connect(self):
         _transport, protocol = await amqp_connect(
@@ -68,33 +66,13 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
                 loop=self.loop,
             )
 
-    async def test_ssl_connection_from_url(self):
-        with mock.patch('aioamqp.connect') as connect:
-            async def func(*x, **y):
-                return 1, 2
-            connect.side_effect = func
-            await amqp_from_url('amqps://tom:pass@example.com:7777/myvhost', loop=self.loop)
-            connect.assert_called_once_with(
-                insist=False,
-                password='pass',
-                login_method='AMQPLAIN',
-                ssl=True,
-                login='tom',
-                host='example.com',
-                protocol_factory=AmqpProtocol,
-                virtualhost='myvhost',
-                port=7777,
-                verify_ssl=True,
-                loop=self.loop,
-            )
-
     async def test_ssl_context_connection_from_url(self):
         ssl_context = mock.Mock()
         with mock.patch('aioamqp.connect') as connect:
             async def func(*x, **y):
                 return 1, 2
             connect.side_effect = func
-            await amqp_from_url('amqp://tom:pass@example.com:7777/myvhost', loop=self.loop, ssl=ssl_context)
+            await amqp_from_url('amqps://tom:pass@example.com:7777/myvhost', loop=self.loop, ssl=ssl_context)
             connect.assert_called_once_with(
                 insist=False,
                 password='pass',
