@@ -1,6 +1,5 @@
 import asyncio
 import socket
-import ssl as ssl_module  # import as to enable argument named ssl in connect
 from urllib.parse import urlparse
 
 from .exceptions import *  # pylint: disable=wildcard-import
@@ -12,7 +11,7 @@ from .version import __packagename__
 
 async def connect(host='localhost', port=None, login='guest', password='guest',
             virtualhost='/', ssl=None, login_method='AMQPLAIN', insist=False,
-            protocol_factory=AmqpProtocol, *, verify_ssl=True, loop=None, **kwargs):
+            protocol_factory=AmqpProtocol, *, loop=None, **kwargs):
     """Convenient method to connect to an AMQP broker
 
         @host:          the host to connect to
@@ -22,7 +21,6 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
         @virtualhost:   AMQP virtualhost to use for this connection
         @ssl:           SSL context used for secure connections, omit for no SSL
                         - see https://docs.python.org/3/library/ssl.html
-        @verify_ssl:    Verify server's SSL certificate (True by default)
         @login_method:  AMQP auth method
         @insist:        Insist on connecting to a server
         @protocol_factory:
@@ -40,9 +38,6 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
     create_connection_kwargs = {}
 
     if ssl is not None:
-        if not verify_ssl:
-            ssl.check_hostname = False
-            ssl.verify_mode = ssl_module.CERT_NONE
         create_connection_kwargs['ssl'] = ssl
 
     if port is None:
@@ -74,8 +69,7 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
 
 
 async def from_url(
-        url, login_method='AMQPLAIN', insist=False, protocol_factory=AmqpProtocol, *,
-        verify_ssl=True, **kwargs):
+        url, login_method='AMQPLAIN', insist=False, protocol_factory=AmqpProtocol, **kwargs):
     """ Connect to the AMQP using a single url parameter and return the client.
 
         For instance:
@@ -85,7 +79,6 @@ async def from_url(
         @insist:        Insist on connecting to a server
         @protocol_factory:
                         Factory to use, if you need to subclass AmqpProtocol
-        @verify_ssl:    Verify server's SSL certificate (True by default)
         @loop:          optionally set the event loop to use.
 
         @kwargs:        Arguments to be given to the protocol_factory instance
@@ -106,6 +99,5 @@ async def from_url(
         login_method=login_method,
         insist=insist,
         protocol_factory=protocol_factory,
-        verify_ssl=verify_ssl,
         **kwargs)
     return transport, protocol

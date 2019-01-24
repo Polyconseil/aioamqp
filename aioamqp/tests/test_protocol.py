@@ -61,7 +61,6 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
                 protocol_factory=AmqpProtocol,
                 virtualhost='myvhost',
                 port=7777,
-                verify_ssl=True,
                 loop=self.loop,
             )
 
@@ -82,7 +81,6 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
                 protocol_factory=AmqpProtocol,
                 virtualhost='myvhost',
                 port=7777,
-                verify_ssl=True,
                 loop=self.loop,
             )
 
