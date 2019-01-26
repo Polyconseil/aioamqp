@@ -32,7 +32,7 @@ test:
 
 
 update:
-	pip install --upgrade -r requirements_dev.txt
+	pip install --upgrade --upgrade-strategy=eager -r requirements_dev.txt
 
 pylint:
 	pylint aioamqp
