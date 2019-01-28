@@ -84,7 +84,7 @@ class RabbitTestCaseMixin:
         self.port = os.environ.get('AMQP_PORT', 5672)
         self.vhost = os.environ.get('AMQP_VHOST', self.VHOST + str(uuid.uuid4()))
         self.http_client = pyrabbit2.api.Client(
-            '{HOST}:15672'.format(HOST=self.host), 'guest', 'guest', timeout=20
+            '{HOST}:15672'.format(HOST=self.host), 'guest', 'guest', timeout=None,
         )
 
         self.amqps = []

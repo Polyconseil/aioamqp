@@ -3,7 +3,7 @@
 PACKAGE = aioamqp
 
 TEST_LAUNCHER ?= pytest
-TEST_OPTIONS ?= -v -s --timeout=20
+TEST_OPTIONS ?= -v -s --timeout=60
 PYLINT_RC ?= .pylintrc
 
 BUILD_DIR ?= build
