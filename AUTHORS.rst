@@ -22,3 +22,5 @@ AUTHORS are (and/or have been)::
     * Mads Sejersen
     * Dave Shawley
     * Jacob Hagstedt P Suorra
+    * Corey `notmeta`
+    * Paul Wistrand
