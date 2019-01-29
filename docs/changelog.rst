@@ -4,6 +4,7 @@ Changelog
 Next release
 ------------
 
+ * SSL Connections must be configured with an SSLContext object in ``connect`` and ``from_url`` (closes #142).
  * Uses pamqp to encode or decode protocol frames.
  * Drops support of python 3.3 and python 3.4.
  * Uses async and await keywords.
