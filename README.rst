@@ -28,7 +28,7 @@ Tests require an instance of RabbitMQ. You can start a new instance using docker
 
      docker run -d --log-driver=syslog -e RABBITMQ_NODENAME=my-rabbit --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 
-Then you can run the tests with ``make test`` (requires ``nose``).
+Then you can run the tests with ``make test``.
 
 tests using docker-compose
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
