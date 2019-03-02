@@ -144,3 +144,47 @@ class ConsumeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
         await channel.basic_consume(callback, queue_name="q")
         sync_future.set_result(True)
+
+    async def test_consume_multiple_queues_using_gather(self):
+        await asyncio.gather(self.channel.queue_declare("q1", exclusive=True, no_wait=False),
+                             self.channel.queue_declare("q2", exclusive=True, no_wait=False))
+        await asyncio.gather(self.channel.exchange_declare("e", "direct"),
+                             self.channel.exchange_declare("f", "direct"))
+        await asyncio.gather(self.channel.queue_bind("q1", "e", routing_key="q1"),
+                             self.channel.queue_bind("q2", "e", routing_key="q2"))
+
+        # get a different channel
+        channel = await self.create_channel()
+
+        q1_future = asyncio.Future(loop=self.loop)
+
+        async def q1_callback(channel, body, envelope, properties):
+            q1_future.set_result((body, envelope, properties))
+
+        q2_future = asyncio.Future(loop=self.loop)
+
+        async def q2_callback(channel, body, envelope, properties):
+            q2_future.set_result((body, envelope, properties))
+
+        # start consumers
+        results = await asyncio.gather(channel.basic_consume(q1_callback, queue_name="q1"),
+                                       channel.basic_consume(q2_callback, queue_name="q2"))
+        ctag_q1 = results[0]['consumer_tag']
+        ctag_q2 = results[1]['consumer_tag']
+
+        # put message in q1 and q2
+        await asyncio.gather(channel.publish("coucou1", "e", "q1"),
+                             channel.publish("coucou2", "e", "q2"))
+
+        # get it
+        body1, envelope1, properties1 = await q1_future
+        self.assertEqual(ctag_q1, envelope1.consumer_tag)
+        self.assertIsNotNone(envelope1.delivery_tag)
+        self.assertEqual(b"coucou1", body1)
+        self.assertIsInstance(properties1, Properties)
+
+        # get it
+        body2, envelope2, properties2 = await q2_future
+        self.assertEqual(ctag_q2, envelope2.consumer_tag)
+        self.assertEqual(b"coucou2", body2)
+        self.assertIsInstance(properties2, Properties)
