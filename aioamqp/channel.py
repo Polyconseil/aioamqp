@@ -37,6 +37,8 @@ class Channel:
         self.publisher_confirms = False
         self.delivery_tag_iter = None  # used for mapping delivered messages to publisher confirms
 
+        self._exchange_declare_lock = asyncio.Lock()
+        self._queue_bind_lock = asyncio.Lock()
         self._futures = {}
         self._ctag_events = {}
 
@@ -209,8 +211,9 @@ class Channel:
             arguments=arguments
         )
 
-        return (await self._write_frame_awaiting_response(
-            'exchange_declare', self.channel_id, request, no_wait))
+        async with self._exchange_declare_lock:
+            return (await self._write_frame_awaiting_response(
+                'exchange_declare', self.channel_id, request, no_wait))
 
     async def exchange_declare_ok(self, frame):
         future = self._get_waiter('exchange_declare')
@@ -220,8 +223,8 @@ class Channel:
 
     async def exchange_delete(self, exchange_name, if_unused=False, no_wait=False):
         request = pamqp.specification.Exchange.Delete(exchange=exchange_name, if_unused=if_unused, nowait=no_wait)
-        return (await self._write_frame_awaiting_response(
-            'exchange_delete', self.channel_id, request, no_wait))
+        return await self._write_frame_awaiting_response(
+            'exchange_delete', self.channel_id, request, no_wait)
 
     async def exchange_delete_ok(self, frame):
         future = self._get_waiter('exchange_delete')
@@ -293,7 +296,7 @@ class Channel:
             arguments = {}
 
         if not queue_name:
-            queue_name = ''
+            queue_name = 'aioamqp.gen-' + str(uuid.uuid4())
         request = pamqp.specification.Queue.Declare(
             queue=queue_name,
             passive=passive,
@@ -304,7 +307,7 @@ class Channel:
             arguments=arguments
         )
         return (await self._write_frame_awaiting_response(
-            'queue_declare', self.channel_id, request, no_wait))
+            'queue_declare' + queue_name, self.channel_id, request, no_wait))
 
     async def queue_declare_ok(self, frame):
         results = {
@@ -312,10 +315,9 @@ class Channel:
             'message_count': frame.message_count,
             'consumer_count': frame.consumer_count,
         }
-        future = self._get_waiter('queue_declare')
+        future = self._get_waiter('queue_declare' + results['queue'])
         future.set_result(results)
         logger.debug("Queue declared")
-
 
     async def queue_delete(self, queue_name, if_unused=False, if_empty=False, no_wait=False):
         """Delete a queue in RabbitMQ
@@ -352,8 +354,9 @@ class Channel:
             arguments=arguments
         )
         # short reserved-1
-        return (await self._write_frame_awaiting_response(
-            'queue_bind', self.channel_id, request, no_wait))
+        async with self._queue_bind_lock:
+            return (await self._write_frame_awaiting_response(
+                'queue_bind', self.channel_id, request, no_wait))
 
     async def queue_bind_ok(self, frame):
         future = self._get_waiter('queue_bind')
@@ -501,7 +504,7 @@ class Channel:
         self.last_consumer_tag = consumer_tag
 
         return_value = await self._write_frame_awaiting_response(
-            'basic_consume', self.channel_id, request, no_wait)
+            'basic_consume' + consumer_tag, self.channel_id, request, no_wait)
         if no_wait:
             return_value = {'consumer_tag': consumer_tag}
         else:
@@ -513,7 +516,7 @@ class Channel:
         results = {
             'consumer_tag': ctag,
         }
-        future = self._get_waiter('basic_consume')
+        future = self._get_waiter('basic_consume' + ctag)
         future.set_result(results)
         self._ctag_events[ctag] = asyncio.Event(loop=self._loop)
 
@@ -609,7 +612,6 @@ class Channel:
     async def basic_client_nack(self, delivery_tag, multiple=False, requeue=True):
         request = pamqp.specification.Basic.Nack(delivery_tag, multiple, requeue)
         await self._write_frame(self.channel_id, request)
-
 
     async def basic_server_ack(self, frame):
         delivery_tag = frame.delivery_tag
