@@ -191,7 +191,7 @@ of consumer cancellations by adding a callback to the channel::
 
 
     async def consumer(channel, body, envelope, properties):
-        channel.basic_ack(envelope.delivery_tag)
+        channel.basic_client_ack(envelope.delivery_tag)
 
 
     channel = await protocol.channel()
