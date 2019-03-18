@@ -19,6 +19,7 @@ setuptools.setup(
     url='https://github.com/polyconseil/aioamqp',
     description=description,
     long_description=open('README.rst').read(),
+    keywords=['asyncio', 'amqp', 'rabbitmq', 'aio'],
     download_url='https://pypi.python.org/pypi/aioamqp',
     packages=[
         'aioamqp',
