@@ -3,6 +3,8 @@
 
 """
 
+import asyncio
+
 import asynctest
 import asynctest.mock
 import uuid
@@ -31,12 +33,14 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase
 
     async def test_cancel_callbacks(self):
         callback_calls = []
+        callback_event = asyncio.Event()
 
         async def coroutine_callback(*args, **kwargs):
             callback_calls.append((args, kwargs))
 
         def function_callback(*args, **kwargs):
             callback_calls.append((args, kwargs))
+            callback_event.set()
 
         self.channel.add_cancellation_callback(coroutine_callback)
         self.channel.add_cancellation_callback(function_callback)
@@ -45,6 +49,7 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase
         rv = await self.channel.basic_consume(consumer)
         await self.channel.queue_delete(self.queue_name)
 
+        await callback_event.wait()
         self.assertEqual(2, len(callback_calls))
         for args, _kwargs in callback_calls:
             self.assertIs(self.channel, args[0])
@@ -52,9 +57,11 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase
 
     async def test_cancel_callback_exceptions(self):
         callback_calls = []
+        callback_event = asyncio.Event()
 
         def function_callback(*args, **kwargs):
             callback_calls.append((args, kwargs))
+            callback_event.set()
             raise RuntimeError
 
         self.channel.add_cancellation_callback(function_callback)
@@ -64,5 +71,6 @@ class ServerBasicCancelTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase
         await self.channel.basic_consume(consumer)
         await self.channel.queue_delete(self.queue_name)
 
+        await callback_event.wait()
         self.assertEqual(2, len(callback_calls))
         self.assertTrue(self.channel.is_open)
