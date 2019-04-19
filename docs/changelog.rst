@@ -8,6 +8,7 @@ Next release
  * Uses pamqp to encode or decode protocol frames.
  * Drops support of python 3.3 and python 3.4.
  * Uses async and await keywords.
+ * Fix pamqp `_frame_parts` call, now uses exposed `frame_parts`
 
 Aioamqp 0.12.0
 --------------

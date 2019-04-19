@@ -25,7 +25,7 @@ setuptools.setup(
         'aioamqp',
     ],
     install_requires=[
-        'pamqp>=2.0,<3',
+        'pamqp>=2.2.0,<3',
     ],
     classifiers=[
         "Development Status :: 4 - Beta",
