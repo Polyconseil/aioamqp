@@ -147,6 +147,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             # drain() cannot be called concurrently by multiple coroutines:
             # http://bugs.python.org/issue29930. Remove this lock when no
             # version of Python where this bugs exists is supported anymore.
+            await self.ensure_open()
             await self._stream_writer.drain()
 
     async def _write_frame(self, channel_id, request, drain=True):
