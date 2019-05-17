@@ -149,7 +149,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             # version of Python where this bugs exists is supported anymore.
             if self._stream_writer:
                 await self._stream_writer.drain()
-            raise exceptions.AmqpClosedConnection()
+            else:
+                raise exceptions.AmqpClosedConnection()
 
     async def _write_frame(self, channel_id, request, drain=True):
         amqp_frame.write(self._stream_writer, channel_id, request)
