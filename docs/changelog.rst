@@ -4,6 +4,8 @@ Changelog
 Next release
 ------------
 
+ * Rename ``type`` to ``message_type`` in constant.Properties object to be full compatible with pamqp.
+
 Aioamqp 0.13.0
 --------------
 

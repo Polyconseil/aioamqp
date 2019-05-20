@@ -159,7 +159,7 @@ In the callback:
     routing_key
     is_redeliver
 
-* the ``properties`` are message properties, an instance of properties.Properties with the following members::
+* the ``properties`` are message properties, an instance of ``properties.Properties`` with the following members::
 
     content_type
     content_encoding
@@ -171,7 +171,7 @@ In the callback:
     expiration
     message_id
     timestamp
-    type
+    message_type
     user_id
     app_id
     cluster_id
