@@ -134,13 +134,7 @@ class Channel:
             self._get_waiter(waiter_id)
             f.cancel()
             raise
-        result = await f
-        try:
-            self._get_waiter(waiter_id)
-        except exceptions.SynchronizationError:
-            # no waiter to get
-            pass
-        return result
+        return (await f)
 
 #
 ## Channel class implementation
