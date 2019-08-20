@@ -115,6 +115,10 @@ class ConsumeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
         self.assertEqual(b"coucou2", body2)
         self.assertIsInstance(properties2, Properties)
 
+        # close consuming
+        await asyncio.gather(self.channel.basic_cancel(ctag_q1),
+                             self.channel.basic_cancel(ctag_q2))
+
     async def test_duplicate_consumer_tag(self):
         await self.channel.queue_declare("q1", exclusive=True, no_wait=False)
         await self.channel.queue_declare("q2", exclusive=True, no_wait=False)
