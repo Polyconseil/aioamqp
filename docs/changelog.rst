@@ -9,6 +9,7 @@ Next release
  * Fix annoying auth method warning because of a wrong defined default argument (closes #214).
  * Support ``amqps://`` URLs.
  * Properly handle disabled heartbeats.
+ * Properly handle concurrent calls to ``basic_cancel``.
 
 Aioamqp 0.14.0
 --------------

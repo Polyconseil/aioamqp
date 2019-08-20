@@ -562,14 +562,14 @@ class Channel:
     async def basic_cancel(self, consumer_tag, no_wait=False):
         request = pamqp.commands.Basic.Cancel(consumer_tag, no_wait)
         return (await self._write_frame_awaiting_response(
-            'basic_cancel', self.channel_id, request, no_wait=no_wait)
+            'basic_cancel' + consumer_tag, self.channel_id, request, no_wait=no_wait)
         )
 
     async def basic_cancel_ok(self, frame):
         results = {
             'consumer_tag': frame.consumer_tag,
         }
-        future = self._get_waiter('basic_cancel')
+        future = self._get_waiter('basic_cancel' + frame.consumer_tag)
         future.set_result(results)
         logger.debug("Cancel ok")
 
