@@ -11,6 +11,12 @@ install:
 - pip install -r requirements_dev.txt
 - pip install --editable .
 - pip freeze
+
+addons:
+  apt:
+    packages:
+      - rabbitmq-server
+before_script: "sudo rabbitmq-plugins enable rabbitmq_management"
 script: "make test && make pylint"
 notifications:
   email: true
