@@ -8,6 +8,7 @@ Next release
  * Drop support for Python 3.5 and 3.6.
  * Fix annoying auth method warning because of a wrong defined default argument (closes #214).
  * Support ``amqps://`` URLs.
+ * Properly handle disabled heartbeats.
 
 Aioamqp 0.14.0
 --------------
