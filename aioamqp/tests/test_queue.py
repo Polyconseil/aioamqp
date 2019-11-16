@@ -72,7 +72,7 @@ class QueueDeclareTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             await self.channel.queue_declare(queue_name,
                 passive=False, exclusive=True, auto_delete=True)
 
-        self.assertEqual(cm.exception.code, 406)
+        self.assertIn(cm.exception.code, [405, 406])
 
     async def test_multiple_channel_same_queue(self):
         queue_name = 'queue_name'
