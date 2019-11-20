@@ -4,6 +4,9 @@ Changelog
 Next release
 ------------
 
+Aioamqp 0.14.0
+--------------
+
  * Fix ``waiter already exist`` issue when creating multiple queues (closes #105).
  * Rename ``type`` to ``message_type`` in constant.Properties object to be full compatible with pamqp.
  * Add python 3.8 support.
