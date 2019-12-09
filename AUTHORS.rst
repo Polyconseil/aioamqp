@@ -25,3 +25,4 @@ AUTHORS are (and/or have been)::
     * Corey `notmeta`
     * Paul Wistrand
     * Aleksandr Balezin
+    * fullylegit

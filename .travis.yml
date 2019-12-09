@@ -1,8 +1,10 @@
 language: python
+dist: bionic
 python:
 - 3.5
 - 3.6
 - 3.7-dev
+- 3.8
 services:
 - rabbitmq
 env:
@@ -11,6 +13,12 @@ install:
 - pip install -r requirements_dev.txt
 - pip install --editable .
 - pip freeze
+
+addons:
+  apt:
+    packages:
+      - rabbitmq-server
+before_script: "sudo rabbitmq-plugins enable rabbitmq_management"
 script: "make test && make pylint"
 notifications:
   email: true
