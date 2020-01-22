@@ -65,7 +65,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             client_properties: dict, client-props to tune the client identification
         """
         self._loop = kwargs.get('loop') or asyncio.get_event_loop()
-        super().__init__(asyncio.StreamReader(loop=self._loop), loop=self._loop)
+        self._reader = asyncio.StreamReader(loop=self._loop)
+        super().__init__(self._reader, loop=self._loop)
         self._on_error_callback = kwargs.get('on_error')
 
         self.client_properties = kwargs.get('client_properties', {})

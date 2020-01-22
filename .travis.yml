@@ -1,8 +1,10 @@
 language: python
+dist: bionic
 python:
 - 3.5
 - 3.6
 - 3.7-dev
+- 3.8
 services:
 - rabbitmq
 env:
