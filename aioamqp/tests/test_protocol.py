@@ -81,6 +81,27 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
                 port=7777,
             )
 
+    async def test_amqps_connection_from_url(self):
+        ssl_context = mock.Mock()
+        with mock.patch('ssl.create_default_context') as create_default_context:
+            with mock.patch('aioamqp.connect') as connect:
+                create_default_context.return_value = ssl_context
+                async def func(*x, **y):
+                    return 1, 2
+                connect.side_effect = func
+                await amqp_from_url('amqps://tom:pass@example.com:7777/myvhost')
+                connect.assert_called_once_with(
+                    insist=False,
+                    password='pass',
+                    login_method='PLAIN',
+                    ssl=ssl_context,
+                    login='tom',
+                    host='example.com',
+                    protocol_factory=AmqpProtocol,
+                    virtualhost='myvhost',
+                    port=7777,
+                )
+
     async def test_from_url_raises_on_wrong_scheme(self):
         with self.assertRaises(ValueError):
             await amqp_from_url('invalid://')

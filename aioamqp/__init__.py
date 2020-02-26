@@ -1,5 +1,6 @@
 import asyncio
 import socket
+import ssl
 from urllib.parse import urlparse
 
 from .exceptions import *  # pylint: disable=wildcard-import
@@ -85,6 +86,9 @@ async def from_url(
 
     if url.scheme not in ('amqp', 'amqps'):
         raise ValueError('Invalid protocol %s, valid protocols are amqp or amqps' % url.scheme)
+
+    if url.scheme == 'amqps' and not kwargs.get('ssl'):
+        kwargs['ssl'] = ssl.create_default_context()
 
     transport, protocol = await connect(
         host=url.hostname or 'localhost',
