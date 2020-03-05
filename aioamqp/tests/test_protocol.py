@@ -55,7 +55,7 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             connect.assert_called_once_with(
                 insist=False,
                 password='pass',
-                login_method='AMQPLAIN',
+                login_method='PLAIN',
                 login='tom',
                 host='example.com',
                 protocol_factory=AmqpProtocol,
@@ -74,7 +74,7 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             connect.assert_called_once_with(
                 insist=False,
                 password='pass',
-                login_method='AMQPLAIN',
+                login_method='PLAIN',
                 ssl=ssl_context,
                 login='tom',
                 host='example.com',

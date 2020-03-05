@@ -188,7 +188,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """
 
         if login_method != 'PLAIN':
-            logger.warning('only PLAIN login_method is supported, falling back to AMQPLAIN')
+            logger.warning('login_method %s is not supported, falling back to PLAIN', login_method)
 
         self._stream_writer.write(amqp_constants.PROTOCOL_HEADER)
 
