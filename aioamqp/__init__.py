@@ -10,7 +10,7 @@ from .version import __packagename__
 
 
 async def connect(host='localhost', port=None, login='guest', password='guest',
-            virtualhost='/', ssl=None, login_method='AMQPLAIN', insist=False,
+            virtualhost='/', ssl=None, login_method='PLAIN', insist=False,
             protocol_factory=AmqpProtocol, *, loop=None, **kwargs):
     """Convenient method to connect to an AMQP broker
 
@@ -69,7 +69,7 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
 
 
 async def from_url(
-        url, login_method='AMQPLAIN', insist=False, protocol_factory=AmqpProtocol, **kwargs):
+        url, login_method='PLAIN', insist=False, protocol_factory=AmqpProtocol, **kwargs):
     """ Connect to the AMQP using a single url parameter and return the client.
 
         For instance:

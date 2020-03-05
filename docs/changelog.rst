@@ -4,6 +4,8 @@ Changelog
 Next release
 ------------
 
+ * Fix annoying auth method warning because of a wrong defined default argument (closes #214).
+
 Aioamqp 0.14.0
 --------------
 
