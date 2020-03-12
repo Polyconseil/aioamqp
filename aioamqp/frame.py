@@ -42,7 +42,6 @@ import asyncio
 import socket
 
 import pamqp.encode
-import pamqp.specification
 import pamqp.frame
 
 from . import exceptions
