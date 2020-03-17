@@ -80,7 +80,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         self.connecting = asyncio.Future(loop=self._loop)
         self.connection_closed = asyncio.Event()
-        self.stop_now = asyncio.Future(loop=self._loop)
+        self.stop_now = asyncio.Event()
         self.state = CONNECTING
         self.version_major = None
         self.version_minor = None
@@ -177,9 +177,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 await asyncio.wait_for(self._heartbeat_worker, timeout=timeout)
             except asyncio.CancelledError:
                 pass
-
-    async def close_ok(self, frame):
-        self._stream_writer.close()
 
     async def start_connection(self, host, port, login, password, virtualhost, ssl=False,
             login_method='PLAIN', insist=False):
@@ -311,12 +308,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             channel.connection_closed(reply_code, reply_text, exception)
 
     async def run(self):
-        while not self.stop_now.done():
+        while not self.stop_now.is_set():
             try:
                 await self.dispatch_frame()
             except exceptions.AmqpClosedConnection as exc:
                 logger.info("Close connection")
-                self.stop_now.set_result(None)
+                self.stop_now.set()
 
                 self._close_channels(exception=exc)
             except Exception:  # pylint: disable=broad-except
@@ -329,7 +326,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         the rest of the AmqpProtocol class.  This is kept around for backwards
         compatibility purposes only.
         """
-        await self.stop_now
+        await self.stop_now.wait()
 
     async def send_heartbeat(self):
         """Sends an heartbeat message.
@@ -403,6 +400,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         )
         await self._write_frame(0, request)
 
+    async def close_ok(self, frame):
+        """In response to server close confirmation"""
+        self.stop_now.set()
+        self._stream_writer.close()
+
     async def server_close(self, frame):
         """The server is closing the connection"""
         self.state = CLOSING
@@ -414,9 +416,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
         await self._close_ok()
+        self.stop_now.set()
         self._stream_writer.close()
 
     async def _close_ok(self):
+        """Send client close confirmation"""
         request = pamqp.commands.Connection.CloseOk()
         await self._write_frame(0, request)
 
