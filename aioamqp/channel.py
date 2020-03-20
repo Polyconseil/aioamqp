@@ -502,13 +502,13 @@ class Channel:
 
         self.consumer_callbacks[consumer_tag] = callback
         self.last_consumer_tag = consumer_tag
-
-        return_value = await self._write_frame_awaiting_response(
-            'basic_consume' + consumer_tag, self.channel_id, request, no_wait)
         if no_wait:
             return_value = {'consumer_tag': consumer_tag}
         else:
-            self._ctag_events[consumer_tag].set()
+            self._ctag_events[consumer_tag] = asyncio.Event(loop=self._loop)
+
+        return_value = await self._write_frame_awaiting_response(
+            'basic_consume' + consumer_tag, self.channel_id, request, no_wait)
         return return_value
 
     async def basic_consume_ok(self, frame):
@@ -518,7 +518,7 @@ class Channel:
         }
         future = self._get_waiter('basic_consume' + ctag)
         future.set_result(results)
-        self._ctag_events[ctag] = asyncio.Event(loop=self._loop)
+        self._ctag_events[ctag].set()
 
     async def basic_deliver(self, frame):
         consumer_tag = frame.consumer_tag
