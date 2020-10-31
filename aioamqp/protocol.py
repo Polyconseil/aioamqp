@@ -79,7 +79,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             self.connection_tunning['heartbeat'] = kwargs.get('heartbeat')
 
         self.connecting = asyncio.Future(loop=self._loop)
-        self.connection_closed = asyncio.Event(loop=self._loop)
+        self.connection_closed = asyncio.Event()
         self.stop_now = asyncio.Future(loop=self._loop)
         self.state = CONNECTING
         self.version_major = None
@@ -91,14 +91,14 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_heartbeat = None
         self._heartbeat_timer_recv = None
         self._heartbeat_timer_send = None
-        self._heartbeat_trigger_send = asyncio.Event(loop=self._loop)
+        self._heartbeat_trigger_send = asyncio.Event()
         self._heartbeat_worker = None
         self.channels = {}
         self.server_frame_max = None
         self.server_channel_max = None
         self.channels_ids_ceil = 0
         self.channels_ids_free = set()
-        self._drain_lock = asyncio.Lock(loop=self._loop)
+        self._drain_lock = asyncio.Lock()
 
     def connection_made(self, transport):
         super().connection_made(transport)
@@ -171,10 +171,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             await self.wait_closed(timeout=timeout)
 
     async def wait_closed(self, timeout=None):
-        await asyncio.wait_for(self.connection_closed.wait(), timeout=timeout, loop=self._loop)
+        await asyncio.wait_for(self.connection_closed.wait(), timeout=timeout)
         if self._heartbeat_worker is not None:
             try:
-                await asyncio.wait_for(self._heartbeat_worker, timeout=timeout, loop=self._loop)
+                await asyncio.wait_for(self._heartbeat_worker, timeout=timeout)
             except asyncio.CancelledError:
                 pass
 

@@ -31,7 +31,7 @@ class Channel:
         self.cancellation_callbacks = []
         self.return_callback = return_callback
         self.response_future = None
-        self.close_event = asyncio.Event(loop=self._loop)
+        self.close_event = asyncio.Event()
         self.cancelled_consumers = set()
         self.last_consumer_tag = None
         self.publisher_confirms = False
@@ -518,7 +518,7 @@ class Channel:
         }
         future = self._get_waiter('basic_consume' + ctag)
         future.set_result(results)
-        self._ctag_events[ctag] = asyncio.Event(loop=self._loop)
+        self._ctag_events[ctag] = asyncio.Event()
 
     async def basic_deliver(self, frame):
         consumer_tag = frame.consumer_tag
