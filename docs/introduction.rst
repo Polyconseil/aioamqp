@@ -7,7 +7,7 @@ Aioamqp library is a pure-Python implementation of the AMQP 0.9.1 protocol using
 Prerequisites
 -------------
 
-Aioamqp works only with python >= 3.5 using asyncio library.
+Aioamqp works only with python >= 3.6 using asyncio library.
 
 Installation
 ------------
