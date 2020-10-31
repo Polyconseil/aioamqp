@@ -456,11 +456,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         await self.ensure_open()
         try:
             channel_id = self.channels_ids_free.pop()
-        except KeyError:
+        except KeyError as ex:
             assert self.server_channel_max is not None, 'connection channel-max tuning not performed'
             # channel-max = 0 means no limit
             if self.server_channel_max and self.channels_ids_ceil > self.server_channel_max:
-                raise exceptions.NoChannelAvailable()
+                raise exceptions.NoChannelAvailable() from ex
             self.channels_ids_ceil += 1
             channel_id = self.channels_ids_ceil
         channel = self.CHANNEL_FACTORY(self, channel_id, **kwargs)
