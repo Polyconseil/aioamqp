@@ -1,10 +1,17 @@
 language: python
 dist: focal
+arch:
+- amd64
+- ppc64le
 python:
 - 3.6
 - 3.7
 - 3.8
 - 3.9
+jobs:
+ exclude:
+  - arch: ppc64le
+    python: 3.7
 services:
 - rabbitmq
 env:
