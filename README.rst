@@ -3,8 +3,8 @@ aioamqp
 
 .. image:: https://badge.fury.io/py/aioamqp.svg
     :target: http://badge.fury.io/py/aioamqp
-.. image:: https://travis-ci.org/Polyconseil/aioamqp.svg?branch=master
-    :target: https://travis-ci.org/Polyconseil/aioamqp
+.. image:: https://github.com/Polyconseil/aioamqp/actions/workflows/tests.yml/badge.svg
+    :target: https://github.com/Polyconseil/aioamqp/actions/workflows/tests.yml
 
 .. image:: https://readthedocs.org/projects/aioamqp/badge/?version=latest
     :alt: Documentation Status
