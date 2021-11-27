@@ -14,7 +14,7 @@ class ConsumeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     def setUp(self):
         super().setUp()
-        self.consume_future = asyncio.Future(loop=self.loop)
+        self.consume_future = asyncio.Future()
 
     async def callback(self, channel, body, envelope, properties):
         self.consume_future.set_result((body, envelope, properties))
@@ -22,7 +22,7 @@ class ConsumeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
     async def get_callback_result(self):
         await self.consume_future
         result = self.consume_future.result()
-        self.consume_future = asyncio.Future(loop=self.loop)
+        self.consume_future = asyncio.Future()
         return result
 
     async def test_consume(self):
@@ -80,12 +80,12 @@ class ConsumeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
         # get a different channel
         channel = await self.create_channel()
 
-        q1_future = asyncio.Future(loop=self.loop)
+        q1_future = asyncio.Future()
 
         async def q1_callback(channel, body, envelope, properties):
             q1_future.set_result((body, envelope, properties))
 
-        q2_future = asyncio.Future(loop=self.loop)
+        q2_future = asyncio.Future()
 
         async def q2_callback(channel, body, envelope, properties):
             q2_future.set_result((body, envelope, properties))
@@ -137,7 +137,7 @@ class ConsumeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
         # publish
         await channel.publish("coucou", "e", routing_key='',)
 
-        sync_future = asyncio.Future(loop=self.loop)
+        sync_future = asyncio.Future()
 
         async def callback(channel, body, envelope, properties):
             self.assertTrue(sync_future.done())
@@ -156,12 +156,12 @@ class ConsumeTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
         # get a different channel
         channel = await self.create_channel()
 
-        q1_future = asyncio.Future(loop=self.loop)
+        q1_future = asyncio.Future()
 
         async def q1_callback(channel, body, envelope, properties):
             q1_future.set_result((body, envelope, properties))
 
-        q2_future = asyncio.Future(loop=self.loop)
+        q2_future = asyncio.Future()
 
         async def q2_callback(channel, body, envelope, properties):
             q2_future.set_result((body, envelope, properties))

@@ -124,7 +124,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             queue_name, exchange_name, routing_key, "payload"
         )
 
-        qfuture = asyncio.Future(loop=self.loop)
+        qfuture = asyncio.Future()
 
         async def qcallback(channel, body, envelope, _properties):
             qfuture.set_result(envelope)
@@ -144,7 +144,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             queue_name, exchange_name, routing_key, "payload"
         )
 
-        qfuture = asyncio.Future(loop=self.loop)
+        qfuture = asyncio.Future()
 
         async def qcallback(channel, body, envelope, _properties):
             await self.channel.basic_client_nack(
@@ -164,7 +164,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             queue_name, exchange_name, routing_key, "payload"
         )
 
-        qfuture = asyncio.Future(loop=self.loop)
+        qfuture = asyncio.Future()
 
         async def qcallback(channel, body, envelope, _properties):
             await self.channel.basic_client_nack(envelope.delivery_tag, requeue=False)
@@ -182,7 +182,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             queue_name, exchange_name, routing_key, "payload"
         )
 
-        qfuture = asyncio.Future(loop=self.loop)
+        qfuture = asyncio.Future()
         called = False
 
         async def qcallback(channel, body, envelope, _properties):
@@ -206,7 +206,7 @@ class BasicDeliveryTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             queue_name, exchange_name, routing_key, "payload"
         )
 
-        qfuture = asyncio.Future(loop=self.loop)
+        qfuture = asyncio.Future()
 
         async def qcallback(channel, body, envelope, _properties):
             qfuture.set_result(envelope)

@@ -11,7 +11,7 @@ from .version import __packagename__
 
 async def connect(host='localhost', port=None, login='guest', password='guest',
             virtualhost='/', ssl=None, login_method='PLAIN', insist=False,
-            protocol_factory=AmqpProtocol, *, loop=None, **kwargs):
+            protocol_factory=AmqpProtocol, **kwargs):
     """Convenient method to connect to an AMQP broker
 
         @host:          the host to connect to
@@ -25,15 +25,12 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
         @insist:        Insist on connecting to a server
         @protocol_factory:
                         Factory to use, if you need to subclass AmqpProtocol
-        @loop:          Set the event loop to use
 
         @kwargs:        Arguments to be given to the protocol_factory instance
 
         Returns:        a tuple (transport, protocol) of an AmqpProtocol instance
     """
-    if loop is None:
-        loop = asyncio.get_event_loop()
-    factory = lambda: protocol_factory(loop=loop, **kwargs)
+    factory = lambda: protocol_factory(**kwargs)
 
     create_connection_kwargs = {}
 
@@ -46,7 +43,7 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
         else:
             port = 5672
 
-    transport, protocol = await loop.create_connection(
+    transport, protocol = await asyncio.get_running_loop().create_connection(
         factory, host, port, **create_connection_kwargs
     )
 
@@ -79,7 +76,6 @@ async def from_url(
         @insist:        Insist on connecting to a server
         @protocol_factory:
                         Factory to use, if you need to subclass AmqpProtocol
-        @loop:          optionally set the event loop to use.
 
         @kwargs:        Arguments to be given to the protocol_factory instance
 
