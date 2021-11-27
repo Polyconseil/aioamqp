@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 class Channel:
 
     def __init__(self, protocol, channel_id, return_callback=None):
-        self._loop = protocol._loop
         self.protocol = protocol
         self.channel_id = channel_id
         self.consumer_queues = {}
@@ -46,7 +45,7 @@ class Channel:
         if rpc_name in self._futures:
             raise exceptions.SynchronizationError("Waiter already exists")
 
-        fut = asyncio.Future(loop=self._loop)
+        fut = asyncio.Future()
         self._futures[rpc_name] = fut
         return fut
 

@@ -269,6 +269,6 @@ class RabbitTestCaseMixin:
             return ProxyAmqpProtocol(self, *args, **kw)
         vhost = vhost or self.vhost
         transport, protocol = await aioamqp_connect(host=self.host, port=self.port, virtualhost=vhost,
-            protocol_factory=protocol_factory, loop=self.loop)
+            protocol_factory=protocol_factory)
         self.amqps.append(protocol)
         return transport, protocol

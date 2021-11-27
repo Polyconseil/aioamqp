@@ -16,6 +16,12 @@ from . import exceptions
 from . import version
 
 
+try:
+    from asyncio import get_running_loop
+except ImportError:  # pragma: no cover
+    from asyncio.events import _get_running_loop as get_running_loop
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,12 +67,10 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                             but may reject very large frames if it cannot allocate resources for them.
             heartbeat: int, the delay, in seconds, of the connection heartbeat that the server wants.
                             Zero means the server does not want a heartbeat.
-            loop: Asyncio.Eventloop: specify the eventloop to use.
             client_properties: dict, client-props to tune the client identification
         """
-        self._loop = kwargs.get('loop') or asyncio.get_event_loop()
-        self._reader = asyncio.StreamReader(loop=self._loop)
-        super().__init__(self._reader, loop=self._loop)
+        self._reader = asyncio.StreamReader()
+        super().__init__(self._reader)
         self._on_error_callback = kwargs.get('on_error')
 
         self.client_properties = kwargs.get('client_properties', {})
@@ -78,9 +82,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         if 'heartbeat' in kwargs:
             self.connection_tunning['heartbeat'] = kwargs.get('heartbeat')
 
-        self.connecting = asyncio.Future(loop=self._loop)
+        self.connecting = asyncio.Future()
         self.connection_closed = asyncio.Event()
-        self.stop_now = asyncio.Future(loop=self._loop)
+        self.stop_now = asyncio.Future()
         self.state = CONNECTING
         self.version_major = None
         self.version_minor = None
@@ -102,7 +106,8 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     def connection_made(self, transport):
         super().connection_made(transport)
-        self._stream_writer = _StreamWriter(transport, self, self._stream_reader, self._loop)
+        self._stream_writer = _StreamWriter(transport, self, self._stream_reader,
+                                            loop=get_running_loop())
 
     def eof_received(self):
         super().eof_received()
@@ -242,7 +247,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         await self.ensure_open()
         # for now, we read server's responses asynchronously
-        self.worker = asyncio.ensure_future(self.run(), loop=self._loop)
+        self.worker = asyncio.ensure_future(self.run())
 
     async def get_frame(self):
         """Read the frame, and only decode its header
@@ -303,7 +308,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         if self._on_error_callback:
             if asyncio.iscoroutinefunction(self._on_error_callback):
-                asyncio.ensure_future(self._on_error_callback(exception), loop=self._loop)
+                asyncio.ensure_future(self._on_error_callback(exception))
             else:
                 self._on_error_callback(exceptions.ChannelClosed(exception))
 
@@ -352,7 +357,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             return
         if self._heartbeat_timer_recv is not None:
             self._heartbeat_timer_recv.cancel()
-        self._heartbeat_timer_recv = self._loop.call_later(
+        self._heartbeat_timer_recv = get_running_loop().call_later(
             self.server_heartbeat * 2,
             self._heartbeat_timer_recv_timeout)
 
@@ -361,11 +366,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             return
         if self._heartbeat_timer_send is not None:
             self._heartbeat_timer_send.cancel()
-        self._heartbeat_timer_send = self._loop.call_later(
+        self._heartbeat_timer_send = get_running_loop().call_later(
             self.server_heartbeat,
             self._heartbeat_trigger_send.set)
         if self._heartbeat_worker is None:
-            self._heartbeat_worker = asyncio.ensure_future(self._heartbeat(), loop=self._loop)
+            self._heartbeat_worker = asyncio.ensure_future(self._heartbeat())
 
     def _heartbeat_stop(self):
         self.server_heartbeat = None

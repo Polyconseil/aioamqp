@@ -64,13 +64,13 @@ class ReplyTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
         exchange_name = 'exchange_name'
         server_routing_key = 'reply_test'
 
-        server_future = asyncio.Future(loop=self.loop)
+        server_future = asyncio.Future()
         await self._server(server_future, exchange_name, server_routing_key)
 
         correlation_id = 'secret correlation id'
         client_routing_key = 'secret_client_key'
 
-        client_future = asyncio.Future(loop=self.loop)
+        client_future = asyncio.Future()
         await self._client(
             client_future, exchange_name, server_routing_key, correlation_id, client_routing_key)
 

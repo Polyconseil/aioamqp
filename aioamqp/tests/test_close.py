@@ -9,7 +9,7 @@ class CloseTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     def setUp(self):
         super().setUp()
-        self.consume_future = asyncio.Future(loop=self.loop)
+        self.consume_future = asyncio.Future()
 
     async def callback(self, body, envelope, properties):
         self.consume_future.set_result((body, envelope, properties))
@@ -17,7 +17,7 @@ class CloseTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
     async def get_callback_result(self):
         await self.consume_future
         result = self.consume_future.result()
-        self.consume_future = asyncio.Future(loop=self.loop)
+        self.consume_future = asyncio.Future()
         return result
 
     async def test_close(self):

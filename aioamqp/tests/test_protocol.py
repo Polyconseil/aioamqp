@@ -15,7 +15,7 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_connect(self):
         _transport, protocol = await amqp_connect(
-            host=self.host, port=self.port, virtualhost=self.vhost, loop=self.loop
+            host=self.host, port=self.port, virtualhost=self.vhost
         )
         self.assertEqual(protocol.state, OPEN)
         await protocol.close()
@@ -30,7 +30,6 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             port=self.port,
             virtualhost=self.vhost,
             client_properties=client_properties,
-            loop=self.loop,
         )
 
         self.assertEqual(protocol.client_properties, client_properties)
@@ -38,12 +37,12 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
 
     async def test_connection_unexistant_vhost(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
-            await amqp_connect(host=self.host, port=self.port, virtualhost='/unexistant', loop=self.loop)
+            await amqp_connect(host=self.host, port=self.port, virtualhost='/unexistant')
 
     def test_connection_wrong_login_password(self):
         with self.assertRaises(exceptions.AmqpClosedConnection):
             self.loop.run_until_complete(
-                amqp_connect(host=self.host, port=self.port, login='wrong', password='wrong', loop=self.loop)
+                amqp_connect(host=self.host, port=self.port, login='wrong', password='wrong')
             )
 
     async def test_connection_from_url(self):
@@ -51,7 +50,7 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             async def func(*x, **y):
                 return 1, 2
             connect.side_effect = func
-            await amqp_from_url('amqp://tom:pass@example.com:7777/myvhost', loop=self.loop)
+            await amqp_from_url('amqp://tom:pass@example.com:7777/myvhost')
             connect.assert_called_once_with(
                 insist=False,
                 password='pass',
@@ -61,7 +60,6 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
                 protocol_factory=AmqpProtocol,
                 virtualhost='myvhost',
                 port=7777,
-                loop=self.loop,
             )
 
     async def test_ssl_context_connection_from_url(self):
@@ -70,7 +68,7 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             async def func(*x, **y):
                 return 1, 2
             connect.side_effect = func
-            await amqp_from_url('amqps://tom:pass@example.com:7777/myvhost', loop=self.loop, ssl=ssl_context)
+            await amqp_from_url('amqps://tom:pass@example.com:7777/myvhost', ssl=ssl_context)
             connect.assert_called_once_with(
                 insist=False,
                 password='pass',
@@ -81,7 +79,6 @@ class ProtocolTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
                 protocol_factory=AmqpProtocol,
                 virtualhost='myvhost',
                 port=7777,
-                loop=self.loop,
             )
 
     async def test_from_url_raises_on_wrong_scheme(self):
