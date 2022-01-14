@@ -37,7 +37,9 @@ def from_pamqp(instance):
     props.reply_to = instance.reply_to
     props.expiration = instance.expiration
     props.message_id = instance.message_id
-    props.timestamp = instance.timestamp
+    if instance.timestamp is not None:
+        # pamqp uses naive datetimes representing UTC, let's use TZ-aware datetimes
+        props.timestamp = instance.timestamp.replace(tzinfo=datetime.timezone.utc)
     props.message_type = instance.message_type
     props.user_id = instance.user_id
     props.app_id = instance.app_id
