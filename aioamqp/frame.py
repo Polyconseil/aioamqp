@@ -75,7 +75,7 @@ async def read(reader):
         raise exceptions.AmqpClosedConnection()
     try:
         data = await reader.readexactly(7)
-    except (asyncio.IncompleteReadError, socket.error) as ex:
+    except (asyncio.IncompleteReadError, OSError) as ex:
         raise exceptions.AmqpClosedConnection() from ex
 
     frame_type, channel, frame_length = pamqp.frame.frame_parts(data)

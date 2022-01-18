@@ -461,7 +461,7 @@ class Channel:
     async def basic_server_nack(self, frame, delivery_tag=None):
         if delivery_tag is None:
             delivery_tag = frame.delivery_tag
-        fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
+        fut = self._get_waiter(f'basic_server_ack_{delivery_tag}')
         logger.debug('Received nack for delivery tag %r', delivery_tag)
         fut.set_exception(exceptions.PublishFailed(delivery_tag))
 
@@ -614,7 +614,7 @@ class Channel:
 
     async def basic_server_ack(self, frame):
         delivery_tag = frame.delivery_tag
-        fut = self._get_waiter('basic_server_ack_{}'.format(delivery_tag))
+        fut = self._get_waiter(f'basic_server_ack_{delivery_tag}')
         logger.debug('Received ack for delivery tag %s', delivery_tag)
         fut.set_result(True)
 
@@ -678,7 +678,7 @@ class Channel:
 
         if self.publisher_confirms:
             delivery_tag = next(self.delivery_tag_iter)  # pylint: disable=stop-iteration-return
-            fut = self._set_waiter('basic_server_ack_{}'.format(delivery_tag))
+            fut = self._set_waiter(f'basic_server_ack_{delivery_tag}')
 
         method_request = pamqp.commands.Basic.Publish(
             exchange=exchange_name,

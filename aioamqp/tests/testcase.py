@@ -25,7 +25,7 @@ def use_full_name(f, arg_names):
     sig = inspect.signature(f)
     for arg_name in arg_names:
         if arg_name not in sig.parameters:
-            raise ValueError('%s is not a valid argument name for function %s' % (arg_name, f.__qualname__))
+            raise ValueError(f'{arg_name} is not a valid argument name for function {f.__qualname__}')
 
     def wrapper(self, *args, **kw):
         ba = sig.bind_partial(self, *args, **kw)
@@ -84,7 +84,7 @@ class RabbitTestCaseMixin:
         self.port = os.environ.get('AMQP_PORT', 5672)
         self.vhost = os.environ.get('AMQP_VHOST', self.VHOST + str(uuid.uuid4()))
         self.http_client = pyrabbit2.api.Client(
-            '{HOST}:15672'.format(HOST=self.host), 'guest', 'guest', timeout=None,
+            f'{self.host}:15672', 'guest', 'guest', timeout=None,
         )
 
         self.amqps = []
@@ -161,7 +161,7 @@ class RabbitTestCaseMixin:
 
     async def assertExchangeExists(self, exchange_name):
         if not self.check_exchange_exists(exchange_name):
-            self.fail("Exchange {} does not exists".format(exchange_name))
+            self.fail(f"Exchange {exchange_name} does not exists")
 
     async def check_queue_exists(self, queue_name):
         """Check if the queue exist"""
@@ -174,7 +174,7 @@ class RabbitTestCaseMixin:
 
     async def assertQueueExists(self, queue_name):
         if not self.check_queue_exists(queue_name):
-            self.fail("Queue {} does not exists".format(queue_name))
+            self.fail(f"Queue {queue_name} does not exists")
 
     def list_queues(self, vhost=None, fully_qualified_name=False):
         # wait for the http client to get the correct state of the queue
