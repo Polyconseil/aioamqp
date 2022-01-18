@@ -5,9 +5,9 @@
 import asyncio
 import logging
 
+import pamqp.commands
 import pamqp.frame
 import pamqp.heartbeat
-import pamqp.specification
 
 from . import channel as amqp_channel
 from . import constants as amqp_constants
@@ -84,7 +84,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
         self.connecting = asyncio.Future()
         self.connection_closed = asyncio.Event()
-        self.stop_now = asyncio.Future()
+        self.stop_now = asyncio.Event()
         self.state = CONNECTING
         self.version_major = None
         self.version_minor = None
@@ -164,7 +164,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """Close connection (and all channels)"""
         await self.ensure_open()
         self.state = CLOSING
-        request = pamqp.specification.Connection.Close(
+        request = pamqp.commands.Connection.Close(
             reply_code=0,
             reply_text='',
             class_id=0,
@@ -182,9 +182,6 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 await asyncio.wait_for(self._heartbeat_worker, timeout=timeout)
             except asyncio.CancelledError:
                 pass
-
-    async def close_ok(self, frame):
-        self._stream_writer.close()
 
     async def start_connection(self, host, port, login, password, virtualhost, ssl=False,
             login_method='PLAIN', insist=False):
@@ -259,11 +256,11 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         """Dispatch the received frame to the corresponding handler"""
 
         method_dispatch = {
-            pamqp.specification.Connection.Close.name: self.server_close,
-            pamqp.specification.Connection.CloseOk.name: self.close_ok,
-            pamqp.specification.Connection.Tune.name: self.tune,
-            pamqp.specification.Connection.Start.name: self.start,
-            pamqp.specification.Connection.OpenOk.name: self.open_ok,
+            pamqp.commands.Connection.Close.name: self.server_close,
+            pamqp.commands.Connection.CloseOk.name: self.close_ok,
+            pamqp.commands.Connection.Tune.name: self.tune,
+            pamqp.commands.Connection.Start.name: self.start,
+            pamqp.commands.Connection.OpenOk.name: self.open_ok,
         }
         if frame_channel is None and frame is None:
             frame_channel, frame = await self.get_frame()
@@ -316,12 +313,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             channel.connection_closed(reply_code, reply_text, exception)
 
     async def run(self):
-        while not self.stop_now.done():
+        while not self.stop_now.is_set():
             try:
                 await self.dispatch_frame()
             except exceptions.AmqpClosedConnection as exc:
                 logger.info("Close connection")
-                self.stop_now.set_result(None)
+                self.stop_now.set()
 
                 self._close_channels(exception=exc)
             except Exception:  # pylint: disable=broad-except
@@ -334,7 +331,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         the rest of the AmqpProtocol class.  This is kept around for backwards
         compatibility purposes only.
         """
-        await self.stop_now
+        await self.stop_now.wait()
 
     async def send_heartbeat(self):
         """Sends an heartbeat message.
@@ -400,13 +397,18 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         def credentials():
             return '\0{LOGIN}\0{PASSWORD}'.format(**auth)
 
-        request = pamqp.specification.Connection.StartOk(
+        request = pamqp.commands.Connection.StartOk(
             client_properties=client_properties,
             mechanism=mechanism,
             locale=locale,
             response=credentials()
         )
         await self._write_frame(0, request)
+
+    async def close_ok(self, frame):
+        """In response to server close confirmation"""
+        self.stop_now.set()
+        self._stream_writer.close()
 
     async def server_close(self, frame):
         """The server is closing the connection"""
@@ -419,10 +421,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             reply_text, reply_code, class_id, method_id)
         self._close_channels(reply_code, reply_text)
         await self._close_ok()
+        self.stop_now.set()
         self._stream_writer.close()
 
     async def _close_ok(self):
-        request = pamqp.specification.Connection.CloseOk()
+        """Send client close confirmation"""
+        request = pamqp.commands.Connection.CloseOk()
         await self._write_frame(0, request)
 
     async def tune(self, frame):
@@ -431,7 +435,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_heartbeat = frame.heartbeat
 
     async def tune_ok(self, channel_max, frame_max, heartbeat):
-        request = pamqp.specification.Connection.TuneOk(
+        request = pamqp.commands.Connection.TuneOk(
             channel_max, frame_max, heartbeat
         )
         await self._write_frame(0, request)
@@ -441,7 +445,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     async def open(self, virtual_host, capabilities='', insist=False):
         """Open connection to virtual host."""
-        request = pamqp.specification.Connection.Open(
+        request = pamqp.commands.Connection.Open(
             virtual_host, capabilities, insist
         )
         await self._write_frame(0, request)

@@ -9,7 +9,7 @@ import io
 from itertools import count
 import warnings
 
-import pamqp.specification
+import pamqp.commands
 
 from . import frame as amqp_frame
 from . import exceptions
@@ -77,35 +77,35 @@ class Channel:
 
     async def dispatch_frame(self, frame):
         methods = {
-            pamqp.specification.Channel.OpenOk.name: self.open_ok,
-            pamqp.specification.Channel.FlowOk.name: self.flow_ok,
-            pamqp.specification.Channel.CloseOk.name: self.close_ok,
-            pamqp.specification.Channel.Close.name: self.server_channel_close,
+            pamqp.commands.Channel.OpenOk.name: self.open_ok,
+            pamqp.commands.Channel.FlowOk.name: self.flow_ok,
+            pamqp.commands.Channel.CloseOk.name: self.close_ok,
+            pamqp.commands.Channel.Close.name: self.server_channel_close,
 
-            pamqp.specification.Exchange.DeclareOk.name: self.exchange_declare_ok,
-            pamqp.specification.Exchange.BindOk.name: self.exchange_bind_ok,
-            pamqp.specification.Exchange.UnbindOk.name: self.exchange_unbind_ok,
-            pamqp.specification.Exchange.DeleteOk.name: self.exchange_delete_ok,
+            pamqp.commands.Exchange.DeclareOk.name: self.exchange_declare_ok,
+            pamqp.commands.Exchange.BindOk.name: self.exchange_bind_ok,
+            pamqp.commands.Exchange.UnbindOk.name: self.exchange_unbind_ok,
+            pamqp.commands.Exchange.DeleteOk.name: self.exchange_delete_ok,
 
-            pamqp.specification.Queue.DeclareOk.name: self.queue_declare_ok,
-            pamqp.specification.Queue.DeleteOk.name: self.queue_delete_ok,
-            pamqp.specification.Queue.BindOk.name: self.queue_bind_ok,
-            pamqp.specification.Queue.UnbindOk.name: self.queue_unbind_ok,
-            pamqp.specification.Queue.PurgeOk.name: self.queue_purge_ok,
+            pamqp.commands.Queue.DeclareOk.name: self.queue_declare_ok,
+            pamqp.commands.Queue.DeleteOk.name: self.queue_delete_ok,
+            pamqp.commands.Queue.BindOk.name: self.queue_bind_ok,
+            pamqp.commands.Queue.UnbindOk.name: self.queue_unbind_ok,
+            pamqp.commands.Queue.PurgeOk.name: self.queue_purge_ok,
 
-            pamqp.specification.Basic.QosOk.name: self.basic_qos_ok,
-            pamqp.specification.Basic.ConsumeOk.name: self.basic_consume_ok,
-            pamqp.specification.Basic.CancelOk.name: self.basic_cancel_ok,
-            pamqp.specification.Basic.GetOk.name: self.basic_get_ok,
-            pamqp.specification.Basic.GetEmpty.name: self.basic_get_empty,
-            pamqp.specification.Basic.Deliver.name: self.basic_deliver,
-            pamqp.specification.Basic.Cancel.name: self.server_basic_cancel,
-            pamqp.specification.Basic.Ack.name: self.basic_server_ack,
-            pamqp.specification.Basic.Nack.name: self.basic_server_nack,
-            pamqp.specification.Basic.RecoverOk.name: self.basic_recover_ok,
-            pamqp.specification.Basic.Return.name: self.basic_return,
+            pamqp.commands.Basic.QosOk.name: self.basic_qos_ok,
+            pamqp.commands.Basic.ConsumeOk.name: self.basic_consume_ok,
+            pamqp.commands.Basic.CancelOk.name: self.basic_cancel_ok,
+            pamqp.commands.Basic.GetOk.name: self.basic_get_ok,
+            pamqp.commands.Basic.GetEmpty.name: self.basic_get_empty,
+            pamqp.commands.Basic.Deliver.name: self.basic_deliver,
+            pamqp.commands.Basic.Cancel.name: self.server_basic_cancel,
+            pamqp.commands.Basic.Ack.name: self.basic_server_ack,
+            pamqp.commands.Basic.Nack.name: self.basic_server_nack,
+            pamqp.commands.Basic.RecoverOk.name: self.basic_recover_ok,
+            pamqp.commands.Basic.Return.name: self.basic_return,
 
-            pamqp.specification.Confirm.SelectOk.name: self.confirm_select_ok,
+            pamqp.commands.Confirm.SelectOk.name: self.confirm_select_ok,
         }
 
         if frame.name not in methods:
@@ -143,7 +143,7 @@ class Channel:
 
     async def open(self):
         """Open the channel on the server."""
-        request = pamqp.specification.Channel.Open()
+        request = pamqp.commands.Channel.Open()
         return (await self._write_frame_awaiting_response(
             'open', self.channel_id, request, no_wait=False, check_open=False))
 
@@ -158,7 +158,7 @@ class Channel:
         if not self.is_open:
             raise exceptions.ChannelClosed("channel already closed or closing")
         self.close_event.set()
-        request = pamqp.specification.Channel.Close(reply_code, reply_text, class_id=0, method_id=0)
+        request = pamqp.commands.Channel.Close(reply_code, reply_text, class_id=0, method_id=0)
         return (await self._write_frame_awaiting_response(
             'close', self.channel_id, request, no_wait=False, check_open=False))
 
@@ -168,7 +168,7 @@ class Channel:
         self.protocol.release_channel_id(self.channel_id)
 
     async def _send_channel_close_ok(self):
-        request = pamqp.specification.Channel.CloseOk()
+        request = pamqp.commands.Channel.CloseOk()
         await self._write_frame(self.channel_id, request)
 
     async def server_channel_close(self, frame):
@@ -182,7 +182,7 @@ class Channel:
         self.connection_closed(results['reply_code'], results['reply_text'])
 
     async def flow(self, active):
-        request = pamqp.specification.Channel.Flow(active)
+        request = pamqp.commands.Channel.Flow(active)
         return (await self._write_frame_awaiting_response(
             'flow', self.channel_id, request, no_wait=False,
             check_open=False))
@@ -200,7 +200,7 @@ class Channel:
 
     async def exchange_declare(self, exchange_name, type_name, passive=False, durable=False,
                          auto_delete=False, no_wait=False, arguments=None):
-        request = pamqp.specification.Exchange.Declare(
+        request = pamqp.commands.Exchange.Declare(
             exchange=exchange_name,
             exchange_type=type_name,
             passive=passive,
@@ -221,7 +221,7 @@ class Channel:
         return future
 
     async def exchange_delete(self, exchange_name, if_unused=False, no_wait=False):
-        request = pamqp.specification.Exchange.Delete(exchange=exchange_name, if_unused=if_unused, nowait=no_wait)
+        request = pamqp.commands.Exchange.Delete(exchange=exchange_name, if_unused=if_unused, nowait=no_wait)
         return await self._write_frame_awaiting_response(
             'exchange_delete', self.channel_id, request, no_wait)
 
@@ -234,7 +234,7 @@ class Channel:
                       no_wait=False, arguments=None):
         if arguments is None:
             arguments = {}
-        request = pamqp.specification.Exchange.Bind(
+        request = pamqp.commands.Exchange.Bind(
             destination=exchange_destination,
             source=exchange_source,
             routing_key=routing_key,
@@ -254,7 +254,7 @@ class Channel:
         if arguments is None:
             arguments = {}
 
-        request = pamqp.specification.Exchange.Unbind(
+        request = pamqp.commands.Exchange.Unbind(
             destination=exchange_destination,
             source=exchange_source,
             routing_key=routing_key,
@@ -296,7 +296,7 @@ class Channel:
 
         if not queue_name:
             queue_name = 'aioamqp.gen-' + str(uuid.uuid4())
-        request = pamqp.specification.Queue.Declare(
+        request = pamqp.commands.Queue.Declare(
             queue=queue_name,
             passive=passive,
             durable=durable,
@@ -326,7 +326,7 @@ class Channel:
                if_empty:       bool, the queue is deleted if it has no messages. Raise if not.
                no_wait:        bool, if set, the server will not respond to the method
         """
-        request = pamqp.specification.Queue.Delete(
+        request = pamqp.commands.Queue.Delete(
             queue=queue_name,
             if_unused=if_unused,
             if_empty=if_empty,
@@ -345,7 +345,7 @@ class Channel:
         if arguments is None:
             arguments = {}
 
-        request = pamqp.specification.Queue.Bind(
+        request = pamqp.commands.Queue.Bind(
             queue=queue_name,
             exchange=exchange_name,
             routing_key=routing_key,
@@ -366,7 +366,7 @@ class Channel:
         if arguments is None:
             arguments = {}
 
-        request = pamqp.specification.Queue.Unbind(
+        request = pamqp.commands.Queue.Unbind(
             queue=queue_name,
             exchange=exchange_name,
             routing_key=routing_key,
@@ -382,7 +382,7 @@ class Channel:
         logger.debug("Queue unbound")
 
     async def queue_purge(self, queue_name, no_wait=False):
-        request = pamqp.specification.Queue.Purge(
+        request = pamqp.commands.Queue.Purge(
             queue=queue_name, nowait=no_wait
         )
         return (await self._write_frame_awaiting_response(
@@ -405,7 +405,7 @@ class Channel:
         if properties is None:
             properties = {}
 
-        method_request = pamqp.specification.Basic.Publish(
+        method_request = pamqp.commands.Basic.Publish(
             exchange=exchange_name,
             routing_key=routing_key,
             mandatory=mandatory,
@@ -416,7 +416,7 @@ class Channel:
 
         header_request = pamqp.header.ContentHeader(
             body_size=len(payload),
-            properties=pamqp.specification.Basic.Properties(**properties)
+            properties=pamqp.commands.Basic.Properties(**properties)
         )
         await self._write_frame(self.channel_id, header_request, drain=False)
 
@@ -445,7 +445,7 @@ class Channel:
                                 settings should apply per-consumer channel; and global=true to mean
                                 that the QoS settings should apply per-channel.
         """
-        request = pamqp.specification.Basic.Qos(
+        request = pamqp.commands.Basic.Qos(
             prefetch_size, prefetch_count, connection_global
         )
         return (await self._write_frame_awaiting_response(
@@ -489,7 +489,7 @@ class Channel:
         if arguments is None:
             arguments = {}
 
-        request = pamqp.specification.Basic.Consume(
+        request = pamqp.commands.Basic.Consume(
             queue=queue_name,
             consumer_tag=consumer_tag,
             no_local=no_local,
@@ -560,7 +560,7 @@ class Channel:
                              callback, error)
 
     async def basic_cancel(self, consumer_tag, no_wait=False):
-        request = pamqp.specification.Basic.Cancel(consumer_tag, no_wait)
+        request = pamqp.commands.Basic.Cancel(consumer_tag, no_wait)
         return (await self._write_frame_awaiting_response(
             'basic_cancel', self.channel_id, request, no_wait=no_wait)
         )
@@ -574,7 +574,7 @@ class Channel:
         logger.debug("Cancel ok")
 
     async def basic_get(self, queue_name='', no_ack=False):
-        request = pamqp.specification.Basic.Get(queue=queue_name, no_ack=no_ack)
+        request = pamqp.commands.Basic.Get(queue=queue_name, no_ack=no_ack)
         return (await self._write_frame_awaiting_response(
             'basic_get', self.channel_id, request, no_wait=False)
         )
@@ -605,11 +605,11 @@ class Channel:
         future.set_exception(exceptions.EmptyQueue)
 
     async def basic_client_ack(self, delivery_tag, multiple=False):
-        request = pamqp.specification.Basic.Ack(delivery_tag, multiple)
+        request = pamqp.commands.Basic.Ack(delivery_tag, multiple)
         await self._write_frame(self.channel_id, request)
 
     async def basic_client_nack(self, delivery_tag, multiple=False, requeue=True):
-        request = pamqp.specification.Basic.Nack(delivery_tag, multiple, requeue)
+        request = pamqp.commands.Basic.Nack(delivery_tag, multiple, requeue)
         await self._write_frame(self.channel_id, request)
 
     async def basic_server_ack(self, frame):
@@ -619,15 +619,15 @@ class Channel:
         fut.set_result(True)
 
     async def basic_reject(self, delivery_tag, requeue=False):
-        request = pamqp.specification.Basic.Reject(delivery_tag, requeue)
+        request = pamqp.commands.Basic.Reject(delivery_tag, requeue)
         await self._write_frame(self.channel_id, request)
 
     async def basic_recover_async(self, requeue=True):
-        request = pamqp.specification.Basic.RecoverAsync(requeue)
+        request = pamqp.commands.Basic.RecoverAsync(requeue)
         await self._write_frame(self.channel_id, request)
 
     async def basic_recover(self, requeue=True):
-        request = pamqp.specification.Basic.Recover(requeue)
+        request = pamqp.commands.Basic.Recover(requeue)
         return (await self._write_frame_awaiting_response(
             'basic_recover', self.channel_id, request, no_wait=False)
         )
@@ -680,7 +680,7 @@ class Channel:
             delivery_tag = next(self.delivery_tag_iter)  # pylint: disable=stop-iteration-return
             fut = self._set_waiter('basic_server_ack_{}'.format(delivery_tag))
 
-        method_request = pamqp.specification.Basic.Publish(
+        method_request = pamqp.commands.Basic.Publish(
             exchange=exchange_name,
             routing_key=routing_key,
             mandatory=mandatory,
@@ -688,7 +688,7 @@ class Channel:
         )
         await self._write_frame(self.channel_id, method_request, drain=False)
 
-        properties = pamqp.specification.Basic.Properties(**properties)
+        properties = pamqp.commands.Basic.Properties(**properties)
         header_request = pamqp.header.ContentHeader(
             body_size=len(payload), properties=properties
         )
@@ -709,7 +709,7 @@ class Channel:
     async def confirm_select(self, *, no_wait=False):
         if self.publisher_confirms:
             raise ValueError('publisher confirms already enabled')
-        request = pamqp.specification.Confirm.Select(nowait=no_wait)
+        request = pamqp.commands.Confirm.Select(nowait=no_wait)
 
         return (await self._write_frame_awaiting_response(
             'confirm_select', self.channel_id, request, no_wait)

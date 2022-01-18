@@ -22,7 +22,7 @@ class CloseTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             # TODO: remove with python <3.4.4 support
             self.assertTrue(transport._closing)
         # make sure those 2 tasks/futures are properly set as finished
-        await amqp.stop_now
+        await amqp.stop_now.wait()
         await amqp.worker
 
     async def test_multiple_close(self):

@@ -147,7 +147,7 @@ class RabbitTestCaseMixin:
         if amqp is None:
             amqp = self.amqp
 
-        server_version = tuple(int(x) for x in amqp.server_properties['version'].decode().split('.'))
+        server_version = tuple(int(x) for x in amqp.server_properties['version'].split('.'))
         return server_version
 
     async def check_exchange_exists(self, exchange_name):
