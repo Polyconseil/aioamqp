@@ -39,7 +39,6 @@ Content Payload
 """
 
 import asyncio
-import socket
 
 import pamqp.encode
 import pamqp.frame

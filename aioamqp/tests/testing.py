@@ -4,7 +4,7 @@ import logging
 class AsyncioErrors(AssertionError):
     def __repr__(self):
         #  pylint: disable=unsubscriptable-object
-        return "<AsyncioErrors: Got asyncio errors: %r" % self.args[0]
+        return f"<AsyncioErrors: Got asyncio errors: {self.args[0]!r}"
 
 
 class Handler(logging.Handler):

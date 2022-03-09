@@ -389,7 +389,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     async def start_ok(self, client_properties, mechanism, auth, locale):
         def credentials():
-            return '\0{LOGIN}\0{PASSWORD}'.format(**auth)
+            return f'\0{auth["LOGIN"]}\0{auth["PASSWORD"]}'
 
         request = pamqp.commands.Connection.StartOk(
             client_properties=client_properties,

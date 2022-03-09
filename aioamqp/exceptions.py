@@ -33,14 +33,14 @@ class ChannelClosed(AioamqpException):
 class DuplicateConsumerTag(AioamqpException):
     def __repr__(self):
         #  pylint: disable=unsubscriptable-object
-        return ('The consumer tag specified already exists for this '
-                'channel: %s' % self.args[0])
+        return (f'The consumer tag specified already exists for this '
+                f'channel: {self.args[0]}')
 
 
 class ConsumerCancelled(AioamqpException):
     def __repr__(self):
         #  pylint: disable=unsubscriptable-object
-        return ('The consumer %s has been cancelled' % self.args[0])
+        return (f'The consumer {self.args[0]} has been cancelled')
 
 
 class PublishFailed(AioamqpException):
@@ -49,5 +49,4 @@ class PublishFailed(AioamqpException):
         self.delivery_tag = delivery_tag
 
     def __repr__(self):
-        return 'Publish failed because a nack was received for delivery_tag {}'.format(
-            self.delivery_tag)
+        return f'Publish failed because a nack was received for delivery_tag {self.delivery_tag}'

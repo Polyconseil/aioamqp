@@ -52,7 +52,7 @@ class Channel:
     def _get_waiter(self, rpc_name):
         fut = self._futures.pop(rpc_name, None)
         if not fut:
-            raise exceptions.SynchronizationError("Call %s didn't set a waiter" % rpc_name)
+            raise exceptions.SynchronizationError(f"Call {rpc_name} didn't set a waiter")
         return fut
 
     @property
@@ -109,7 +109,7 @@ class Channel:
         }
 
         if frame.name not in methods:
-            raise NotImplementedError("Frame %s is not implemented" % frame.name)
+            raise NotImplementedError(f"Frame {frame.name} is not implemented")
 
         await methods[frame.name](frame)
 
@@ -484,7 +484,7 @@ class Channel:
                 arguments:      dict, AMQP arguments to be passed to the server
         """
         # If a consumer tag was not passed, create one
-        consumer_tag = consumer_tag or 'ctag%i.%s' % (self.channel_id, uuid.uuid4().hex)
+        consumer_tag = consumer_tag or f'ctag{self.channel_id}.{uuid.uuid4().hex}'
 
         if arguments is None:
             arguments = {}

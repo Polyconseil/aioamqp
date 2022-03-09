@@ -11,7 +11,7 @@ from .version import __packagename__
 
 
 async def connect(host='localhost', port=None, login='guest', password='guest',
-            virtualhost='/', ssl=None, login_method='PLAIN', insist=False,
+            virtualhost='/', ssl=None, login_method='PLAIN', insist=False,  # pylint: disable=redefined-outer-name
             protocol_factory=AmqpProtocol, **kwargs):
     """Convenient method to connect to an AMQP broker
 
@@ -31,7 +31,7 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
 
         Returns:        a tuple (transport, protocol) of an AmqpProtocol instance
     """
-    factory = lambda: protocol_factory(**kwargs)
+    factory = lambda: protocol_factory(**kwargs)  # pylint: disable=unnecessary-lambda
 
     create_connection_kwargs = {}
 
@@ -85,7 +85,7 @@ async def from_url(
     url = urlparse(url)
 
     if url.scheme not in ('amqp', 'amqps'):
-        raise ValueError('Invalid protocol %s, valid protocols are amqp or amqps' % url.scheme)
+        raise ValueError(f'Invalid protocol {url.scheme}, valid protocols are amqp or amqps')
 
     if url.scheme == 'amqps' and not kwargs.get('ssl'):
         kwargs['ssl'] = ssl.create_default_context()
