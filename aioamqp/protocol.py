@@ -344,7 +344,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self._stream_writer.close()
 
     def _heartbeat_timer_recv_reset(self):
-        if self.server_heartbeat is None:
+        if self.server_heartbeat is None or self.server_heartbeat is 0:
             return
         if self._heartbeat_timer_recv is not None:
             self._heartbeat_timer_recv.cancel()
@@ -353,7 +353,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             self._heartbeat_timer_recv_timeout)
 
     def _heartbeat_timer_send_reset(self):
-        if self.server_heartbeat is None:
+        if self.server_heartbeat is None or self.server_heartbeat is 0:
             return
         if self._heartbeat_timer_send is not None:
             self._heartbeat_timer_send.cancel()
