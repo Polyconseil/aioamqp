@@ -301,7 +301,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
             if asyncio.iscoroutinefunction(self._on_error_callback):
                 asyncio.ensure_future(self._on_error_callback(exception))
             else:
-                self._on_error_callback(exceptions.ChannelClosed(exception))
+                self._on_error_callback(exception)
 
         for channel in self.channels.values():
             channel.connection_closed(reply_code, reply_text, exception)
