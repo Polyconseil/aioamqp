@@ -1,0 +1,55 @@
+name: Run tests and QA checks
+
+on:
+  push:
+    branches: [master]
+    tags: [aioamqp-*]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  quality:
+    name: Run QA checks on Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.7", "3.8", "3.9", "3.10"]
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+    - name: Install Python ${{ matrix.python }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+    - name: Update base packages
+      run: pip install -U setuptools pip
+    - name: Install deps
+      run: make update
+    - name: Run pylint
+      run: make pylint
+  tests:
+    name: Run test suite Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    services:
+      rabbitmq:
+        image: rabbitmq:3.6.9-management
+        ports:
+          - 5672:5672
+          - 15672:15672
+    strategy:
+      matrix:
+        python: ["3.7", "3.8", "3.9", "3.10"]
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+    - name: Install Python ${{ matrix.python }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+    - name: Update base packages
+      run: pip install -U setuptools pip
+    - name: Install deps
+      run: make update
+    - name: Run tests
+      run: make test
