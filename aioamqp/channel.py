@@ -398,9 +398,8 @@ class Channel:
 
     async def basic_publish(self, payload, exchange_name, routing_key,
                             properties=None, mandatory=False, immediate=False):
-        if isinstance(payload, str):
-            warnings.warn("Str payload support will be removed in next release", DeprecationWarning)
-            payload = payload.encode()
+        if not isinstance(payload, (bytes, bytearray, memoryview)):
+            raise ValueError('payload must be bytes type')
 
         if properties is None:
             properties = {}

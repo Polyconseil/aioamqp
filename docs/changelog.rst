@@ -11,6 +11,7 @@ Next release
  * Properly handle disabled heartbeats.
  * Properly handle concurrent calls to ``basic_cancel``.
  * Drastically reduce overhead of heartbeats.
+ * Drop support for non-bytes payloads in ``basic_publish``.
 
 Aioamqp 0.14.0
 --------------
