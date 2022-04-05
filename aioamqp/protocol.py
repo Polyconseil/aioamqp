@@ -87,8 +87,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_locales = None
         self.worker = None
         self.server_heartbeat = None
-        self._heartbeat_timer_recv = None
+        self._heartbeat_last_recv = None
         self._heartbeat_last_send = None
+        self._heartbeat_recv_worker = None
         self._heartbeat_send_worker = None
         self.channels = {}
         self.server_frame_max = None
@@ -334,22 +335,12 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         request = pamqp.heartbeat.Heartbeat()
         await self._write_frame(0, request)
 
-    def _heartbeat_timer_recv_timeout(self):
-        # 4.2.7 If a peer detects no incoming traffic (i.e. received octets) for
-        # two heartbeat intervals or longer, it should close the connection
-        # without following the Connection.Close/Close-Ok handshaking, and log
-        # an error.
-        # TODO(rcardona) raise a "timeout" exception somewhere
-        self._stream_writer.close()
-
     def _heartbeat_timer_recv_reset(self):
         if self.server_heartbeat is None or self.server_heartbeat == 0:
             return
-        if self._heartbeat_timer_recv is not None:
-            self._heartbeat_timer_recv.cancel()
-        self._heartbeat_timer_recv = asyncio.get_running_loop().call_later(
-            self.server_heartbeat * 2,
-            self._heartbeat_timer_recv_timeout)
+        self._heartbeat_last_recv = asyncio.get_running_loop().time()
+        if self._heartbeat_recv_worker is None:
+            self._heartbeat_recv_worker = asyncio.ensure_future(self._heartbeat_recv())
 
     def _heartbeat_timer_send_reset(self):
         if self.server_heartbeat is None or self.server_heartbeat == 0:
@@ -360,10 +351,28 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     def _heartbeat_stop(self):
         self.server_heartbeat = None
-        if self._heartbeat_timer_recv is not None:
-            self._heartbeat_timer_recv.cancel()
+        if self._heartbeat_recv_worker is not None:
+            self._heartbeat_recv_worker.cancel()
         if self._heartbeat_send_worker is not None:
             self._heartbeat_send_worker.cancel()
+
+    async def _heartbeat_recv(self):
+        # 4.2.7 If a peer detects no incoming traffic (i.e. received octets) for
+        # two heartbeat intervals or longer, it should close the connection
+        # without following the Connection.Close/Close-Ok handshaking, and log
+        # an error.
+        # TODO(rcardona) raise a "timeout" exception somewhere
+        now = asyncio.get_running_loop().time()
+        time_since_last_recv = now - self._heartbeat_last_recv
+
+        while self.state != CLOSED:
+            sleep_for = self.server_heartbeat * 2 - time_since_last_recv
+            await asyncio.sleep(sleep_for)
+
+            now = asyncio.get_running_loop().time()
+            time_since_last_recv = now - self._heartbeat_last_recv
+            if time_since_last_recv >= self.server_heartbeat * 2:
+                self._stream_writer.close()
 
     async def _heartbeat_send(self):
         now = asyncio.get_running_loop().time()

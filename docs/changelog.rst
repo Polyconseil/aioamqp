@@ -10,6 +10,7 @@ Next release
  * Support ``amqps://`` URLs.
  * Properly handle disabled heartbeats.
  * Properly handle concurrent calls to ``basic_cancel``.
+ * Drastically reduce overhead of heartbeats.
 
 Aioamqp 0.14.0
 --------------
