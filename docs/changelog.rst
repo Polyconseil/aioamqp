@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Next release
-------------
+Aioamqp 0.15.0
+--------------
 
  * Add support for Python 3.9 and 3.10.
  * Drop support for Python 3.5 and 3.6.
