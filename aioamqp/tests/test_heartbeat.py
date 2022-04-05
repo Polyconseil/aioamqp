@@ -20,8 +20,8 @@ class HeartbeatTestCase(testcase.RabbitTestCaseMixin, asynctest.TestCase):
             # reset both timer/task to 1) make them 'see' the new heartbeat value
             # 2) so that the mock is actually called back from the main loop
             self.amqp.server_heartbeat = 1
-            self.amqp._heartbeat_worker.cancel()
-            self.amqp._heartbeat_worker = asyncio.ensure_future(self.amqp._heartbeat())
+            self.amqp._heartbeat_send_worker.cancel()
+            self.amqp._heartbeat_send_worker = asyncio.ensure_future(self.amqp._heartbeat_send())
             self.amqp._heartbeat_timer_recv_reset()
 
             await asyncio.sleep(1.001)

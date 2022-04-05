@@ -89,7 +89,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_heartbeat = None
         self._heartbeat_timer_recv = None
         self._heartbeat_last_send = None
-        self._heartbeat_worker = None
+        self._heartbeat_send_worker = None
         self.channels = {}
         self.server_frame_max = None
         self.server_channel_max = None
@@ -170,9 +170,9 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
 
     async def wait_closed(self, timeout=None):
         await asyncio.wait_for(self.connection_closed.wait(), timeout=timeout)
-        if self._heartbeat_worker is not None:
+        if self._heartbeat_send_worker is not None:
             try:
-                await asyncio.wait_for(self._heartbeat_worker, timeout=timeout)
+                await asyncio.wait_for(self._heartbeat_send_worker, timeout=timeout)
             except asyncio.CancelledError:
                 pass
 
@@ -355,17 +355,17 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         if self.server_heartbeat is None or self.server_heartbeat == 0:
             return
         self._heartbeat_last_send = asyncio.get_running_loop().time()
-        if self._heartbeat_worker is None:
-            self._heartbeat_worker = asyncio.ensure_future(self._heartbeat())
+        if self._heartbeat_send_worker is None:
+            self._heartbeat_send_worker = asyncio.ensure_future(self._heartbeat_send())
 
     def _heartbeat_stop(self):
         self.server_heartbeat = None
         if self._heartbeat_timer_recv is not None:
             self._heartbeat_timer_recv.cancel()
-        if self._heartbeat_worker is not None:
-            self._heartbeat_worker.cancel()
+        if self._heartbeat_send_worker is not None:
+            self._heartbeat_send_worker.cancel()
 
-    async def _heartbeat(self):
+    async def _heartbeat_send(self):
         now = asyncio.get_running_loop().time()
         time_since_last_send = now - self._heartbeat_last_send
 
