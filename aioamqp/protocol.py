@@ -88,8 +88,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.worker = None
         self.server_heartbeat = None
         self._heartbeat_timer_recv = None
-        self._heartbeat_timer_send = None
-        self._heartbeat_trigger_send = asyncio.Event()
+        self._heartbeat_last_send = None
         self._heartbeat_worker = None
         self.channels = {}
         self.server_frame_max = None
@@ -355,11 +354,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
     def _heartbeat_timer_send_reset(self):
         if self.server_heartbeat is None or self.server_heartbeat == 0:
             return
-        if self._heartbeat_timer_send is not None:
-            self._heartbeat_timer_send.cancel()
-        self._heartbeat_timer_send = asyncio.get_running_loop().call_later(
-            self.server_heartbeat,
-            self._heartbeat_trigger_send.set)
+        self._heartbeat_last_send = asyncio.get_running_loop().time()
         if self._heartbeat_worker is None:
             self._heartbeat_worker = asyncio.ensure_future(self._heartbeat())
 
@@ -367,16 +362,22 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
         self.server_heartbeat = None
         if self._heartbeat_timer_recv is not None:
             self._heartbeat_timer_recv.cancel()
-        if self._heartbeat_timer_send is not None:
-            self._heartbeat_timer_send.cancel()
         if self._heartbeat_worker is not None:
             self._heartbeat_worker.cancel()
 
     async def _heartbeat(self):
+        now = asyncio.get_running_loop().time()
+        time_since_last_send = now - self._heartbeat_last_send
+
         while self.state != CLOSED:
-            await self._heartbeat_trigger_send.wait()
-            self._heartbeat_trigger_send.clear()
-            await self.send_heartbeat()
+            sleep_for = self.server_heartbeat - time_since_last_send
+            await asyncio.sleep(sleep_for)
+
+            now = asyncio.get_running_loop().time()
+            time_since_last_send = now - self._heartbeat_last_send
+            if time_since_last_send >= self.server_heartbeat:
+                await self.send_heartbeat()
+                time_since_last_send = now - self._heartbeat_last_send
 
     # Amqp specific methods
     async def start(self, frame):
