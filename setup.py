@@ -25,7 +25,7 @@ setuptools.setup(
         'aioamqp',
     ],
     install_requires=[
-        'pamqp>=3.1.0',
+        'pamqp>=3.2.0',
     ],
     python_requires=">=3.7",
     classifiers=[
