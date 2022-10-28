@@ -31,7 +31,7 @@ async def connect(host='localhost', port=None, login='guest', password='guest',
 
         Returns:        a tuple (transport, protocol) of an AmqpProtocol instance
     """
-    factory = lambda: protocol_factory(**kwargs)  # pylint: disable=unnecessary-lambda
+    factory = lambda: protocol_factory(**kwargs)  # pylint: disable=unnecessary-lambda,unnecessary-lambda-assignment
 
     create_connection_kwargs = {}
 
