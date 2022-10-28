@@ -125,7 +125,7 @@ class RabbitTestCaseMixin:
                     continue
                 logger.debug('Delete amqp %s', amqp)
                 await amqp.close()
-                del amqp
+                del amqp  # pylint: disable=modified-iterating-list
         self.loop.run_until_complete(go())
 
         try:
