@@ -315,7 +315,7 @@ class AmqpProtocol(asyncio.StreamReaderProtocol):
                 self.stop_now.set()
 
                 self._close_channels(exception=exc)
-            except Exception:  # pylint: disable=broad-except
+            except (Exception, asyncio.CancelledError):  # pylint: disable=broad-except
                 logger.exception('error on dispatch')
 
     async def heartbeat(self):
